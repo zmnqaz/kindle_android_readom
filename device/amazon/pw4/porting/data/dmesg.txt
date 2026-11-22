@@ -1,0 +1,796 @@
+[    0.000000] Booting Linux on physical CPU 0x0
+[    0.000000] Linux version 4.1.15-lab126 (builder@eink-builds) (gcc version 4.9.1 (GCC) ) #1 SMP PREEMPT Thu May 21 05:14:34 UTC 2026
+[    0.000000] CPU: ARMv7 Processor [414fc091] revision 1 (ARMv7), cr=10c53c7d
+[    0.000000] CPU: PIPT / VIPT nonaliasing data cache, VIPT aliasing instruction cache
+[    0.000000] Machine model: Lab126 i.MX6SLL Board
+[    0.000000] dt: falcon bios 0x9ffd0000(0x30000)
+[    0.000000] dt: storage bios 0x9ffc0000(0x10000)
+[    0.000000] dt: falcon work 0x0
+[    0.000000] log_goal_location: 0x9be00000
+[    0.000000] Printk log placed at 0x9be00000
+[    0.000000] Memory policy: Data cache writeback
+[    0.000000] Falcon BIOS found.
+[    0.000000] On node 0 totalpages: 130304
+[    0.000000] free_area_init_node: node 0, pgdat 80c07d40, node_mem_map 9f97f000
+[    0.000000]   DMA zone: 1152 pages used for memmap
+[    0.000000]   DMA zone: 0 pages reserved
+[    0.000000]   DMA zone: 130304 pages, LIFO batch:31
+[    0.000000] CPU: All CPU(s) started in SVC mode.
+[    0.000000] PERCPU: Embedded 12 pages/cpu @9ff94000 s17216 r8192 d23744 u49152
+[    0.000000] pcpu-alloc: s17216 r8192 d23744 u49152 alloc=12*4096
+[    0.000000] pcpu-alloc: [0] 0 
+[    0.000000] Built 1 zonelists in Zone order, mobility grouping on.  Total pages: 129152
+[    0.000000] Kernel command line: console=ttymxc0,115200 consoleblank=0 uart_at_4m root=/dev/mmcblk1p8 rootwait quiet secure_cpu=1 androidboot.secure_cpu=1 androidboot.prod=1 androidboot.unlocked_kernel=false
+[    0.000000] Prink buffer had been relocated to physical address: 0x9be00000
+[    0.000000] log_buf_len: 262144 bytes
+[    0.000000] early log buf free: 260128(99%)
+[    0.000000] PID hash table entries: 2048 (order: 1, 8192 bytes)
+[    0.000000] Dentry cache hash table entries: 65536 (order: 6, 262144 bytes)
+[    0.000000] Inode-cache hash table entries: 32768 (order: 5, 131072 bytes)
+[    0.000000] Memory: 495552K/521216K available (8344K kernel code, 560K rwdata, 3124K rodata, 360K init, 579K bss, 25664K reserved, 0K cma-reserved)
+[    0.000000] Virtual kernel memory layout:
+    vector  : 0xffff0000 - 0xffff1000   (   4 kB)
+    fixmap  : 0xffc00000 - 0xfff00000   (3072 kB)
+    vmalloc : 0xa0800000 - 0xff000000   (1512 MB)
+    lowmem  : 0x80000000 - 0xa0000000   ( 512 MB)
+    modules : 0x7f000000 - 0x80000000   (  16 MB)
+      .text : 0x80008000 - 0x80b3b4a4   (11470 kB)
+      .init : 0x80b3c000 - 0x80b96000   ( 360 kB)
+      .data : 0x80b96000 - 0x80c22078   ( 561 kB)
+       .bss : 0x80c25000 - 0x80cb5e8c   ( 580 kB)
+[    0.000000] SLUB: HWalign=64, Order=0-3, MinObjects=0, CPUs=1, Nodes=1
+[    0.000000] Preemptible hierarchical RCU implementation.
+[    0.000000] 	Additional per-CPU info printed with stalls.
+[    0.000000] 	RCU restricting CPUs from NR_CPUS=4 to nr_cpu_ids=1.
+[    0.000000] RCU: Adjusting geometry for rcu_fanout_leaf=16, nr_cpu_ids=1
+[    0.000000] NR_IRQS:16 nr_irqs:16 16
+[    0.000000] L2C-310 erratum 769419 enabled
+[    0.000000] L2C-310 enabling early BRESP for Cortex-A9
+[    0.000000] L2C-310: enabling full line of zeros but not enabled in Cortex-A9
+[    0.000000] L2C-310 ID prefetch enabled, offset 16 lines
+[    0.000000] L2C-310 dynamic clock gating enabled, standby mode enabled
+[    0.000000] L2C-310 cache controller enabled, 16 ways, 256 kB
+[    0.000000] L2C-310: CACHE_ID 0x410000c8, AUX_CTRL 0x76430001
+[    0.000000] mxc_clocksource_init 3000000
+[    0.000000] Switching to timer-based delay loop, resolution 333ns
+[    0.000006] sched_clock: 32 bits at 3000kHz, resolution 333ns, wraps every 715827882841ns
+[    0.000024] clocksource mxc_timer1: mask: 0xffffffff max_cycles: 0xffffffff, max_idle_ns: 637086815595 ns
+[    0.001004] Console: colour dummy device 80x30
+[    0.001021] Calibrating delay loop (skipped), value calculated using timer frequency.. 6.00 BogoMIPS (lpj=30000)
+[    0.001035] pid_max: default: 32768 minimum: 301
+[    0.001139] Mount-cache hash table entries: 1024 (order: 0, 4096 bytes)
+[    0.001151] Mountpoint-cache hash table entries: 1024 (order: 0, 4096 bytes)
+[    0.001697] Initializing cgroup subsys memory
+[    0.001747] CPU: Testing write buffer coherency: ok
+[    0.001969] CPU0: thread -1, cpu 0, socket 0, mpidr 80000000
+[    0.002042] Setting up static identity map for 0x80008280 - 0x800082d8
+[    0.060209] Brought up 1 CPUs
+[    0.060225] SMP: Total of 1 processors activated (6.00 BogoMIPS).
+[    0.060233] CPU: All CPU(s) started in SVC mode.
+[    0.060703] devtmpfs: initialized
+[    0.067308] VFP support v0.3: implementor 41 architecture 3 part 30 variant 9 rev 4
+[    0.069412] clocksource jiffies: mask: 0xffffffff max_cycles: 0xffffffff, max_idle_ns: 19112604462750000 ns
+[    0.069758] pinctrl core: initialized pinctrl subsystem
+[    0.070781] NET: Registered protocol family 16
+[    0.071627] DMA: preallocated 256 KiB pool for atomic coherent allocations
+[    0.100301] cpuidle: using governor ladder
+[    0.130323] cpuidle: using governor menu
+[    0.145815] hw-breakpoint: found 5 (+1 reserved) breakpoint and 1 watchpoint registers.
+[    0.145829] hw-breakpoint: maximum watchpoint size is 4 bytes.
+[    0.148410] imx6sll-pinctrl 20e0000.iomuxc: initialized IMX pinctrl driver
+[    0.193725] SCSI subsystem initialized
+[    0.193955] libata version 3.00 loaded.
+[    0.194252] usbcore: registered new interface driver usbfs
+[    0.194324] usbcore: registered new interface driver hub
+[    0.194413] usbcore: registered new device driver usb
+[    0.195892] bd71827 0-004b: Device ID=0x31
+[    0.197511] bd71827 0-004b: BD71827_REG_INT_STAT_00=0x54 
+[    0.198323] bd71827 0-004b: BD71827_REG_INT_STAT_01=0x00 
+[    0.199131] bd71827 0-004b: BD71827_REG_INT_STAT_02=0x0F 
+[    0.199935] bd71827 0-004b: BD71827_REG_INT_STAT_03=0x40 
+[    0.200782] bd71827 0-004b: BD71827_REG_INT_STAT_04=0x00 
+[    0.201593] bd71827 0-004b: BD71827_REG_INT_STAT_05=0x80 
+[    0.202402] bd71827 0-004b: BD71827_REG_INT_STAT_06=0x00 
+[    0.203206] bd71827 0-004b: BD71827_REG_INT_STAT_07=0x00 
+[    0.204009] bd71827 0-004b: BD71827_REG_INT_STAT_08=0x02 
+[    0.204813] bd71827 0-004b: BD71827_REG_INT_STAT_09=0x00 
+[    0.205616] bd71827 0-004b: BD71827_REG_INT_STAT_10=0x00 
+[    0.206419] bd71827 0-004b: BD71827_REG_INT_STAT_11=0x00 
+[    0.207224] bd71827 0-004b: BD71827_REG_INT_STAT_12=0x00 
+[    0.208028] bd71827 0-004b: BD71827_REG_INT_STAT_13=0x00 
+[    0.208039] bd71827 0-004b: RESET_REASON = 0x1
+[    0.208052] bd71827 0-004b: Reboot Reason: SOFTWARE_RESTART     Software Shutdown
+[    0.208454] bd71827 0-004b: gpio_intr = 120 
+[    0.208466] bd71827 0-004b: chip_irq=148 
+[    0.214887] bd71827-pmic bd71827-pmic: regulator register name 'buck1'
+[    0.216641] bd71827-pmic bd71827-pmic: regulator register name 'buck2'
+[    0.218341] bd71827-pmic bd71827-pmic: regulator register name 'buck3'
+[    0.219190] bd71827-pmic bd71827-pmic: regulator register name 'buck4'
+[    0.220054] bd71827-pmic bd71827-pmic: regulator register name 'buck5'
+[    0.220943] bd71827-pmic bd71827-pmic: regulator register name 'ldo1'
+[    0.221797] bd71827-pmic bd71827-pmic: regulator register name 'ldo2'
+[    0.222684] bd71827-pmic bd71827-pmic: regulator register name 'ldo3'
+[    0.223311] bd71827-pmic bd71827-pmic: regulator register name 'ldo4'
+[    0.224166] bd71827-pmic bd71827-pmic: regulator register name 'ldo5'
+[    0.225016] bd71827-pmic bd71827-pmic: regulator register name 'ldo6'
+[    0.225600] bd71827-pmic bd71827-pmic: regulator register name 'ldosnvs'
+[    0.226037] bd71827-pmic bd71827-pmic: Buck0: DVS Run-Idle-Susp[1100000 - 900000 - 900000].
+[    0.227212] bd71827-pmic bd71827-pmic: Buck1: DVS Run-Idle-Susp[1100000 - 900000 - 900000].
+[    0.229849] i2c i2c-0: IMX I2C adapter registered
+[    0.229870] i2c i2c-0: can't use DMA
+[    0.230579] i2c i2c-1: IMX I2C adapter registered
+[    0.230602] i2c i2c-1: can't use DMA
+[    0.231124] i2c i2c-2: IMX I2C adapter registered
+[    0.231141] i2c i2c-2: can't use DMA
+[    0.231274] Linux video capture interface: v2.00
+[    0.231358] pps_core: LinuxPPS API ver. 1 registered
+[    0.231367] pps_core: Software ver. 5.3.6 - Copyright 2005-2007 Rodolfo Giometti <giometti@linux.it>
+[    0.231396] PTP clock support registered
+[    0.232413] MIPI CSI2 driver module loaded
+[    0.232593] Advanced Linux Sound Architecture Driver Initialized.
+[    0.233424] Bluetooth: Core ver 2.20
+[    0.233475] NET: Registered protocol family 31
+[    0.233484] Bluetooth: HCI device and connection manager initialized
+[    0.233501] Bluetooth: HCI socket layer initialized
+[    0.233512] Bluetooth: L2CAP socket layer initialized
+[    0.233555] Bluetooth: SCO socket layer initialized
+[    0.234418] Switched to clocksource mxc_timer1
+[    0.236547] cfg80211: World regulatory domain updated:
+[    0.236560] cfg80211:  DFS Master region: unset
+[    0.236567] cfg80211:   (start_freq - end_freq @ bandwidth), (max_antenna_gain, max_eirp), (dfs_cac_time)
+[    0.236579] cfg80211:   (2402000 KHz - 2472000 KHz @ 40000 KHz), (N/A, 2000 mBm), (N/A)
+[    0.236590] cfg80211:   (2457000 KHz - 2482000 KHz @ 20000 KHz, 92000 KHz AUTO), (N/A, 2000 mBm), (N/A)
+[    0.236600] cfg80211:   (2474000 KHz - 2494000 KHz @ 20000 KHz), (N/A, 2000 mBm), (N/A)
+[    0.236611] cfg80211:   (5170000 KHz - 5250000 KHz @ 80000 KHz, 160000 KHz AUTO), (N/A, 2000 mBm), (N/A)
+[    0.236621] cfg80211:   (5250000 KHz - 5330000 KHz @ 80000 KHz, 160000 KHz AUTO), (N/A, 2000 mBm), (0 s)
+[    0.236631] cfg80211:   (5490000 KHz - 5730000 KHz @ 160000 KHz), (N/A, 2000 mBm), (0 s)
+[    0.236640] cfg80211:   (5735000 KHz - 5835000 KHz @ 80000 KHz), (N/A, 2000 mBm), (N/A)
+[    0.236649] cfg80211:   (57240000 KHz - 63720000 KHz @ 2160000 KHz), (N/A, 0 mBm), (N/A)
+[    0.243460] idme_init: hwid = 12
+[    0.243485] idme_init: alscal2 = 0
+[    0.243501] idme_init: alscal1 = 0
+[    0.243561] idme_init: vcom = -2730000
+[    0.243627] idme_init: main 5
+[    0.243635] idme_init: can't read bootmode err=-22
+[    0.243715] idme_init: read serial successfully
+[    0.243732] idme_init: read board_id successfully
+[    0.243998] NET: Registered protocol family 2
+[    0.244629] TCP established hash table entries: 4096 (order: 2, 16384 bytes)
+[    0.244680] TCP bind hash table entries: 4096 (order: 3, 32768 bytes)
+[    0.244748] TCP: Hash tables configured (established 4096 bind 4096)
+[    0.244808] UDP hash table entries: 256 (order: 1, 8192 bytes)
+[    0.244832] UDP-Lite hash table entries: 256 (order: 1, 8192 bytes)
+[    0.244991] NET: Registered protocol family 1
+[    0.245284] RPC: Registered named UNIX socket transport module.
+[    0.245296] RPC: Registered udp transport module.
+[    0.245302] RPC: Registered tcp transport module.
+[    0.245309] RPC: Registered tcp NFSv4.1 backchannel transport module.
+[    0.245521] Trying to unpack rootfs image as initramfs...
+[    0.268563] Freeing initrd memory: 6428K (9e6a5000 - 9ecec000)
+[    0.270802] Bus freq driver module loaded
+[    0.271997] qbblk(storage): Enabled per clock
+[    0.272017] qbblk(storage): Enabled ipg clock
+[    0.272034] qbblk(storage): Enabled ahb clock
+[    0.272055] qbblk(storage): Enabled epit clock
+[    0.272065] qbblk(storage): Set pinctrl
+[    0.273004] futex hash table entries: 256 (order: 2, 16384 bytes)
+[    0.280039] VFS: Disk quotas dquot_6.6.0
+[    0.280225] VFS: Dquot-cache hash table entries: 1024 (order 0, 4096 bytes)
+[    0.281656] squashfs: version 4.0 (2009/01/31) Phillip Lougher
+[    0.282424] NFS: Registering the id_resolver key type
+[    0.282475] Key type id_resolver registered
+[    0.282484] Key type id_legacy registered
+[    0.282571] jffs2: version 2.2. (NAND) Â© 2001-2006 Red Hat, Inc.
+[    0.283274] fuse init (API version 7.23)
+[    0.287663] io scheduler noop registered
+[    0.287682] io scheduler deadline registered
+[    0.287870] io scheduler cfq registered (default)
+[    0.290028] MIPI DSI driver module loaded
+[    0.290186] MIPI DSI driver module loaded
+[    0.292124] imx-sdma 20ec000.sdma: no event needs to be remapped
+[    0.292268] imx-sdma 20ec000.sdma: loaded firmware 3.3
+[    0.294747] imx-sdma 20ec000.sdma: initialized
+[    0.295630] reg-virt-consumer regulator-virtuals:virt-buck1: attached: buck1
+[    0.296018] reg-virt-consumer regulator-virtuals:virt-buck2: attached: buck2
+[    0.296392] reg-virt-consumer regulator-virtuals:virt-buck3: attached: buck3
+[    0.296756] reg-virt-consumer regulator-virtuals:virt-buck4: attached: buck4
+[    0.297112] reg-virt-consumer regulator-virtuals:virt-buck5: attached: buck5
+[    0.297482] reg-virt-consumer regulator-virtuals:virt-ldo1: attached: ldo1
+[    0.297849] reg-virt-consumer regulator-virtuals:virt-ldo2: attached: ldo2
+[    0.297962] reg-virt-consumer regulator-virtuals:virt-ldo3: attached: ldo3
+[    0.298090] reg-virt-consumer regulator-virtuals:virt-ldo4: attached: ldo4
+[    0.298198] reg-virt-consumer regulator-virtuals:virt-ldo5: attached: ldo5
+[    0.298556] reg-virt-consumer regulator-virtuals:virt-ldo6: attached: ldo6
+[    0.298927] reg-virt-consumer regulator-virtuals:virt-ldosnvs: attached: ldosnvs
+[    0.299880] 2020000.serial: ttymxc0 at MMIO 0x2020000 (irq = 18, base_baud = 250000) is a IMX
+[    0.322784] console [ttymxc0] enabled
+[    0.323412] 2034000.serial: ttymxc2 at MMIO 0x2034000 (irq = 19, base_baud = 250000) is a IMX
+[    0.358204] imx-rng 21b4000.rngb: iMX RNG Registered.
+[    0.358401] [drm] Initialized drm 1.1.0 20060810
+[    0.358885] [drm] Initialized vivante 1.0.0 20120216 on minor 0
+[    0.368741] brd: module loaded
+[    0.373589] loop: module loaded
+[    0.374121] zram: Created 1 device(s)
+[    0.374337] bt_pwrctrl_init called..
+[    0.374679] 
+bt_reset pin obtained is 51
+[    0.374699] 
+bt_dev_wake pin obtained is 116
+[    0.374713] 
+bt_host_wake pin obtained is 93
+[    0.374733] IRQ# for BT HOST WAKE: 119
+[    0.378790] bt_pwrctrl_probe probe successful
+[    0.378917] frontlight /dev entries driver
+[    0.382366] misc frontlight: new frontlight device (backlight:bl) registered.
+[    0.386857] CAN device driver interface
+[    0.388463] ehci_hcd: USB 2.0 'Enhanced' Host Controller (EHCI) Driver
+[    0.388503] ehci-mxc: Freescale On-Chip EHCI Host driver
+[    0.388680] usbcore: registered new interface driver usb-storage
+[    0.389643] 2184800.usbmisc supply vbus-wakeup not found, using dummy regulator
+[    0.390833] mousedev: PS/2 mouse device common for all mice
+[    0.391598] input: 20cc000.snvs:snvs-powerkey as /devices/soc0/soc/2000000.aips-bus/20cc000.snvs/20cc000.snvs:snvs-powerkey/input/input0
+[    0.393088] bd71827-rtc bd71827-rtc: Enabling rtc-bd71827.
+[    0.398170] bd71827-rtc bd71827-rtc: rtc core: registered bd71827-rtc as rtc0
+[    0.398632] bd71827-rtc probe time: 126:10:22-16:13:56:
+[    0.399334] snvs_rtc 20cc000.snvs:snvs-rtc-lp: rtc core: registered 20cc000.snvs:snvs-r as rtc1
+[    0.399498] i2c /dev entries driver
+[    0.400570] IR NEC protocol handler initialized
+[    0.400588] IR RC5(x/sz) protocol handler initialized
+[    0.400600] IR RC6 protocol handler initialized
+[    0.400611] IR JVC protocol handler initialized
+[    0.400623] IR Sony protocol handler initialized
+[    0.400634] IR SANYO protocol handler initialized
+[    0.400646] IR Sharp protocol handler initialized
+[    0.400658] IR MCE Keyboard/mouse protocol handler initialized
+[    0.400668] IR XMP protocol handler initialized
+[    0.401908] max14656 2-0035: detected revision 15
+[    0.403292] bd71827_set_battery_parameters found battType:4, battID:0x52
+[    0.406589] bd71827_safe_charging_control on_off:0
+[    0.416387] input: bd71827-power as /devices/soc0/soc/2100000.aips-bus/21a0000.i2c/i2c-0/0-004b/bd71827-power/input/input1
+[    0.429289] usb_gadget_chg_det_sync
+[    0.431512] imx2-wdt 20bc000.wdog: use WDOG_B to reboot.
+[    0.432224] imx2-wdt 20bc000.wdog: timeout 60 sec (nowayout=0)
+[    0.433033] softdog: Software Watchdog Timer: 0.08 initialized. soft_noboot=0 soft_margin=60 sec soft_panic=0 (nowayout=0)
+[    0.433082] Bluetooth: HCI UART driver ver 2.3
+[    0.433194] Bluetooth: HCI UART protocol H4 registered
+[    0.433203] Bluetooth: HCI UART protocol BCSP registered
+[    0.433229] Bluetooth: HCI UART protocol ATH3K registered
+[    0.433494] usbcore: registered new interface driver bcm203x
+[    0.433728] usbcore: registered new interface driver btusb
+[    0.433949] usbcore: registered new interface driver ath3k
+[    0.434756] sdhci: Secure Digital Host Controller Interface driver
+[    0.434785] sdhci: Copyright(c) Pierre Ossman
+[    0.434801] sdhci-pltfm: SDHCI platform and OF driver helper
+[    0.437424] /soc/aips-bus@02100000/usdhc@02190000: voltage-ranges unspecified
+[    0.437656] sdhci-esdhc-imx 2190000.usdhc: assigned as wifi host
+[    0.438958] sdhci-esdhc-imx 2190000.usdhc: No vmmc regulator found
+[    0.438972] sdhci-esdhc-imx 2190000.usdhc: No vqmmc regulator found
+[    0.444574] kernel:pmic:clamp_soc:22,vbat:3723000
+[    0.484539] mmc0: SDHCI controller on 2190000.usdhc [2190000.usdhc] using ADMA
+[    0.497369] usbcore: registered new interface driver usbhid
+[    0.497381] usbhid: USB HID core driver
+[    0.589264] get_host_info: Found target host info
+[    0.589280] init_falcon_blk: Not Use interrupt
+[    0.614526]  mmcblk1: p1 p2 p3 p4 p5 p6 p7 p8 p9 p10 p10
+[    0.622446] NET: Registered protocol family 26
+[    0.622476] Netfilter messages via NETLINK v0.30.
+[    0.622517] nfnl_acct: registering with nfnetlink.
+[    0.622575] nf_conntrack version 0.5.0 (7843 buckets, 31372 max)
+[    0.623113] ctnetlink v0.93: registering with nfnetlink.
+[    0.623366] nf_tables: (c) 2007-2009 Patrick McHardy <kaber@trash.net>
+[    0.623385] nf_tables_compat: (c) 2012 Pablo Neira Ayuso <pablo@netfilter.org>
+[    0.623961] xt_time: kernel timezone is -0000
+[    0.623992] IPVS: Registered protocols ()
+[    0.624027] IPVS: Connection hash table configured (size=4096, memory=32Kbytes)
+[    0.624137] IPVS: Creating netns size=872 id=0
+[    0.624185] IPVS: ipvs loaded.
+[    0.624720] ip_tables: (C) 2000-2006 Netfilter Core Team
+[    0.624855] ipt_CLUSTERIP: ClusterIP Version 0.8 loaded successfully
+[    0.624903] arp_tables: (C) 2002 David S. Miller
+[    0.624962] NET: Registered protocol family 17
+[    0.624984] can: controller area network core (rev 20120528 abi 9)
+[    0.625063] NET: Registered protocol family 29
+[    0.625081] can: raw protocol (rev 20120528)
+[    0.625092] can: broadcast manager protocol (rev 20120528 t)
+[    0.625110] can: netlink gateway (rev 20130117) max_hops=1
+[    0.625387] Bluetooth: RFCOMM TTY layer initialized
+[    0.625408] Bluetooth: RFCOMM socket layer initialized
+[    0.625438] Bluetooth: RFCOMM ver 1.11
+[    0.625459] Bluetooth: BNEP (Ethernet Emulation) ver 1.3
+[    0.625468] Bluetooth: BNEP filters: protocol multicast
+[    0.625481] Bluetooth: BNEP socket layer initialized
+[    0.625492] Bluetooth: HIDP (Human Interface Emulation) ver 1.2
+[    0.625504] Bluetooth: HIDP socket layer initialized
+[    0.625572] 8021q: 802.1Q VLAN Support v1.8
+[    0.625627] Key type dns_resolver registered
+[    0.627103] cpu cpu0: dev_pm_opp_get_opp_count: device OPP not found (-19)
+[    0.634121] cpufreq: __cpufreq_add_dev: CPU0: Running at unlisted freq: 792000 KHz
+[    0.639718] cpufreq: __cpufreq_add_dev: CPU0: Unlisted initial frequency changed to: 996000 KHz
+[    0.684907] state=0
+[    1.136799] bd71827-rtc bd71827-rtc: setting system clock to 2026-11-22 16:13:57 UTC (1795364037)
+[    1.142089] ldo5: disabling
+[    1.142776] ldo4: disabling
+[    1.143211] eMMC_VCCQ: disabling
+[    1.143219] SD1_SPWR: disabling
+[    1.143375] ALSA device list:
+[    1.143383]   No soundcards found.
+[    1.143896] Freeing unused kernel memory: 360K (80b3c000 - 80b96000)
+[    1.150477] INFO:mount /dev/mmcblk1p2 to /mnt/wfm OK
+[    1.151474] INFO:find_file:165 Found 320_R278_AI4103_ED060KC4C3_TC.wrf.gz
+[    1.151525] INFO:find 1 waveform files
+[    1.151601] INFO:Loading: /lib/modules/mxc_epdc_v2_fb.ko waveform=320_R278_AI4103_ED060KC4C3_TC.wrf.gz
+[    1.155043] Panel VCOM settings: -2730000 hwid: 12
+[    1.188019] imx_epdc_v2_fb 20f4000.epdc: use reserved working buffer @ 0x9b000000
+[    1.210286] imx_epdc_v2_fb 20f4000.epdc: ok to request xon pins 109
+[    1.217144] requesting waveform imx/epdc/epdc_ED060KC4.fw
+[    1.226253] imx_epdc_v2_fb 20f4000.epdc: mxc_epdc_fb_fw_handler:  enter 
+[    1.226339] imx_epdc_v2_fb 20f4000.epdc: read_mnt_wfm_v2: waveform at /mnt/wfm/waveform_to_use/320_R278_AI4103_ED060KC4C3_TC.wrf.gz
+[    1.226353] imx_epdc_v2_fb 20f4000.epdc: read_mnt_wfm_v2: open file (/mnt/wfm/waveform_to_use/320_R278_AI4103_ED060KC4C3_TC.wrf.gz) ok size=94849
+[    1.229262] imx_epdc_v2_fb 20f4000.epdc: read_mnt_wfm_v2: read file OK
+[    1.245255] imx_epdc_v2_fb 20f4000.epdc: allocate 3261253 byte @ a2c29000 for waveform
+[    1.251044] imx_epdc_v2_fb 20f4000.epdc: long 70 xswi 31c326
+[    1.251065] imx_epdc_v2_fb 20f4000.epdc: copy (31c326 - 31bee8) byte @ offset 31bee8 to acd buffer
+[    1.251087] imx_epdc_v2_fb 20f4000.epdc: copy (31bee8 - 31b628) byte @ offset 31b628 to vcd buffer
+[    1.251096] imx_epdc_v2_fb 20f4000.epdc: Retrieved voltage control information (0x8c0)
+[    1.251106] imx_epdc_v2_fb 20f4000.epdc: epd_vc_data mode=9 temp=13 size = 16 waveform_mc=10 waveform_trc=14
+[    1.251116] imx_epdc_v2_fb 20f4000.epdc:  -- VC Data version 0x0004 : vddh_ext = 0x0000, vee_ext = 0x0028, xon_len = 0x00fb, xon_delay = 0x0008, 
+[    1.251127] imx_epdc_v2_fb 20f4000.epdc: vddh = 0x07d0, vee = 0x0640, vcom_offset = 0x0000, v_l = 0x0108, vpdd_len = 0x001e  cs = 0x0073--
+[    1.251139] imx_epdc_v2_fb 20f4000.epdc: epd_vc_data mode=8 temp=13 size = 16 waveform_mc=10 waveform_trc=14
+[    1.251149] imx_epdc_v2_fb 20f4000.epdc:  -- VC Data version 0x0004 : vddh_ext = 0x0000, vee_ext = 0x0028, xon_len = 0x00fb, xon_delay = 0x0008, 
+[    1.251159] imx_epdc_v2_fb 20f4000.epdc: vddh = 0x07d0, vee = 0x0640, vcom_offset = 0x0000, v_l = 0x0108, vpdd_len = 0x001e  cs = 0x0073--
+[    2.424820] max14656_detect_worker:320 0x00, 0x00, 0x00, 0x1f
+[    2.424835] max14656_detect_worker:323 chg_type=0b0000
+[    2.424844] pmic_current_event_handler:1194 max dcin current:450mA, ifst:550mA
+[    2.445071] no charger connected:358 bitflags: 0x00
+[    2.445080] turn off VBUS
+[    2.914452] imx_epdc_v2_fb 20f4000.epdc: Update region is outside bounds of framebuffer.Aborting update.
+[    2.924201] INFO:Loaded module /lib/modules/mxc_epdc_v2_fb.ko waveform=320_R278_AI4103_ED060KC4C3_TC.wrf.gz (152552 bytes)
+[    2.944218] INFO:eink initialized... (1575424 bytes)
+[    2.944385] INFO:is_production=1, is_unlocked=0, is_secure_cpu=1
+[    2.945241] INFO:Battery ID is valid
+[    2.948818] INFO:Battery percentage = 22
+[    2.950380] INFO:alloc_read_gpt_entries: count = 128 * 128 = 16384
+[    2.974508] INFO:Setup loop device /dev/loop0 for /dev/mmcblk1p10 + 8192
+[    2.975661] EXT4-fs (loop0): VFS: Can't find ext4 filesystem
+[    3.006810] INFO:Mounted /mnt-us (/dev/loop0) fs_type=vfat
+[    3.006936] INFO:Checking for updates... (auto-pilot mode)
+[    3.007108] INFO:No update*.bin found; no update needed.
+[    3.094483] INFO:no updates found.
+[    3.797509] screen update triggered SOC update skipped
+[    4.429241] EXT3-fs (mmcblk1p8): mounted filesystem with ordered data mode
+[    4.429399] kjournald starting.  Commit interval 5 seconds
+[    5.285241] random: head urandom read with 82 bits of entropy available
+[    5.440600] udevd (202): /proc/202/oom_adj is deprecated, please use /proc/202/oom_score_adj instead.
+[    5.611066] kernel:pmic:clamp_soc:23,vbat:3724000
+[    5.611079] bd_soc_update_work_callback: clamp_soc=23
+[    7.514459] random: nonblocking pool is initialized
+[    8.435212] falcon: module license 'newBSD' taints kernel.
+[    8.435228] Disabling lock debugging due to kernel taint
+[    8.436578] BIOS require 5103616 bytes buffer
+[    8.436744] Allocate new buffer area
+[    8.591598] EXT3-fs (mmcblk1p3): mounted filesystem with ordered data mode
+[    8.593748] kjournald starting.  Commit interval 5 seconds
+[    8.948484] EXT3-fs (mmcblk1p8): using internal journal
+[    8.965671] EXT3-fs (mmcblk1p9): using internal journal
+[    8.965688] EXT3-fs (mmcblk1p9): mounted filesystem with ordered data mode
+[    8.966897] kjournald starting.  Commit interval 5 seconds
+[   10.855913] <<-GTP-INFO->> GTP driver installing....
+[   10.861070] <<-GTP-INFO->> GTP Driver Version: V2.4.0.1<2016/10/26>
+[   10.861084] <<-GTP-INFO->> GTP I2C Address: 0x14
+[   10.861202] <<-GTP-INFO->> GTP power on.
+[   10.863069] <<-GTP-INFO->> Guitar reset
+[   11.083067] <<-GTP-INFO->> IC Version: 967_1077
+[   11.092523] <<-GTP-INFO->> X_MAX: 1072, Y_MAX: 1448, TRIGGER: 0x01
+[   11.104495] <<-GTP-INFO->> create proc entry touch success
+[   11.104718] <<-GTP-INFO->> create proc entry gt9xx_config success
+[   11.104727] <<-GTP-INFO->> Esd started
+[   11.104735] <<-GTP-INFO->> Ready to run update thread.
+[   11.106975] input: goodix-ts as /devices/virtual/input/input2
+[   11.108234] <<-GTP-INFO->> GTP works in interrupt mode.
+[   11.108255] <<-GTP-INFO->> Applied memory size:2562.
+[   11.108261] <<-GTP-INFO->> I2C function: without pre and end cmd!
+[   11.108276] <<-GTP-INFO->> Create proc entry success!
+[   11.125191] <<-GTP-INFO->> FILE CFG Ver:99
+[   11.125203] <<-GTP-INFO->> IC CFG Ver:99
+[   11.125208] <<-GTP-INFO->> File CFG Ver <= Ic CFG Ver, update config aborted!
+[   11.136708] <<-GTP-INFO->> FILE HARDWARE INFO:00016000
+[   11.136721] <<-GTP-INFO->> FILE PID:967
+[   11.136727] <<-GTP-INFO->> FILE VID:1077
+[   11.136733] <<-GTP-INFO->> IC HARDWARE INFO:00900600
+[   11.136738] <<-GTP-INFO->> IC PID:967
+[   11.136742] <<-GTP-INFO->> IC VID:1077
+[   11.136748] <<-GTP-INFO->> Firmware length:90112(88K)
+[   11.136754] <<-GTP-INFO->> Don't meet the third condition.
+[   11.136758] <<-GTP-INFO->> File VID <= Ic VID, update aborted!
+[   13.207895] Mass Storage Function, version: 2009/09/11
+[   13.207911] LUN: removable file: (no medium)
+[   13.207994] LUN: removable file: (no medium)
+[   13.208002] Number of LUNs=1
+[   13.208011] Number of LUNs=1
+[   13.208780] g_mass_storage gadget: Internal Storage, version: 2009/09/11
+[   13.208794] g_mass_storage gadget: g_mass_storage ready
+[   14.437312] zram0: detected capacity change from 0 to 134217728
+[   14.481340] Adding 131068k swap on /dev/zram0.  Priority:-1 extents:1 across:131068k SS
+[   32.502248] dhd_module_init in
+[   32.502280] dhd_module_init fw_image_unaligned=94500000 fw_image=94500000
+[   32.502311] brcm_wlan_power: setting gpio #[47] on
+[   32.655623] found wifi platform device bcmdhd_wlan
+[   32.656004] dhd_module_init out
+[   32.754019] mmc0: new high speed SDIO card at address 0001
+[   32.756757] alloc static buf at 9cbc0000!
+[   32.761283] DHD: dongle ram size is set to 524288(orig 524288) at 0x0
+[   32.761445] wifi_platform_get_mac_addr
+[   32.761470] brcm_wlan_get_country_code: WFO sku: cc=''
+[   32.826158] dhd_deferred_work_init: work queue initialized 
+[   32.829462] dhdsdio_download_code_file @4294940578: read fw to 94500000
+[   32.930921] dhdsdio_download_code_file @4294940588: finished download fw_image_size=369119
+[   32.931846] dhdsdio_download_nvram: len=1166 read
+[   32.931858] dhdsdio_download_nvram: len=1166 saved
+[   32.992491] dhd_bus_init: enable 0x06, ready 0x06 (waited 0us)
+[   32.992760] bcmsdh_oob_intr_register OOB irq=121 flags=4 
+[   32.993560] wifi_platform_get_mac_addr
+[   32.997818] Firmware up: op_mode=0x0005, MAC=0c:25:3e
+[   32.998254] dhd_preinit_ioctls:7847 wl ampdu_hostreorder failed -23
+[   33.048881] Firmware version = wl0: Mar 29 2021 18:23:27 version 7.45.102.16 (r728411 CY) FWID 01-361e1702
+[   33.052171] 
+Dongle Host Driver, version 1.363.110.23 (r)
+Compiled from 
+[   33.052727] Register interface [wlan0]  MAC: 0c:25:3e
+
+[   33.113480] kernel:pmic:clamp_soc:22,vbat:3692000
+[   33.113495] bd_soc_update_work_callback: clamp_soc=22
+[   36.173213] Connecting with 10:fc:a5 ssid "å*******‹" len (9) channel=1
+
+[   36.196565] wl_bss_connect_done succeeded with 10:fc:a5
+[   36.228457] wl_bss_connect_done succeeded with 10:fc:a5
+[   36.240125] screen update triggered SOC update skipped
+[   36.455992] screen update triggered SOC update skipped
+[   36.729749] bd_soc_update_work_callback: clamp_soc=22
+[   38.238705] screen update triggered SOC update skipped
+[   38.390775] bd71827-rtc bd71827-rtc: bd71827_rtc_set_time, rtc time set to 2026-11-22 16:14:34
+[   38.391310] bd71827-rtc bd71827-rtc: bd71827_rtc_alarm_irq_enable: disable rtc alarm
+[   38.484323] screen update triggered SOC update skipped
+[   39.361706] screen update triggered SOC update skipped
+[   39.991882] bd_soc_update_work_callback: clamp_soc=22
+[   41.148161] screen update triggered SOC update skipped
+[   42.064919] screen update triggered SOC update skipped
+[   42.861614] bd_soc_update_work_callback: clamp_soc=22
+[   43.877259] screen update triggered SOC update skipped
+[   44.769527] screen update triggered SOC update skipped
+[   45.461670] bd_soc_update_work_callback: clamp_soc=22
+[   46.586014] screen update triggered SOC update skipped
+[   47.493159] screen update triggered SOC update skipped
+[   48.189908] bd_soc_update_work_callback: clamp_soc=22
+[   49.306199] screen update triggered SOC update skipped
+[   50.216171] screen update triggered SOC update skipped
+[   50.900857] bd_soc_update_work_callback: clamp_soc=22
+[   52.023291] screen update triggered SOC update skipped
+[   52.934574] screen update triggered SOC update skipped
+[   53.620641] bd_soc_update_work_callback: clamp_soc=22
+[   54.738465] screen update triggered SOC update skipped
+[   55.645652] screen update triggered SOC update skipped
+[   56.341149] bd_soc_update_work_callback: clamp_soc=22
+[   57.458482] screen update triggered SOC update skipped
+[   58.372275] screen update triggered SOC update skipped
+[   59.049764] bd_soc_update_work_callback: clamp_soc=22
+[   60.206680] screen update triggered SOC update skipped
+[   61.096603] screen update triggered SOC update skipped
+[   61.801124] bd_soc_update_work_callback: clamp_soc=22
+[   62.907615] screen update triggered SOC update skipped
+[   63.856690] screen update triggered SOC update skipped
+[   64.520127] bd_soc_update_work_callback: clamp_soc=22
+[   65.666629] screen update triggered SOC update skipped
+[   66.567589] screen update triggered SOC update skipped
+[   67.291201] bd_soc_update_work_callback: clamp_soc=22
+[   68.385788] screen update triggered SOC update skipped
+[   69.286191] screen update triggered SOC update skipped
+[   69.979603] bd_soc_update_work_callback: clamp_soc=22
+[   71.116666] screen update triggered SOC update skipped
+[   72.036627] screen update triggered SOC update skipped
+[   72.851152] bd_soc_update_work_callback: clamp_soc=22
+[   73.846664] screen update triggered SOC update skipped
+[   74.734142] screen update triggered SOC update skipped
+[   75.409820] kernel:pmic:clamp_soc:21,vbat:3674000
+[   75.409833] bd_soc_update_work_callback: clamp_soc=21
+[   78.149752] bd_soc_update_work_callback: clamp_soc=21
+[   90.094865] nf_conntrack: automatic helper assignment is deprecated and it will be removed soon. Use the iptables CT target to attach helpers instead.
+[  123.521903] screen update triggered SOC update skipped
+[  125.420180] bd_soc_update_work_callback: clamp_soc=21
+[  148.941015] screen update triggered SOC update skipped
+[  149.451972] screen update triggered SOC update skipped
+[  150.630989] bd_soc_update_work_callback: clamp_soc=21
+[  152.684191] screen update triggered SOC update skipped
+[  154.155709] screen update triggered SOC update skipped
+[  154.969874] bd_soc_update_work_callback: clamp_soc=21
+[  188.940944] bd_soc_update_work_callback: clamp_soc=21
+[  218.643849] screen update triggered SOC update skipped
+[  219.194236] screen update triggered SOC update skipped
+[  219.830172] screen update triggered SOC update skipped
+[  220.339444] bd_soc_update_work_callback: clamp_soc=21
+[  220.978288] screen update triggered SOC update skipped
+[  221.576455] screen update triggered SOC update skipped
+[  222.909408] bd_soc_update_work_callback: clamp_soc=21
+[  234.168280] screen update triggered SOC update skipped
+[  234.721377] screen update triggered SOC update skipped
+[  236.199555] bd_soc_update_work_callback: clamp_soc=21
+[  248.911211] bd_soc_update_work_callback: clamp_soc=21
+[  249.194140] usb_gadget_chg_det_sync
+[  249.195498] max14656_detect_worker:320 0x63, 0x00, 0x12, 0x1f
+[  249.195511] max14656_detect_worker:323 chg_type=0b0010
+[  249.195521] pmic_current_event_handler:1194 max dcin current:900mA, ifst:1000mA
+[  249.215917] charger connected:335 bitflags: 0x04
+[  249.217078] turn on VBUS
+[  249.222414] state=2
+[  249.222445] usb_gadget_state_work: gadget state: powered
+[  249.373292] screen update triggered SOC update skipped
+[  249.395885] state=8
+[  249.395938] usb_gadget_state_work: gadget state: suspended
+[  249.526330] state=5
+[  249.571869] state=6
+[  249.571924] usb_gadget_state_work: gadget state: addressed
+[  249.571960] **usb_gadget_state_work: request high bus
+[  249.592506] g_mass_storage gadget: high-speed config #1: Linux File-Backed Storage
+[  249.592522] state=7
+[  249.592634] usb_gadget_state_work: gadget state: configured
+[  249.592679] send_online_uevent:1012 bitflags: 0x00, recovery_mode: 0
+[  251.256239] fsg_store_file:448, file=/dev/loop/0
+[  251.299053] CFG80211-ERROR) wl_cfg80211_disconnect : Reason 3
+[  251.302255] CFG80211-ERROR) wl_is_linkdown : Link down Reason : WLC_E_LINK
+[  251.302281] link down if wlan0 may call cfg80211_disconnected. event : 16, reason=2 from 10:fc:a5
+[  251.303392] CFG80211-ERROR) wl_cfg80211_reg_notifier : reg_notifier for intiator:0 not supported : set default
+[  251.303407] CFG80211-ERROR) wl_cfg80211_reg_notifier : Set country code 0* from User
+[  251.305370] brcm_wlan_get_country_code: WFO sku: cc='00'
+[  251.321780] WLDEV-ERROR) wldev_set_country : wldev_set_country: set country for 0* as X* rev 47
+[  251.414515] cfg80211: World regulatory domain updated:
+[  251.414529] cfg80211:  DFS Master region: unset
+[  251.414535] cfg80211:   (start_freq - end_freq @ bandwidth), (max_antenna_gain, max_eirp), (dfs_cac_time)
+[  251.414545] cfg80211:   (2402000 KHz - 2472000 KHz @ 40000 KHz), (N/A, 2000 mBm), (N/A)
+[  251.414555] cfg80211:   (2457000 KHz - 2482000 KHz @ 20000 KHz, 92000 KHz AUTO), (N/A, 2000 mBm), (N/A)
+[  251.414564] cfg80211:   (2474000 KHz - 2494000 KHz @ 20000 KHz), (N/A, 2000 mBm), (N/A)
+[  251.414573] cfg80211:   (5170000 KHz - 5250000 KHz @ 80000 KHz, 160000 KHz AUTO), (N/A, 2000 mBm), (N/A)
+[  251.414582] cfg80211:   (5250000 KHz - 5330000 KHz @ 80000 KHz, 160000 KHz AUTO), (N/A, 2000 mBm), (0 s)
+[  251.414590] cfg80211:   (5490000 KHz - 5730000 KHz @ 160000 KHz), (N/A, 2000 mBm), (0 s)
+[  251.414597] cfg80211:   (5735000 KHz - 5835000 KHz @ 80000 KHz), (N/A, 2000 mBm), (N/A)
+[  251.414605] cfg80211:   (57240000 KHz - 63720000 KHz @ 2160000 KHz), (N/A, 0 mBm), (N/A)
+[  251.853277] bd_soc_update_work_callback: clamp_soc=21
+[  252.650663] screen update triggered SOC update skipped
+[  254.529472] bd_soc_update_work_callback: clamp_soc=21
+[  254.625683] fsg_suspend:3470
+[  254.628582] state=8
+[  254.628606] usb_gadget_state_work: gadget state: suspended
+[  254.753070] state=5
+[  254.753158] send_offline_uevent:996 bitflags: 0x0a, unplug_state: 1, recovery_mode: 0
+[  254.799803] state=6
+[  254.799887] usb_gadget_state_work: gadget state: addressed
+[  254.819811] g_mass_storage gadget: high-speed config #1: Linux File-Backed Storage
+[  254.819838] state=7
+[  254.819935] usb_gadget_state_work: gadget state: configured
+[  254.820011] send_online_uevent:1012 bitflags: 0x08, recovery_mode: 0
+[  254.920452] fsg_store_file:448, file=
+[  256.198934] screen update triggered SOC update skipped
+[  256.682197] Connecting with 10:fc:a5 ssid "å*******‹" len (9) channel=1
+
+[  256.710235] wl_bss_connect_done succeeded with 10:fc:a5
+[  256.775421] screen update triggered SOC update skipped
+[  256.791119] wl_bss_connect_done succeeded with 10:fc:a5
+[  257.657823] screen update triggered SOC update skipped
+[  257.918908] screen update triggered SOC update skipped
+[  258.081249] bd_soc_update_work_callback: clamp_soc=21
+[  258.328362] fsg_store_file:448, file=/dev/loop/0
+[  258.426510] CFG80211-ERROR) wl_cfg80211_disconnect : Reason 3
+[  258.436250] CFG80211-ERROR) wl_is_linkdown : Link down Reason : WLC_E_LINK
+[  258.440137] CFG80211-ERROR) wl_cfg80211_cancel_scan : Scan aborted! 
+[  258.440189] link down if wlan0 may call cfg80211_disconnected. event : 16, reason=2 from 10:fc:a5
+[  258.441629] CFG80211-ERROR) wl_escan_handler : escan is not ready ndev 94448000 drv_status 0x0 e_type 69 e_states 4
+[  258.442991] CFG80211-ERROR) wl_cfg80211_reg_notifier : reg_notifier for intiator:0 not supported : set default
+[  258.443006] CFG80211-ERROR) wl_cfg80211_reg_notifier : Set country code 0* from User
+[  258.444678] brcm_wlan_get_country_code: WFO sku: cc='00'
+[  258.461144] WLDEV-ERROR) wldev_set_country : wldev_set_country: set country for 0* as X* rev 47
+[  258.584300] cfg80211: World regulatory domain updated:
+[  258.584318] cfg80211:  DFS Master region: unset
+[  258.584324] cfg80211:   (start_freq - end_freq @ bandwidth), (max_antenna_gain, max_eirp), (dfs_cac_time)
+[  258.584334] cfg80211:   (2402000 KHz - 2472000 KHz @ 40000 KHz), (N/A, 2000 mBm), (N/A)
+[  258.584344] cfg80211:   (2457000 KHz - 2482000 KHz @ 20000 KHz, 92000 KHz AUTO), (N/A, 2000 mBm), (N/A)
+[  258.584353] cfg80211:   (2474000 KHz - 2494000 KHz @ 20000 KHz), (N/A, 2000 mBm), (N/A)
+[  258.584361] cfg80211:   (5170000 KHz - 5250000 KHz @ 80000 KHz, 160000 KHz AUTO), (N/A, 2000 mBm), (N/A)
+[  258.584370] cfg80211:   (5250000 KHz - 5330000 KHz @ 80000 KHz, 160000 KHz AUTO), (N/A, 2000 mBm), (0 s)
+[  258.584377] cfg80211:   (5490000 KHz - 5730000 KHz @ 160000 KHz), (N/A, 2000 mBm), (0 s)
+[  258.584385] cfg80211:   (5735000 KHz - 5835000 KHz @ 80000 KHz), (N/A, 2000 mBm), (N/A)
+[  258.584393] cfg80211:   (57240000 KHz - 63720000 KHz @ 2160000 KHz), (N/A, 0 mBm), (N/A)
+[  260.386249] screen update triggered SOC update skipped
+[  262.269412] bd_soc_update_work_callback: clamp_soc=21
+[  310.132612] fsg_suspend:3470
+[  310.135531] state=8
+[  310.137130] usb_gadget_state_work: gadget state: suspended
+[  310.263269] state=5
+[  310.263432] send_offline_uevent:996 bitflags: 0x0a, unplug_state: 1, recovery_mode: 0
+[  310.309967] state=6
+[  310.310050] usb_gadget_state_work: gadget state: addressed
+[  310.330612] g_mass_storage gadget: high-speed config #1: Linux File-Backed Storage
+[  310.330641] state=7
+[  310.330737] usb_gadget_state_work: gadget state: configured
+[  310.330814] send_online_uevent:1012 bitflags: 0x08, recovery_mode: 0
+[  310.454657] fsg_store_file:448, file=
+[  311.827592] screen update triggered SOC update skipped
+[  312.407329] screen update triggered SOC update skipped
+[  312.421858] Connecting with 10:fc:a5 ssid "å*******‹" len (9) channel=1
+
+[  312.452520] wl_bss_connect_done succeeded with 10:fc:a5
+[  312.493771] wl_bss_connect_done succeeded with 10:fc:a5
+[  313.680007] fsg_store_file:448, file=/dev/loop/0
+[  313.716503] CFG80211-ERROR) wl_cfg80211_disconnect : Reason 3
+[  313.723375] CFG80211-ERROR) wl_is_linkdown : Link down Reason : WLC_E_LINK
+[  313.723402] link down if wlan0 may call cfg80211_disconnected. event : 16, reason=2 from 10:fc:a5
+[  313.724073] CFG80211-ERROR) wl_cfg80211_reg_notifier : reg_notifier for intiator:0 not supported : set default
+[  313.724089] CFG80211-ERROR) wl_cfg80211_reg_notifier : Set country code 0* from User
+[  313.725401] brcm_wlan_get_country_code: WFO sku: cc='00'
+[  313.744129] WLDEV-ERROR) wldev_set_country : 
+[  313.747379] bd_soc_update_work_callback: clamp_soc=21
+[  313.764537] wldev_set_country: set country for 0* as X* rev 47
+[  313.764555] cfg80211: World regulatory domain updated:
+[  313.764562] cfg80211:  DFS Master region: unset
+[  313.764567] cfg80211:   (start_freq - end_freq @ bandwidth), (max_antenna_gain, max_eirp), (dfs_cac_time)
+[  313.764577] cfg80211:   (2402000 KHz - 2472000 KHz @ 40000 KHz), (N/A, 2000 mBm), (N/A)
+[  313.764587] cfg80211:   (2457000 KHz - 2482000 KHz @ 20000 KHz, 92000 KHz AUTO), (N/A, 2000 mBm), (N/A)
+[  313.764596] cfg80211:   (2474000 KHz - 2494000 KHz @ 20000 KHz), (N/A, 2000 mBm), (N/A)
+[  313.764605] cfg80211:   (5170000 KHz - 5250000 KHz @ 80000 KHz, 160000 KHz AUTO), (N/A, 2000 mBm), (N/A)
+[  313.764613] cfg80211:   (5250000 KHz - 5330000 KHz @ 80000 KHz, 160000 KHz AUTO), (N/A, 2000 mBm), (0 s)
+[  313.764621] cfg80211:   (5490000 KHz - 5730000 KHz @ 160000 KHz), (N/A, 2000 mBm), (0 s)
+[  313.764629] cfg80211:   (5735000 KHz - 5835000 KHz @ 80000 KHz), (N/A, 2000 mBm), (N/A)
+[  313.764637] cfg80211:   (57240000 KHz - 63720000 KHz @ 2160000 KHz), (N/A, 0 mBm), (N/A)
+[  315.510301] screen update triggered SOC update skipped
+[  317.389451] bd_soc_update_work_callback: clamp_soc=21
+[  419.468406] fsg_suspend:3470
+[  419.471323] state=8
+[  419.471382] usb_gadget_state_work: gadget state: suspended
+[  419.536357] bd71827_safe_charging_control on_off:0
+[  419.540167] usb_gadget_chg_det_sync
+[  421.464447] Disconnect....
+[  421.464470] send_offline_uevent:996 bitflags: 0x0a, unplug_state: 1, recovery_mode: 0
+[  421.536171] max14656_detect_worker:320 0x63, 0x00, 0x00, 0x1f
+[  421.536187] max14656_detect_worker:323 chg_type=0b0000
+[  421.536197] pmic_current_event_handler:1194 max dcin current:450mA, ifst:550mA
+[  421.558068] no charger connected:358 bitflags: 0x06
+[  421.558093] fsg_resume:3511
+[  421.560992] state=0
+[  421.561046] send_offline_uevent:996 bitflags: 0x04, unplug_state: 1, recovery_mode: 0
+[  421.567471] fsg_store_file:448, file=
+[  421.569968] turn off VBUS
+[  421.572361] usb_gadget_state_work: gadget state: not attached
+[  421.572385] **usb_gadget_state_work: release high bus
+[  422.717938] screen update triggered SOC update skipped
+[  422.721700] screen update triggered SOC update skipped
+[  423.184779] Connecting with 10:fc:a5 ssid "å*******‹" len (9) channel=1
+
+[  423.207126] wl_bss_connect_done succeeded with 10:fc:a5
+[  423.286914] wl_bss_connect_done succeeded with 10:fc:a5
+[  423.296838] screen update triggered SOC update skipped
+[  424.160762] screen update triggered SOC update skipped
+[  424.579470] screen update triggered SOC update skipped
+[  424.637850] bd_soc_update_work_callback: clamp_soc=21
+[  424.920003] screen update triggered SOC update skipped
+[  424.941881] screen update triggered SOC update skipped
+[  425.914318] screen update triggered SOC update skipped
+[  426.090456] screen update triggered SOC update skipped
+[  427.076974] screen update triggered SOC update skipped
+[  427.239744] kernel:pmic:clamp_soc:20,vbat:3647000
+[  427.239759] bd_soc_update_work_callback: clamp_soc=20
+[  429.098482] CFG80211-ERROR) wl_cfg80211_reg_notifier : Set country code J* from User
+[  429.105649] brcm_wlan_get_country_code: WFO sku: cc='JP'
+[  429.109298] CFG80211-ERROR) wl_is_linkdown : Link down Reason : WLC_E_LINK
+[  429.109324] link down if wlan0 may call cfg80211_disconnected. event : 16, reason=2 from 10:fc:a5
+[  429.122975] WLDEV-ERROR) wldev_set_country : wldev_set_country: set country for J* as J* rev 125
+[  429.133800] cfg80211: Regulatory domain changed to country: J*
+[  429.133807] cfg80211:  DFS Master region: JP
+[  429.133812] cfg80211:   (start_freq - end_freq @ bandwidth), (max_antenna_gain, max_eirp), (dfs_cac_time)
+[  429.133823] cfg80211:   (2402000 KHz - 2482000 KHz @ 40000 KHz), (N/A, 2000 mBm), (N/A)
+[  429.133831] cfg80211:   (2474000 KHz - 2494000 KHz @ 20000 KHz), (N/A, 2000 mBm), (N/A)
+[  429.133838] cfg80211:   (4910000 KHz - 4990000 KHz @ 40000 KHz), (N/A, 2300 mBm), (N/A)
+[  429.133845] cfg80211:   (5030000 KHz - 5090000 KHz @ 40000 KHz), (N/A, 2300 mBm), (N/A)
+[  429.133855] cfg80211:   (5170000 KHz - 5250000 KHz @ 80000 KHz, 160000 KHz AUTO), (N/A, 2000 mBm), (N/A)
+[  429.133864] cfg80211:   (5250000 KHz - 5330000 KHz @ 80000 KHz, 160000 KHz AUTO), (N/A, 2000 mBm), (0 s)
+[  429.133872] cfg80211:   (5490000 KHz - 5710000 KHz @ 160000 KHz), (N/A, 2300 mBm), (0 s)
+[  429.133880] cfg80211:   (59000000 KHz - 66000000 KHz @ 2160000 KHz), (N/A, 1000 mBm), (N/A)
+[  429.172228] CFG80211-ERROR) wl_cfg80211_reg_notifier : reg_notifier for intiator:0 not supported : set default
+[  429.172247] CFG80211-ERROR) wl_cfg80211_reg_notifier : Set country code 0* from User
+[  429.172773] brcm_wlan_get_country_code: WFO sku: cc='00'
+[  429.189299] WLDEV-ERROR) wldev_set_country : wldev_set_country: set country for 0* as X* rev 47
+[  429.258944] cfg80211: World regulatory domain updated:
+[  429.258974] cfg80211:  DFS Master region: unset
+[  429.258988] cfg80211:   (start_freq - end_freq @ bandwidth), (max_antenna_gain, max_eirp), (dfs_cac_time)
+[  429.259014] cfg80211:   (2402000 KHz - 2472000 KHz @ 40000 KHz), (N/A, 2000 mBm), (N/A)
+[  429.259039] cfg80211:   (2457000 KHz - 2482000 KHz @ 20000 KHz, 92000 KHz AUTO), (N/A, 2000 mBm), (N/A)
+[  429.259058] cfg80211:   (2474000 KHz - 2494000 KHz @ 20000 KHz), (N/A, 2000 mBm), (N/A)
+[  429.259079] cfg80211:   (5170000 KHz - 5250000 KHz @ 80000 KHz, 160000 KHz AUTO), (N/A, 2000 mBm), (N/A)
+[  429.259101] cfg80211:   (5250000 KHz - 5330000 KHz @ 80000 KHz, 160000 KHz AUTO), (N/A, 2000 mBm), (0 s)
+[  429.259120] cfg80211:   (5490000 KHz - 5730000 KHz @ 160000 KHz), (N/A, 2000 mBm), (0 s)
+[  429.259139] cfg80211:   (5735000 KHz - 5835000 KHz @ 80000 KHz), (N/A, 2000 mBm), (N/A)
+[  429.259157] cfg80211:   (57240000 KHz - 63720000 KHz @ 2160000 KHz), (N/A, 0 mBm), (N/A)
+[  429.266534] CFG80211-ERROR) wl_cfg80211_reg_notifier : Set country code J* from User
+[  429.277224] brcm_wlan_get_country_code: WFO sku: cc='JP'
+[  429.305829] WLDEV-ERROR) wldev_set_country : wldev_set_country: set country for J* as J* rev 125
+[  429.313371] cfg80211: Regulatory domain changed to country: J*
+[  429.313387] cfg80211:  DFS Master region: JP
+[  429.313399] cfg80211:   (start_freq - end_freq @ bandwidth), (max_antenna_gain, max_eirp), (dfs_cac_time)
+[  429.313423] cfg80211:   (2402000 KHz - 2482000 KHz @ 40000 KHz), (N/A, 2000 mBm), (N/A)
+[  429.313443] cfg80211:   (2474000 KHz - 2494000 KHz @ 20000 KHz), (N/A, 2000 mBm), (N/A)
+[  429.313461] cfg80211:   (4910000 KHz - 4990000 KHz @ 40000 KHz), (N/A, 2300 mBm), (N/A)
+[  429.313479] cfg80211:   (5030000 KHz - 5090000 KHz @ 40000 KHz), (N/A, 2300 mBm), (N/A)
+[  429.313502] cfg80211:   (5170000 KHz - 5250000 KHz @ 80000 KHz, 160000 KHz AUTO), (N/A, 2000 mBm), (N/A)
+[  429.313524] cfg80211:   (5250000 KHz - 5330000 KHz @ 80000 KHz, 160000 KHz AUTO), (N/A, 2000 mBm), (0 s)
+[  429.313543] cfg80211:   (5490000 KHz - 5710000 KHz @ 160000 KHz), (N/A, 2300 mBm), (0 s)
+[  429.313560] cfg80211:   (59000000 KHz - 66000000 KHz @ 2160000 KHz), (N/A, 1000 mBm), (N/A)
+[  429.336420] CFG80211-ERROR) wl_escan_handler : unexpected Escan Event 10 : abort
+[  429.336537] Connecting with ff:ff:ff ssid "å*******‹" len (9) channel=0
+
+[  429.513064] Connecting with d4:02:1b ssid "å*******‹" len (9) channel=1
+
+[  429.519582] wl_bss_connect_done succeeded with d4:02:1b
+[  429.684914] wl_bss_connect_done succeeded with d4:02:1b
+[  432.845349] imx_epdc_v2_fb 20f4000.epdc: SW mitigation needed temp=23C battery = 20
+[  433.425841] screen update triggered SOC update skipped
+[  433.425866] imx_epdc_v2_fb 20f4000.epdc: SW mitigation needed temp=23C battery = 20
+[  435.363247] bd_soc_update_work_callback: clamp_soc=20
+[  436.060153] imx_epdc_v2_fb 20f4000.epdc: SW mitigation needed temp=23C battery = 20
+[  436.329933] screen update triggered SOC update skipped
+[  436.329959] imx_epdc_v2_fb 20f4000.epdc: SW mitigation needed temp=23C battery = 20
+[  437.764378] screen update triggered SOC update skipped
+[  437.764470] imx_epdc_v2_fb 20f4000.epdc: SW mitigation needed temp=23C battery = 20
+[  437.832916] screen update triggered SOC update skipped
+[  437.832942] imx_epdc_v2_fb 20f4000.epdc: SW mitigation needed temp=23C battery = 20
+[  438.559532] bd_soc_update_work_callback: clamp_soc=20
+[  439.538195] imx_epdc_v2_fb 20f4000.epdc: SW mitigation needed temp=23C battery = 20
+[  439.624273] screen update triggered SOC update skipped
+[  439.624299] imx_epdc_v2_fb 20f4000.epdc: SW mitigation needed temp=23C battery = 20
+[  440.504673] screen update triggered SOC update skipped
+[  440.504698] imx_epdc_v2_fb 20f4000.epdc: SW mitigation needed temp=23C battery = 20
+[  441.770790] wl_bss_connect_done succeeded with 10:fc:a5
+[  441.824384] wl_bss_roaming_done succeeded to 10:fc:a5
+[  441.900506] screen update triggered SOC update skipped
+[  441.900528] imx_epdc_v2_fb 20f4000.epdc: SW mitigation needed temp=23C battery = 20
+[  442.041544] bd_soc_update_work_callback: clamp_soc=20
+[  442.404201] imx_epdc_v2_fb 20f4000.epdc: SW mitigation needed temp=23C battery = 20
+[  443.667657] screen update triggered SOC update skipped
+[  443.667682] imx_epdc_v2_fb 20f4000.epdc: SW mitigation needed temp=23C battery = 20
+[  444.320974] screen update triggered SOC update skipped
+[  444.320999] imx_epdc_v2_fb 20f4000.epdc: SW mitigation needed temp=23C battery = 20
+[  444.900701] bd_soc_update_work_callback: clamp_soc=20
+[  445.141830] imx_epdc_v2_fb 20f4000.epdc: SW mitigation needed temp=23C battery = 20
+[  445.413309] screen update triggered SOC update skipped
+[  445.413336] imx_epdc_v2_fb 20f4000.epdc: SW mitigation needed temp=23C battery = 20
+[  445.997982] screen update triggered SOC update skipped
+[  445.998006] imx_epdc_v2_fb 20f4000.epdc: SW mitigation needed temp=23C battery = 20
+[  447.639649] bd_soc_update_work_callback: clamp_soc=20
+[  450.185724] imx_epdc_v2_fb 20f4000.epdc: SW mitigation needed temp=23C battery = 20
+[  450.726508] screen update triggered SOC update skipped
+[  450.726533] imx_epdc_v2_fb 20f4000.epdc: SW mitigation needed temp=24C battery = 20
+[  450.907234] screen update triggered SOC update skipped
+[  450.907258] imx_epdc_v2_fb 20f4000.epdc: SW mitigation needed temp=24C battery = 20
+[  450.912473] screen update triggered SOC update skipped
+[  450.912506] imx_epdc_v2_fb 20f4000.epdc: SW mitigation needed temp=24C battery = 20
+[  450.914952] screen update triggered SOC update skipped
+[  450.914982] imx_epdc_v2_fb 20f4000.epdc: SW mitigation needed temp=23C battery = 20
+[  452.689854] bd_soc_update_work_callback: clamp_soc=20
+[  456.184795] imx_epdc_v2_fb 20f4000.epdc: SW mitigation needed temp=24C battery = 20
+[  456.202317] screen update triggered SOC update skipped
+[  456.202353] imx_epdc_v2_fb 20f4000.epdc: SW mitigation needed temp=24C battery = 20
+[  457.204058] screen update triggered SOC update skipped
+[  457.204085] imx_epdc_v2_fb 20f4000.epdc: SW mitigation needed temp=23C battery = 20
+[  457.208431] screen update triggered SOC update skipped
+[  457.208467] imx_epdc_v2_fb 20f4000.epdc: SW mitigation needed temp=23C battery = 20
+[  457.209984] screen update triggered SOC update skipped
+[  457.210014] imx_epdc_v2_fb 20f4000.epdc: SW mitigation needed temp=23C battery = 20
+[  457.946271] screen update triggered SOC update skipped
+[  457.946296] imx_epdc_v2_fb 20f4000.epdc: SW mitigation needed temp=23C battery = 20
+[  458.568310] screen update triggered SOC update skipped
+[  458.568336] imx_epdc_v2_fb 20f4000.epdc: SW mitigation needed temp=24C battery = 20
+[  458.689659] bd_soc_update_work_callback: clamp_soc=20
+[  463.544464] imx_epdc_v2_fb 20f4000.epdc: SW mitigation needed temp=23C battery = 20
+[  464.071023] screen update triggered SOC update skipped
+[  464.071047] imx_epdc_v2_fb 20f4000.epdc: SW mitigation needed temp=23C battery = 20
+[  464.248254] screen update triggered SOC update skipped
+[  464.248278] imx_epdc_v2_fb 20f4000.epdc: SW mitigation needed temp=23C battery = 20
+[  464.253325] screen update triggered SOC update skipped
+[  464.253358] imx_epdc_v2_fb 20f4000.epdc: SW mitigation needed temp=25C battery = 20
+[  464.255179] screen update triggered SOC update skipped
+[  464.255214] imx_epdc_v2_fb 20f4000.epdc: SW mitigation needed temp=25C battery = 20

@@ -1,0 +1,982 @@
+
+===== date; id =====
+Mon Nov 23 00:21:40 GMT+8:0100 2026
+uid=0(root) gid=0(root) groups=0(root)
+
+===== cat /etc/version.txt /etc/prettyversion.txt 2>/dev/null; cat /mnt/us/system/version.txt =====
+System Software Version: 023-juno_18010101_moonshine_rex-476968
+Thu May 21 05:56:00 UTC 2026
+com.lab126.eink.moonshine.os
+Kindle 5.18.1.1.1 (~~otaVersion~~)Kindle 5.18.1.1.1 (476968 023)
+===== uname -a =====
+Linux kindle 4.1.15-lab126 #1 SMP PREEMPT Thu May 21 05:14:34 UTC 2026 armv7l GNU/Linux
+
+===== cat /proc/version =====
+Linux version 4.1.15-lab126 (builder@eink-builds) (gcc version 4.9.1 (GCC) ) #1 SMP PREEMPT Thu May 21 05:14:34 UTC 2026
+
+===== cat /proc/cmdline =====
+console=ttymxc0,115200 consoleblank=0 uart_at_4m root=/dev/mmcblk1p8 rootwait quiet secure_cpu=1 androidboot.secure_cpu=1 androidboot.prod=1 androidboot.unlocked_kernel=false
+
+===== cat /proc/cpuinfo =====
+processor	: 0
+model name	: ARMv7 Processor rev 1 (v7l)
+BogoMIPS	: 7.54
+Features	: half thumb fastmult vfp edsp neon vfpv3 tls vfpd32 
+CPU implementer	: 0x41
+CPU architecture: 7
+CPU variant	: 0x4
+CPU part	: 0xc09
+CPU revision	: 1
+
+Hardware	: Freescale i.MX6 SoloLite (Device Tree)
+Revision	: 0000
+Serial		: <redacted>
+
+===== cat /proc/meminfo =====
+MemTotal:         502340 kB
+MemFree:            7120 kB
+MemAvailable:     199800 kB
+Buffers:           45436 kB
+Cached:           163544 kB
+SwapCached:            0 kB
+Active:           286468 kB
+Inactive:         122076 kB
+Active(anon):     188716 kB
+Inactive(anon):    24984 kB
+Active(file):      97752 kB
+Inactive(file):    97092 kB
+Unevictable:           0 kB
+Mlocked:               0 kB
+SwapTotal:        131068 kB
+SwapFree:         131032 kB
+Dirty:                76 kB
+Writeback:             0 kB
+AnonPages:        199552 kB
+Mapped:            63000 kB
+Shmem:             14140 kB
+Slab:              28480 kB
+SReclaimable:      13436 kB
+SUnreclaim:        15044 kB
+KernelStack:        6288 kB
+PageTables:         4800 kB
+NFS_Unstable:          0 kB
+Bounce:                0 kB
+WritebackTmp:          0 kB
+CommitLimit:      382236 kB
+Committed_AS:    1332348 kB
+VmallocTotal:    1548288 kB
+VmallocUsed:       34528 kB
+VmallocChunk:    1329048 kB
+CmaTotal:              0 kB
+CmaFree:               0 kB
+=================================
+Total RAM:                  524288 kB
+
+===== cat /proc/iomem =====
+00905000-0091ffff : 905000.sram
+02020000-02023fff : /soc/aips-bus@02000000/spba-bus@02000000/serial@02020000
+02034000-02037fff : /soc/aips-bus@02000000/spba-bus@02000000/serial@02034000
+0209c000-0209ffff : /soc/aips-bus@02000000/gpio@0209c000
+020a0000-020a3fff : /soc/aips-bus@02000000/gpio@020a0000
+020a4000-020a7fff : /soc/aips-bus@02000000/gpio@020a4000
+020a8000-020abfff : /soc/aips-bus@02000000/gpio@020a8000
+020ac000-020affff : /soc/aips-bus@02000000/gpio@020ac000
+020b0000-020b3fff : /soc/aips-bus@02000000/gpio@020b0000
+020bc000-020bffff : /soc/aips-bus@02000000/wdog@020bc000
+020c9000-020c9fff : /soc/aips-bus@02000000/usbphy@020c9000
+020ca000-020cafff : /soc/aips-bus@02000000/usbphy@020ca000
+020e0000-020e3fff : /soc/aips-bus@02000000/iomuxc@020e0000
+020ec000-020effff : /soc/aips-bus@02000000/sdma@020ec000
+020f0000-020f3fff : /soc/aips-bus@02000000/pxp@020f0000
+020f4000-020f7fff : /soc/aips-bus@02000000/epdc@020f4000
+020fc000-020fffff : /soc/aips-bus@02000000/dcp@020fc000
+02184000-021841ff : /soc/aips-bus@02100000/usb@02184000
+  02184000-021841ff : /soc/aips-bus@02100000/usb@02184000
+02184800-021849ff : /soc/aips-bus@02100000/usbmisc@02184800
+02190000-02193fff : mmc0
+021a0000-021a3fff : /soc/aips-bus@02100000/i2c@021a0000
+021a4000-021a7fff : /soc/aips-bus@02100000/i2c@021a4000
+021a8000-021abfff : /soc/aips-bus@02100000/i2c@021a8000
+021bc000-021bffff : /soc/aips-bus@02100000/ocotp-ctrl@021bc000
+80000000-9affffff : System RAM
+  80008000-80b3b4a3 : Kernel code
+  80b96000-80cb5e8b : Kernel data
+9b300000-9fffffff : System RAM
+
+===== cat /proc/partitions =====
+major minor  #blocks  name
+
+   1        0      65536 ram0
+   1        1      65536 ram1
+   1        2      65536 ram2
+   1        3      65536 ram3
+   1        4      65536 ram4
+   1        5      65536 ram5
+   1        6      65536 ram6
+   1        7      65536 ram7
+   1        8      65536 ram8
+   1        9      65536 ram9
+   1       10      65536 ram10
+   1       11      65536 ram11
+   1       12      65536 ram12
+   1       13      65536 ram13
+   1       14      65536 ram14
+   1       15      65536 ram15
+   7        0    6545366 loop0
+   7        2        316 loop2
+   7        3      81868 loop3
+   7        4         20 loop4
+   7        5        684 loop5
+   7        6      14472 loop6
+   7        7       1964 loop7
+ 254        0     131072 zram0
+ 253        0    7634944 mmcblk1
+ 253        1      16384 mmcblk1p1
+ 253        2       4096 mmcblk1p2
+ 253        3       2048 mmcblk1p3
+ 253        4        512 mmcblk1p4
+ 253        5        512 mmcblk1p5
+ 253        6      16384 mmcblk1p6
+ 253        7     262144 mmcblk1p7
+ 253        8     524288 mmcblk1p8
+ 253        9     262144 mmcblk1p9
+ 253       10    6545374 mmcblk1p10
+ 253       16       4096 mmcblk1boot0
+ 253       32       4096 mmcblk1boot1
+   7        8       8460 loop8
+   7        9       2288 loop9
+   7       10       6064 loop10
+   7       11      36568 loop11
+   7       12      36804 loop12
+
+===== mount =====
+/dev/root on / type ext3 (ro,noatime,nodiratime,barrier=1,data=ordered)
+none on /proc type proc (rw,nosuid,nodev,noexec,relatime)
+none on /sys type sysfs (rw,nosuid,nodev,noexec,relatime)
+tmpfs on /dev type tmpfs (rw,relatime,mode=755)
+tmpfs on /dev/shm type tmpfs (rw,relatime)
+devpts on /dev/pts type devpts (rw,relatime,gid=5,mode=620)
+tmpfs on /var type tmpfs (rw,relatime,size=65536k)
+tmpfs on /mnt/kfxcache type tmpfs (rw,relatime,size=256000k)
+/dev/loop/2 on /usr/share/X11/xkb type squashfs (ro,noatime,nodiratime)
+/dev/loop/3 on /usr/java/lib/fonts type squashfs (ro,noatime,nodiratime)
+/dev/loop/4 on /etc/kdb.src type squashfs (ro,noatime,nodiratime)
+/dev/loop/5 on /usr/lib/locale type squashfs (ro,noatime,nodiratime)
+/dev/loop/6 on /usr/share/keyboard type squashfs (ro,noatime,nodiratime)
+/dev/loop/7 on /opt/var/local type squashfs (ro,noatime,nodiratime)
+/dev/loop/8 on /usr/lib/tts type squashfs (ro,noatime,nodiratime)
+/dev/loop/9 on /usr/lib/mmseg type squashfs (ro,noatime,nodiratime)
+/dev/loop/10 on /usr/lib/webkit-gtk type squashfs (ro,noatime,nodiratime)
+/dev/loop/11 on /usr/bin/chromium type squashfs (ro,noatime,nodiratime)
+/dev/mmcblk1p3 on /keys type ext3 (ro,noatime,nodiratime,errors=continue,user_xattr,acl,barrier=1,data=ordered)
+debugfs on /sys/kernel/debug type debugfs (rw,relatime)
+/dev/mmcblk1p9 on /var/local type ext3 (rw,relatime,errors=continue,barrier=1,data=ordered)
+fsp on /mnt/us type fuse.fsp (rw,nosuid,nodev,noatime,user_id=0,group_id=0,allow_other)
+cgroup_root on /sys/fs/cgroup type tmpfs (rw,relatime)
+none on /sys/fs/cgroup/memory type cgroup (rw,relatime,memory)
+/dev/loop/12 on /var/local/font/mnt/zh-Hans_font type squashfs (ro,noatime,nodiratime)
+/dev/root on /var/tmp/chroot/lib type ext3 (ro,noatime,nodiratime,barrier=1,data=ordered)
+/dev/root on /var/tmp/chroot/usr/lib type ext3 (ro,noatime,nodiratime,barrier=1,data=ordered)
+none on /var/tmp/chroot/proc type proc (rw,nosuid,nodev,noexec,relatime)
+tmpfs on /var/tmp/chroot/dev type tmpfs (rw,relatime,mode=755)
+/dev/loop/11 on /var/tmp/chroot/usr/bin/chromium type squashfs (ro,noatime,nodiratime)
+/dev/root on /var/tmp/chroot/etc/hosts type ext3 (ro,noatime,nodiratime,barrier=1,data=ordered)
+/dev/root on /var/tmp/chroot/etc/prettyversion.txt type ext3 (ro,noatime,nodiratime,barrier=1,data=ordered)
+/dev/root on /var/tmp/chroot/etc/passwd type ext3 (ro,noatime,nodiratime,barrier=1,data=ordered)
+/dev/root on /var/tmp/chroot/etc/ssl/certs/ca-certificates-prod.crt type ext3 (ro,noatime,nodiratime,barrier=1,data=ordered)
+/dev/root on /var/tmp/chroot/etc/ssl/certs/ca-certificates.crt type ext3 (ro,noatime,nodiratime,barrier=1,data=ordered)
+/dev/loop/0 on /mnt/base-us type vfat (rw,noexec,noatime,nodiratime,fmask=0000,dmask=0000,allow_utime=0022,codepage=437,iocharset=iso8859-1,shortname=mixed,utf8,errors=remount-ro)
+none on /var/tmp/chroot/sys type sysfs (rw,nosuid,nodev,noexec,relatime)
+tmpfs on /var/tmp/chroot/var/cache type tmpfs (rw,relatime,size=65536k)
+tmpfs on /var/tmp/chroot/var/lock type tmpfs (rw,relatime,size=65536k)
+tmpfs on /var/tmp/chroot/var/run type tmpfs (rw,relatime,size=65536k)
+/dev/loop/4 on /var/tmp/chroot/etc/kdb.src type squashfs (ro,noatime,nodiratime)
+/dev/mmcblk1p9 on /var/tmp/chroot/var/local type ext3 (rw,relatime,errors=continue,barrier=1,data=ordered)
+fsp on /var/tmp/chroot/mnt/us type fuse.fsp (rw,nosuid,nodev,noatime,user_id=0,group_id=0,allow_other)
+/dev/root on /var/tmp/chroot/etc/fonts type ext3 (ro,noatime,nodiratime,barrier=1,data=ordered)
+/dev/root on /var/tmp/chroot/etc/gtk-2.0 type ext3 (ro,noatime,nodiratime,barrier=1,data=ordered)
+/dev/root on /var/tmp/chroot/etc/pango type ext3 (ro,noatime,nodiratime,barrier=1,data=ordered)
+/dev/root on /var/tmp/chroot/etc/resolv.d type ext3 (ro,noatime,nodiratime,barrier=1,data=ordered)
+/dev/root on /var/tmp/chroot/usr/share type ext3 (ro,noatime,nodiratime,barrier=1,data=ordered)
+/dev/root on /var/tmp/chroot/usr/ssl type ext3 (ro,noatime,nodiratime,barrier=1,data=ordered)
+/dev/loop/6 on /var/tmp/chroot/usr/share/keyboard type squashfs (ro,noatime,nodiratime)
+/dev/loop/3 on /var/tmp/chroot/usr/java/lib/fonts type squashfs (ro,noatime,nodiratime)
+/dev/loop/2 on /var/tmp/chroot/usr/share/X11/xkb type squashfs (ro,noatime,nodiratime)
+/dev/root on /var/tmp/chroot/usr/lib/pango type ext3 (ro,noatime,nodiratime,barrier=1,data=ordered)
+/dev/loop/5 on /var/tmp/chroot/usr/lib/locale type squashfs (ro,noatime,nodiratime)
+tmpfs on /var/tmp/chroot/tmp/session_token type tmpfs (rw,relatime,size=65536k)
+
+===== df -k =====
+Filesystem           1K-blocks      Used Available Use% Mounted on
+/dev/root               505407    464565     30357  94% /
+tmpfs                   251168       184    250984   0% /dev
+tmpfs                   251168        56    251112   0% /dev/shm
+tmpfs                    65536      8808     56728  13% /var
+tmpfs                   256000       156    255844   0% /mnt/kfxcache
+/dev/loop/2                384       384         0 100% /usr/share/X11/xkb
+/dev/loop/3              81920     81920         0 100% /usr/java/lib/fonts
+/dev/loop/4                128       128         0 100% /etc/kdb.src
+/dev/loop/5                768       768         0 100% /usr/lib/locale
+/dev/loop/6              14592     14592         0 100% /usr/share/keyboard
+/dev/loop/7               2048      2048         0 100% /opt/var/local
+/dev/loop/8               8576      8576         0 100% /usr/lib/tts
+/dev/loop/9               2304      2304         0 100% /usr/lib/mmseg
+/dev/loop/10              6144      6144         0 100% /usr/lib/webkit-gtk
+/dev/loop/11             36608     36608         0 100% /usr/bin/chromium
+/dev/mmcblk1p3             987        21       864   2% /keys
+/dev/mmcblk1p9          245679     52946    179626  23% /var/local
+fsp                    6536664    205320   6331344   3% /mnt/us
+cgroup_root             251168         0    251168   0% /sys/fs/cgroup
+/dev/loop/12             36864     36864         0 100% /var/local/font/mnt/zh-Hans_font
+/dev/root               505407    464565     30357  94% /var/tmp/chroot/lib
+/dev/root               505407    464565     30357  94% /var/tmp/chroot/usr/lib
+tmpfs                   251168       184    250984   0% /var/tmp/chroot/dev
+/dev/loop/11             36608     36608         0 100% /var/tmp/chroot/usr/bin/chromium
+/dev/root               505407    464565     30357  94% /var/tmp/chroot/etc/hosts
+/dev/root               505407    464565     30357  94% /var/tmp/chroot/etc/prettyversion.txt
+/dev/root               505407    464565     30357  94% /var/tmp/chroot/etc/passwd
+/dev/root               505407    464565     30357  94% /var/tmp/chroot/etc/ssl/certs/ca-certificates-prod.crt
+/dev/root               505407    464565     30357  94% /var/tmp/chroot/etc/ssl/certs/ca-certificates.crt
+/dev/loop/0            6536664    205320   6331344   3% /mnt/base-us
+tmpfs                    65536      8808     56728  13% /var/tmp/chroot/var/cache
+tmpfs                    65536      8808     56728  13% /var/tmp/chroot/var/lock
+tmpfs                    65536      8808     56728  13% /var/tmp/chroot/var/run
+/dev/loop/4                128       128         0 100% /var/tmp/chroot/etc/kdb.src
+/dev/mmcblk1p9          245679     52946    179626  23% /var/tmp/chroot/var/local
+fsp                    6536664    205320   6331344   3% /var/tmp/chroot/mnt/us
+/dev/root               505407    464565     30357  94% /var/tmp/chroot/etc/fonts
+/dev/root               505407    464565     30357  94% /var/tmp/chroot/etc/gtk-2.0
+/dev/root               505407    464565     30357  94% /var/tmp/chroot/etc/pango
+/dev/root               505407    464565     30357  94% /var/tmp/chroot/etc/resolv.d
+/dev/root               505407    464565     30357  94% /var/tmp/chroot/usr/share
+/dev/root               505407    464565     30357  94% /var/tmp/chroot/usr/ssl
+/dev/loop/6              14592     14592         0 100% /var/tmp/chroot/usr/share/keyboard
+/dev/loop/3              81920     81920         0 100% /var/tmp/chroot/usr/java/lib/fonts
+/dev/loop/2                384       384         0 100% /var/tmp/chroot/usr/share/X11/xkb
+/dev/root               505407    464565     30357  94% /var/tmp/chroot/usr/lib/pango
+/dev/loop/5                768       768         0 100% /var/tmp/chroot/usr/lib/locale
+tmpfs                    65536      8808     56728  13% /var/tmp/chroot/tmp/session_token
+
+===== cat /proc/modules =====
+bcmdhd 669206 0 - Live 0x7f07c000
+g_mass_storage 4203 0 - Live 0x7f076000
+usb_f_mass_storage 51007 2 g_mass_storage, Live 0x7f061000
+libcomposite 49114 2 g_mass_storage,usb_f_mass_storage, Live 0x7f04d000
+configfs 26493 3 usb_f_mass_storage,libcomposite, Live 0x7f041000
+gt9xx_ts 49578 1 - Live 0x7f02e000
+falcon 22088 0 [permanent], Live 0x7f024000 (PO)
+mxc_epdc_v2_fb 109207 4 - Live 0x7f000000
+
+===== ls -la /lib/modules /lib/modules/* 2>&1 | head -200 =====
+/lib/modules:
+total 4
+drwxr-xr-x    3 root     root          1024 May 21  2026 .
+drwxr-xr-x    8 root     root          2048 May 21  2026 ..
+drwxr-xr-x    4 root     root          1024 May 21  2026 4.1.15-lab126
+
+/lib/modules/4.1.15-lab126:
+total 173
+drwxr-xr-x    4 root     root          1024 May 21  2026 .
+drwxr-xr-x    3 root     root          1024 May 21  2026 ..
+drwxr-xr-x    2 root     root          1024 May 21  2026 extra
+drwxr-xr-x    7 root     root          1024 May 21  2026 kernel
+-rw-r--r--    1 root     root         32770 May 21  2026 modules.alias
+-rw-r--r--    1 root     root         37006 May 21  2026 modules.alias.bin
+-rw-r--r--    1 root     root         25264 May 21  2026 modules.builtin
+-rw-r--r--    1 root     root         27235 May 21  2026 modules.builtin.bin
+-rw-r--r--    1 root     root          4353 May 21  2026 modules.dep
+-rw-r--r--    1 root     root          7234 May 21  2026 modules.dep.bin
+-rw-r--r--    1 root     root            75 May 21  2026 modules.devname
+-rw-r--r--    1 root     root          2533 May 21  2026 modules.order
+-rw-r--r--    1 root     root            55 May 21  2026 modules.softdep
+-rw-r--r--    1 root     root         10748 May 21  2026 modules.symbols
+-rw-r--r--    1 root     root         12494 May 21  2026 modules.symbols.bin
+
+===== cat /proc/sys/kernel/modules_disabled /proc/sys/kernel/kptr_restrict /proc/sys/kernel/dmesg_restrict =====
+0
+0
+0
+
+===== ls /proc/config.gz =====
+/proc/config.gz
+
+===== grep -E "MODULE_SIG|MODULES|VMSPLIT|PAGE_OFFSET|SMP|NR_CPUS|HOTPLUG_CPU|CACHE_L2X0|ARM_LPAE|OF=|MACH_|SOC_IMX|MXC_EPDC|FB_MXC|REGULATOR_|MFD_|BATTERY_|BRCM|ATH|WLAN|TOUCHSCREEN" /mnt/us/readom-probe/config.txt =====
+CONFIG_GENERIC_SMP_IDLE_THREAD=y
+CONFIG_MODULES_USE_ELF_REL=y
+CONFIG_MODULES=y
+# CONFIG_MODULE_SIG is not set
+# CONFIG_SOC_IMX50 is not set
+# CONFIG_SOC_IMX51 is not set
+# CONFIG_SOC_IMX53 is not set
+CONFIG_SOC_IMX6=y
+# CONFIG_SOC_IMX6Q is not set
+CONFIG_SOC_IMX6SL=y
+# CONFIG_SOC_IMX6SX is not set
+CONFIG_SOC_IMX6UL=y
+CONFIG_SOC_IMX6ULL=y
+# CONFIG_SOC_IMX7D is not set
+CONFIG_SOC_IMX6SLL=y
+# CONFIG_ARM_LPAE is not set
+CONFIG_MIGHT_HAVE_CACHE_L2X0=y
+CONFIG_CACHE_L2X0=y
+CONFIG_HAVE_SMP=y
+CONFIG_SMP=y
+CONFIG_SMP_ON_UP=y
+# CONFIG_VMSPLIT_3G is not set
+CONFIG_VMSPLIT_2G=y
+# CONFIG_VMSPLIT_1G is not set
+CONFIG_PAGE_OFFSET=0x80000000
+CONFIG_NR_CPUS=4
+CONFIG_HOTPLUG_CPU=y
+CONFIG_USE_OF=y
+CONFIG_PM_SLEEP_SMP=y
+CONFIG_PM_GENERIC_DOMAINS_OF=y
+CONFIG_BT_HCIUART_ATH3K=y
+CONFIG_BT_ATH3K=y
+CONFIG_UEVENT_HELPER_PATH=""
+# CONFIG_BRCMSTB_GISB_ARB is not set
+CONFIG_MTD_PHYSMAP_OF=y
+CONFIG_OF=y
+CONFIG_WLAN=y
+# CONFIG_USB_NET_RNDIS_WLAN is not set
+# CONFIG_ATH_CARDS is not set
+CONFIG_BCMDHD_FW_PATH="/opt/brcm_4343w/wifi/firmware/fw_bcmdhd_sr.bin"
+CONFIG_BCMDHD_NVRAM_PATH="/opt/brcm_4343w/wifi/nvram/nvram.txt"
+# CONFIG_BRCMSMAC is not set
+# CONFIG_BRCMFMAC is not set
+CONFIG_INPUT_TOUCHSCREEN=y
+CONFIG_OF_TOUCHSCREEN=y
+# CONFIG_TOUCHSCREEN_ADS7846 is not set
+CONFIG_TOUCHSCREEN_CT36X_WLD=y
+# CONFIG_TOUCHSCREEN_AD7877 is not set
+# CONFIG_TOUCHSCREEN_AD7879 is not set
+# CONFIG_TOUCHSCREEN_AR1021_I2C is not set
+# CONFIG_TOUCHSCREEN_ATMEL_MXT is not set
+# CONFIG_TOUCHSCREEN_AUO_PIXCIR is not set
+# CONFIG_TOUCHSCREEN_BU21013 is not set
+# CONFIG_TOUCHSCREEN_CHIPONE_ICN8318 is not set
+# CONFIG_TOUCHSCREEN_CY8CTMG110 is not set
+# CONFIG_TOUCHSCREEN_CYTTSP_CORE is not set
+# CONFIG_TOUCHSCREEN_CYTTSP4_CORE is not set
+CONFIG_TOUCHSCREEN_CYPRESS_CYTTSP5=m
+CONFIG_TOUCHSCREEN_CYPRESS_CYTTSP5_DEVICETREE_SUPPORT=y
+# CONFIG_TOUCHSCREEN_CYPRESS_CYTTSP5_DEBUG is not set
+CONFIG_TOUCHSCREEN_CYPRESS_CYTTSP5_I2C=m
+# CONFIG_TOUCHSCREEN_CYPRESS_CYTTSP5_SPI is not set
+# CONFIG_TOUCHSCREEN_CYPRESS_CYTTSP5_MT_A is not set
+CONFIG_TOUCHSCREEN_CYPRESS_CYTTSP5_MT_B=y
+# CONFIG_TOUCHSCREEN_CYPRESS_CYTTSP5_BUTTON is not set
+# CONFIG_TOUCHSCREEN_CYPRESS_CYTTSP5_PROXIMITY is not set
+CONFIG_TOUCHSCREEN_CYPRESS_CYTTSP5_DEVICE_ACCESS=m
+# CONFIG_TOUCHSCREEN_CYPRESS_CYTTSP5_DEVICE_ACCESS_API is not set
+CONFIG_TOUCHSCREEN_CYPRESS_CYTTSP5_LOADER=m
+# CONFIG_TOUCHSCREEN_CYPRESS_CYTTSP5_PLATFORM_FW_UPGRADE is not set
+CONFIG_TOUCHSCREEN_CYPRESS_CYTTSP5_BINARY_FW_UPGRADE=y
+# CONFIG_TOUCHSCREEN_CYPRESS_CYTTSP5_PLATFORM_TTCONFIG_UPGRADE is not set
+# CONFIG_TOUCHSCREEN_CYPRESS_CYTTSP5_MANUAL_TTCONFIG_UPGRADE is not set
+# CONFIG_TOUCHSCREEN_CYPRESS_CYTTSP5_DEBUG_MDL is not set
+# CONFIG_TOUCHSCREEN_DA9052 is not set
+# CONFIG_TOUCHSCREEN_DYNAPRO is not set
+# CONFIG_TOUCHSCREEN_HAMPSHIRE is not set
+# CONFIG_TOUCHSCREEN_EETI is not set
+# CONFIG_TOUCHSCREEN_EGALAX is not set
+# CONFIG_TOUCHSCREEN_ELAN_TS is not set
+# CONFIG_TOUCHSCREEN_FUJITSU is not set
+# CONFIG_TOUCHSCREEN_GOODIX is not set
+# CONFIG_TOUCHSCREEN_ILI210X is not set
+# CONFIG_TOUCHSCREEN_GUNZE is not set
+# CONFIG_TOUCHSCREEN_ELAN is not set
+# CONFIG_TOUCHSCREEN_ELO is not set
+# CONFIG_TOUCHSCREEN_WACOM_W8001 is not set
+# CONFIG_TOUCHSCREEN_WACOM_I2C is not set
+# CONFIG_TOUCHSCREEN_MAX11801 is not set
+# CONFIG_TOUCHSCREEN_MCS5000 is not set
+# CONFIG_TOUCHSCREEN_MMS114 is not set
+# CONFIG_TOUCHSCREEN_MTOUCH is not set
+# CONFIG_TOUCHSCREEN_IMX6UL_TSC is not set
+# CONFIG_TOUCHSCREEN_INEXIO is not set
+# CONFIG_TOUCHSCREEN_MK712 is not set
+# CONFIG_TOUCHSCREEN_PENMOUNT is not set
+# CONFIG_TOUCHSCREEN_EDT_FT5X06 is not set
+# CONFIG_TOUCHSCREEN_TOUCHRIGHT is not set
+# CONFIG_TOUCHSCREEN_TOUCHWIN is not set
+# CONFIG_TOUCHSCREEN_PIXCIR is not set
+# CONFIG_TOUCHSCREEN_USB_COMPOSITE is not set
+# CONFIG_TOUCHSCREEN_MC13783 is not set
+# CONFIG_TOUCHSCREEN_TOUCHIT213 is not set
+# CONFIG_TOUCHSCREEN_TSC_SERIO is not set
+# CONFIG_TOUCHSCREEN_TSC2005 is not set
+# CONFIG_TOUCHSCREEN_TSC2007 is not set
+# CONFIG_TOUCHSCREEN_ST1232 is not set
+# CONFIG_TOUCHSCREEN_STMPE is not set
+# CONFIG_TOUCHSCREEN_SUR40 is not set
+# CONFIG_TOUCHSCREEN_SX8654 is not set
+# CONFIG_TOUCHSCREEN_TPS6507X is not set
+# CONFIG_TOUCHSCREEN_ZFORCE is not set
+CONFIG_TOUCHSCREEN_GT9XX=m
+# CONFIG_INPUT_REGULATOR_HAPTIC is not set
+# CONFIG_BATTERY_DS2780 is not set
+# CONFIG_BATTERY_DS2781 is not set
+# CONFIG_BATTERY_DS2782 is not set
+# CONFIG_BATTERY_SBS is not set
+# CONFIG_BATTERY_BQ27x00 is not set
+# CONFIG_BATTERY_DA9052 is not set
+# CONFIG_BATTERY_MAX17040 is not set
+# CONFIG_BATTERY_MAX17042 is not set
+# CONFIG_BATTERY_GAUGE_LTC2941 is not set
+# CONFIG_POWER_RESET_BRCMSTB is not set
+CONFIG_THERMAL_OF=y
+CONFIG_MFD_CORE=y
+# CONFIG_MFD_AS3711 is not set
+# CONFIG_MFD_AS3722 is not set
+# CONFIG_MFD_AAT2870_CORE is not set
+# CONFIG_MFD_ATMEL_HLCDC is not set
+# CONFIG_MFD_BCM590XX is not set
+# CONFIG_MFD_AXP20X is not set
+# CONFIG_MFD_CROS_EC is not set
+# CONFIG_MFD_ASIC3 is not set
+# CONFIG_MFD_DA9052_SPI is not set
+CONFIG_MFD_DA9052_I2C=y
+# CONFIG_MFD_DA9055 is not set
+# CONFIG_MFD_DA9063 is not set
+# CONFIG_MFD_DA9150 is not set
+# CONFIG_MFD_DLN2 is not set
+CONFIG_MFD_MC13XXX=y
+CONFIG_MFD_MC13XXX_SPI=y
+CONFIG_MFD_MC13XXX_I2C=y
+CONFIG_MFD_MXC_HDMI=y
+# CONFIG_MFD_HI6421_PMIC is not set
+# CONFIG_MFD_KEMPLD is not set
+# CONFIG_MFD_88PM800 is not set
+# CONFIG_MFD_88PM805 is not set
+# CONFIG_MFD_88PM860X is not set
+# CONFIG_MFD_MAX14577 is not set
+# CONFIG_MFD_MAX17135 is not set
+# CONFIG_MFD_MAX77686 is not set
+# CONFIG_MFD_MAX77693 is not set
+# CONFIG_MFD_MAX77843 is not set
+# CONFIG_MFD_MAX8907 is not set
+# CONFIG_MFD_MAX8925 is not set
+# CONFIG_MFD_MAX8997 is not set
+# CONFIG_MFD_MAX8998 is not set
+# CONFIG_MFD_MT6397 is not set
+# CONFIG_MFD_MENF21BMC is not set
+# CONFIG_MFD_VIPERBOARD is not set
+# CONFIG_MFD_RETU is not set
+# CONFIG_MFD_PCF50633 is not set
+# CONFIG_MFD_PM8921_CORE is not set
+# CONFIG_MFD_RT5033 is not set
+# CONFIG_MFD_RTSX_USB is not set
+# CONFIG_MFD_RC5T583 is not set
+# CONFIG_MFD_RK808 is not set
+# CONFIG_MFD_RN5T618 is not set
+# CONFIG_MFD_SEC_CORE is not set
+CONFIG_MFD_SI476X_CORE=y
+# CONFIG_MFD_SM501 is not set
+# CONFIG_MFD_SKY81452 is not set
+# CONFIG_MFD_SMSC is not set
+CONFIG_MFD_STMPE=y
+CONFIG_MFD_SYSCON=y
+# CONFIG_MFD_TI_AM335X_TSCADC is not set
+# CONFIG_MFD_LP3943 is not set
+# CONFIG_MFD_LP8788 is not set
+CONFIG_MFD_TI_LMU=y
+# CONFIG_MFD_PALMAS is not set
+# CONFIG_MFD_TPS65090 is not set
+# CONFIG_MFD_TPS65217 is not set
+# CONFIG_MFD_TPS65218 is not set
+# CONFIG_MFD_TPS6586X is not set
+# CONFIG_MFD_TPS65910 is not set
+# CONFIG_MFD_TPS65912 is not set
+# CONFIG_MFD_TPS65912_I2C is not set
+# CONFIG_MFD_TPS65912_SPI is not set
+# CONFIG_MFD_TPS80031 is not set
+# CONFIG_MFD_WL1273_CORE is not set
+# CONFIG_MFD_LM3533 is not set
+# CONFIG_MFD_TC3589X is not set
+# CONFIG_MFD_TMIO is not set
+# CONFIG_MFD_T7L66XB is not set
+# CONFIG_MFD_TC6387XB is not set
+# CONFIG_MFD_TC6393XB is not set
+# CONFIG_MFD_ARIZONA_I2C is not set
+# CONFIG_MFD_ARIZONA_SPI is not set
+# CONFIG_MFD_WM8400 is not set
+# CONFIG_MFD_WM831X_I2C is not set
+# CONFIG_MFD_WM831X_SPI is not set
+# CONFIG_MFD_WM8350_I2C is not set
+CONFIG_MFD_WM8994=y
+CONFIG_MFD_BD71827=y
+# CONFIG_REGULATOR_DEBUG is not set
+CONFIG_REGULATOR_FIXED_VOLTAGE=y
+CONFIG_REGULATOR_VIRTUAL_CONSUMER=y
+CONFIG_REGULATOR_USERSPACE_CONSUMER=y
+# CONFIG_REGULATOR_ACT8865 is not set
+# CONFIG_REGULATOR_AD5398 is not set
+CONFIG_REGULATOR_ANATOP=y
+CONFIG_REGULATOR_DA9052=y
+# CONFIG_REGULATOR_DA9210 is not set
+# CONFIG_REGULATOR_DA9211 is not set
+# CONFIG_REGULATOR_FAN53555 is not set
+CONFIG_REGULATOR_GPIO=y
+# CONFIG_REGULATOR_ISL9305 is not set
+# CONFIG_REGULATOR_ISL6271A is not set
+# CONFIG_REGULATOR_LP3971 is not set
+# CONFIG_REGULATOR_LP3972 is not set
+# CONFIG_REGULATOR_LP872X is not set
+# CONFIG_REGULATOR_LP8755 is not set
+# CONFIG_REGULATOR_LTC3589 is not set
+# CONFIG_REGULATOR_MAX1586 is not set
+# CONFIG_REGULATOR_MAX8649 is not set
+# CONFIG_REGULATOR_MAX8660 is not set
+# CONFIG_REGULATOR_MAX8952 is not set
+# CONFIG_REGULATOR_MAX8973 is not set
+CONFIG_REGULATOR_MC13XXX_CORE=y
+CONFIG_REGULATOR_MC13783=y
+CONFIG_REGULATOR_MC13892=y
+CONFIG_REGULATOR_PFUZE100=y
+# CONFIG_REGULATOR_PWM is not set
+# CONFIG_REGULATOR_TPS51632 is not set
+# CONFIG_REGULATOR_TPS62360 is not set
+# CONFIG_REGULATOR_TPS65023 is not set
+# CONFIG_REGULATOR_TPS6507X is not set
+# CONFIG_REGULATOR_TPS6524X is not set
+# CONFIG_REGULATOR_WM8994 is not set
+CONFIG_REGULATOR_BD71827=y
+CONFIG_FB_MXC=y
+CONFIG_FB_MXC_SYNC_PANEL=y
+CONFIG_FB_MXC_MIPI_DSI=y
+CONFIG_FB_MXC_MIPI_DSI_SAMSUNG=y
+CONFIG_FB_MXC_TRULY_WVGA_SYNC_PANEL=y
+CONFIG_FB_MXC_TRULY_PANEL_TFT3P5079E=y
+CONFIG_FB_MXC_TRULY_PANEL_TFT3P5581E=y
+CONFIG_FB_MXC_LDB=y
+CONFIG_FB_MXC_HDMI=y
+CONFIG_FB_MXC_EDID=y
+CONFIG_FB_MXC_DCIC=m
+CONFIG_FB_MXC_EINK_PANEL=y
+CONFIG_FB_MXC_EINK_V2_PANEL=m
+# CONFIG_FB_MXC_EINK_AUTO_UPDATE_MODE is not set
+CONFIG_SND_SOC_IMX_PCM_DMA=y
+CONFIG_SND_SOC_IMX_AUDMUX=y
+CONFIG_SND_SOC_IMX_SSI=y
+CONFIG_SND_SOC_IMX_HDMI_DMA=y
+CONFIG_SND_SOC_IMX_WM8960=y
+CONFIG_SND_SOC_IMX_SII902X=y
+CONFIG_SND_SOC_IMX_WM8958=y
+CONFIG_SND_SOC_IMX_CS42888=y
+CONFIG_SND_SOC_IMX_WM8962=y
+# CONFIG_SND_SOC_IMX_WM8962_ANDROID is not set
+# CONFIG_SND_SOC_IMX_ES8328 is not set
+CONFIG_SND_SOC_IMX_SGTL5000=y
+CONFIG_SND_SOC_IMX_MQS=y
+CONFIG_SND_SOC_IMX_SPDIF=y
+CONFIG_SND_SOC_IMX_MC13783=y
+CONFIG_SND_SOC_IMX_SI476X=y
+CONFIG_SND_SOC_IMX_HDMI=y
+# CONFIG_HID_BATTERY_STRENGTH is not set
+CONFIG_USB_CHIPIDEA_OF=y
+CONFIG_DMA_OF=y
+# CONFIG_TOUCHSCREEN_SYNAPTICS_I2C_RMI4 is not set
+CONFIG_CLKSRC_OF=y
+# CONFIG_DEBUG_WW_MUTEX_SLOWPATH is not set
+
+===== grep -E " (pm_test_show|l2x0_[a-z_]+|module_sig_check|mod_verify_sig|machine_shutdown|soft_restart|cpu_v7_proc_fin|cpu_die|__cpu_disable|disable_nonboot_cpus|imx_.*cpu.*|mxc_epdc.*probe)$" /proc/kallsyms | head -100 =====
+80012598 T soft_restart
+800125cc T machine_shutdown
+80015660 T __cpu_disable
+8002158c T cpu_v7_proc_fin
+80027f3c T imx_enable_cpu
+80027fe8 T imx_set_cpu_jump
+8002804c T imx_get_cpu_arg
+8002808c T imx_set_cpu_arg
+80028188 T imx_cpu_die
+800281cc T imx_cpu_kill
+8003668c T disable_nonboot_cpus
+80069564 t pm_test_show
+8032bb84 T mxc_epdc_fb_probe
+807e7bbc T cpu_die
+80b449cc t l2x0_cache_size_of_parse
+80b44ed0 t l2x0_of_parse
+80b45290 T l2x0_init
+80b45320 T l2x0_of_init
+80b469a0 t imx_smp_init_cpus
+80b46a60 t imx_smp_prepare_cpus
+80b8b4e8 t l2x0_ids
+80c45550 B l2x0_saved_regs
+80c45578 b l2x0_data
+80c4557c b l2x0_way_mask
+80c45580 b l2x0_base
+80c45584 b l2x0_lock
+80c45588 b l2x0_size
+
+===== cat /proc/device-tree/model; echo; cat /proc/device-tree/compatible | tr "\0" " " =====
+Lab126 i.MX6SLL Board
+amzn,imx6sll-rex fsl,imx6sll 
+===== for d in /sys/bus/i2c/devices/*; do echo "$d $(cat $d/name 2>/dev/null)"; done =====
+/sys/bus/i2c/devices/0-0048 fp9929
+/sys/bus/i2c/devices/0-004b bd71827
+/sys/bus/i2c/devices/0-0063 lm3695
+/sys/bus/i2c/devices/1-0014 gt9xx-ts
+/sys/bus/i2c/devices/1-0024 cyttsp5_i2c_adapter
+/sys/bus/i2c/devices/2-0035 max14656
+/sys/bus/i2c/devices/i2c-0 21a0000.i2c
+/sys/bus/i2c/devices/i2c-1 21a4000.i2c
+/sys/bus/i2c/devices/i2c-2 21a8000.i2c
+
+===== for d in /sys/bus/platform/drivers/*; do echo "$d"; done =====
+/sys/bus/platform/drivers/CCI-400
+/sys/bus/platform/drivers/CCI-400 PMU
+/sys/bus/platform/drivers/ahci
+/sys/bus/platform/drivers/ahci-imx
+/sys/bus/platform/drivers/alarmtimer
+/sys/bus/platform/drivers/anatop_regulator
+/sys/bus/platform/drivers/arm-pmu
+/sys/bus/platform/drivers/bcmdhd_wlan
+/sys/bus/platform/drivers/bd71827-gpo
+/sys/bus/platform/drivers/bd71827-led
+/sys/bus/platform/drivers/bd71827-pmic
+/sys/bus/platform/drivers/bd71827-power
+/sys/bus/platform/drivers/bd71827-rtc
+/sys/bus/platform/drivers/bt_pwr_ctrl
+/sys/bus/platform/drivers/caam
+/sys/bus/platform/drivers/caam_jr
+/sys/bus/platform/drivers/chipidea-usb2
+/sys/bus/platform/drivers/ci_hdrc
+/sys/bus/platform/drivers/da9052-regulator
+/sys/bus/platform/drivers/eukrea_tlv320
+/sys/bus/platform/drivers/falcon_blk
+/sys/bus/platform/drivers/falconblk
+/sys/bus/platform/drivers/fec
+/sys/bus/platform/drivers/flexcan
+/sys/bus/platform/drivers/fsl-asrc
+/sys/bus/platform/drivers/fsl-esai-dai
+/sys/bus/platform/drivers/fsl-hdmi-dai
+/sys/bus/platform/drivers/fsl-lpuart
+/sys/bus/platform/drivers/fsl-mqs
+/sys/bus/platform/drivers/fsl-quadspi
+/sys/bus/platform/drivers/fsl-sai
+/sys/bus/platform/drivers/fsl-spdif-dai
+/sys/bus/platform/drivers/fsl-ssi-dai
+/sys/bus/platform/drivers/galcore
+/sys/bus/platform/drivers/generic-bl
+/sys/bus/platform/drivers/gpio-keys
+/sys/bus/platform/drivers/gpio-mxc
+/sys/bus/platform/drivers/gpio-rc-recv
+/sys/bus/platform/drivers/gpio-regulator
+/sys/bus/platform/drivers/gpio-reset
+/sys/bus/platform/drivers/gpmi-nand
+/sys/bus/platform/drivers/hall_sensor
+/sys/bus/platform/drivers/hannstar-cabc
+/sys/bus/platform/drivers/hdmi-audio-codec
+/sys/bus/platform/drivers/imx-audio-hdmi
+/sys/bus/platform/drivers/imx-audmux
+/sys/bus/platform/drivers/imx-cs42888
+/sys/bus/platform/drivers/imx-gpc
+/sys/bus/platform/drivers/imx-hdmi-audio
+/sys/bus/platform/drivers/imx-i2c
+/sys/bus/platform/drivers/imx-ipuv3
+/sys/bus/platform/drivers/imx-keypad
+/sys/bus/platform/drivers/imx-mmdc
+/sys/bus/platform/drivers/imx-mqs
+/sys/bus/platform/drivers/imx-ocotp
+/sys/bus/platform/drivers/imx-pre
+/sys/bus/platform/drivers/imx-prg
+/sys/bus/platform/drivers/imx-pwm
+/sys/bus/platform/drivers/imx-pxp
+/sys/bus/platform/drivers/imx-pxp-v3
+/sys/bus/platform/drivers/imx-rng
+/sys/bus/platform/drivers/imx-sdma
+/sys/bus/platform/drivers/imx-sgtl5000
+/sys/bus/platform/drivers/imx-sii902x
+/sys/bus/platform/drivers/imx-spdif
+/sys/bus/platform/drivers/imx-ssi
+/sys/bus/platform/drivers/imx-tuner-si476x
+/sys/bus/platform/drivers/imx-uart
+/sys/bus/platform/drivers/imx-wm8958
+/sys/bus/platform/drivers/imx-wm8960
+/sys/bus/platform/drivers/imx-wm8962
+/sys/bus/platform/drivers/imx2-wdt
+/sys/bus/platform/drivers/imx6q-cpufreq
+/sys/bus/platform/drivers/imx6sl-pinctrl
+/sys/bus/platform/drivers/imx6sll-pinctrl
+/sys/bus/platform/drivers/imx6ul-pinctrl
+/sys/bus/platform/drivers/imx7d_adc
+/sys/bus/platform/drivers/imx_busfreq
+/sys/bus/platform/drivers/imx_epdc_fb
+/sys/bus/platform/drivers/imx_epdc_v2_fb
+/sys/bus/platform/drivers/imx_mc13783
+/sys/bus/platform/drivers/imx_thermal
+/sys/bus/platform/drivers/imx_usb
+/sys/bus/platform/drivers/ldb
+/sys/bus/platform/drivers/ldo2p5-dummy
+/sys/bus/platform/drivers/leds-gpio
+/sys/bus/platform/drivers/lm3695-backlight
+/sys/bus/platform/drivers/m_can
+/sys/bus/platform/drivers/mc13783-regulator
+/sys/bus/platform/drivers/mc13892-regulator
+/sys/bus/platform/drivers/msm_hsusb
+/sys/bus/platform/drivers/mwan
+/sys/bus/platform/drivers/mx3_sdc_fb
+/sys/bus/platform/drivers/mxc-ehci
+/sys/bus/platform/drivers/mxc_hdmi
+/sys/bus/platform/drivers/mxc_hdmi_cec
+/sys/bus/platform/drivers/mxc_lcdif
+/sys/bus/platform/drivers/mxc_mipi_csi2
+/sys/bus/platform/drivers/mxc_mipi_dsi
+/sys/bus/platform/drivers/mxc_mipi_dsi_samsung
+/sys/bus/platform/drivers/mxc_nand
+/sys/bus/platform/drivers/mxc_rtc
+/sys/bus/platform/drivers/mxc_sdc_fb
+/sys/bus/platform/drivers/mxc_sim
+/sys/bus/platform/drivers/mxc_vdoa
+/sys/bus/platform/drivers/mxs-dcp
+/sys/bus/platform/drivers/mxs_phy
+/sys/bus/platform/drivers/mxsfb
+/sys/bus/platform/drivers/of-flash
+/sys/bus/platform/drivers/pata_imx
+/sys/bus/platform/drivers/reg-dummy
+/sys/bus/platform/drivers/reg-fixed-voltage
+/sys/bus/platform/drivers/reg-userspace-consumer
+/sys/bus/platform/drivers/reg-virt-consumer
+/sys/bus/platform/drivers/sdhci-esdhc-imx
+/sys/bus/platform/drivers/si476x-codec
+/sys/bus/platform/drivers/smc911x
+/sys/bus/platform/drivers/smc91x
+/sys/bus/platform/drivers/smsc911x
+/sys/bus/platform/drivers/snd-soc-dummy
+/sys/bus/platform/drivers/snvs-secvio
+/sys/bus/platform/drivers/snvs_pwrkey
+/sys/bus/platform/drivers/snvs_rtc
+/sys/bus/platform/drivers/soc-audio
+/sys/bus/platform/drivers/spi_gpio
+/sys/bus/platform/drivers/spi_imx
+/sys/bus/platform/drivers/sram
+/sys/bus/platform/drivers/syscon
+/sys/bus/platform/drivers/syscon-poweroff
+/sys/bus/platform/drivers/usbmisc_imx
+/sys/bus/platform/drivers/vf610-adc
+/sys/bus/platform/drivers/wm8994-codec
+/sys/bus/platform/drivers/zevio_usb
+
+===== ls -l /sys/class/power_supply /sys/class/backlight /sys/class/regulator /sys/class/input /sys/class/net 2>&1 =====
+/sys/class/backlight:
+total 0
+lrwxrwxrwx    1 root     root             0 Nov 23 00:14 bl -> ../../devices/soc0/soc/2100000.aips-bus/21a0000.i2c/i2c-0/0-0063/lm3695-backlight.0/backlight/bl
+
+/sys/class/input:
+total 0
+lrwxrwxrwx    1 root     root             0 Nov 23 00:14 event0 -> ../../devices/soc0/soc/2000000.aips-bus/20cc000.snvs/20cc000.snvs:snvs-powerkey/input/input0/event0
+lrwxrwxrwx    1 root     root             0 Nov 23 00:14 event1 -> ../../devices/soc0/soc/2100000.aips-bus/21a0000.i2c/i2c-0/0-004b/bd71827-power/input/input1/event1
+lrwxrwxrwx    1 root     root             0 Nov 23 00:14 event2 -> ../../devices/virtual/input/input2/event2
+lrwxrwxrwx    1 root     root             0 Nov 23 00:14 input0 -> ../../devices/soc0/soc/2000000.aips-bus/20cc000.snvs/20cc000.snvs:snvs-powerkey/input/input0
+lrwxrwxrwx    1 root     root             0 Nov 23 00:14 input1 -> ../../devices/soc0/soc/2100000.aips-bus/21a0000.i2c/i2c-0/0-004b/bd71827-power/input/input1
+lrwxrwxrwx    1 root     root             0 Nov 23 00:14 input2 -> ../../devices/virtual/input/input2
+lrwxrwxrwx    1 root     root             0 Nov 23 00:14 mice -> ../../devices/virtual/input/mice
+
+/sys/class/net:
+total 0
+lrwxrwxrwx    1 root     root             0 Nov 23 00:14 lo -> ../../devices/virtual/net/lo
+lrwxrwxrwx    1 root     root             0 Nov 23 00:21 wlan0 -> ../../devices/soc0/soc/2100000.aips-bus/2190000.usdhc/mmc_host/mmc0/mmc0:0001/mmc0:0001:2/net/wlan0
+
+/sys/class/power_supply:
+total 0
+lrwxrwxrwx    1 root     root             0 Nov 23 00:14 bd71827_ac -> ../../devices/soc0/soc/2100000.aips-bus/21a0000.i2c/i2c-0/0-004b/bd71827-power/power_supply/bd71827_ac
+lrwxrwxrwx    1 root     root             0 Nov 23 00:14 bd71827_bat -> ../../devices/soc0/soc/2100000.aips-bus/21a0000.i2c/i2c-0/0-004b/bd71827-power/power_supply/bd71827_bat
+
+/sys/class/regulator:
+total 0
+lrwxrwxrwx    1 root     root             0 Nov 23 00:14 regulator.0 -> ../../devices/platform/reg-dummy/regulator/regulator.0
+lrwxrwxrwx    1 root     root             0 Nov 23 00:14 regulator.1 -> ../../devices/soc0/soc/2000000.aips-bus/20c8000.anatop/20c8000.anatop:regulator-3p0@120/regulator/regulator.1
+lrwxrwxrwx    1 root     root             0 Nov 23 00:14 regulator.10 -> ../../devices/soc0/soc/2100000.aips-bus/21a0000.i2c/i2c-0/0-004b/bd71827-pmic/regulator/regulator.10
+lrwxrwxrwx    1 root     root             0 Nov 23 00:14 regulator.11 -> ../../devices/soc0/soc/2100000.aips-bus/21a0000.i2c/i2c-0/0-004b/bd71827-pmic/regulator/regulator.11
+lrwxrwxrwx    1 root     root             0 Nov 23 00:14 regulator.12 -> ../../devices/soc0/soc/2100000.aips-bus/21a0000.i2c/i2c-0/0-004b/bd71827-pmic/regulator/regulator.12
+lrwxrwxrwx    1 root     root             0 Nov 23 00:14 regulator.13 -> ../../devices/soc0/soc/2100000.aips-bus/21a0000.i2c/i2c-0/0-004b/bd71827-pmic/regulator/regulator.13
+lrwxrwxrwx    1 root     root             0 Nov 23 00:14 regulator.14 -> ../../devices/soc0/soc/2100000.aips-bus/21a0000.i2c/i2c-0/0-004b/bd71827-pmic/regulator/regulator.14
+lrwxrwxrwx    1 root     root             0 Nov 23 00:14 regulator.15 -> ../../devices/soc0/soc/2100000.aips-bus/21a0000.i2c/i2c-0/0-004b/bd71827-pmic/regulator/regulator.15
+lrwxrwxrwx    1 root     root             0 Nov 23 00:14 regulator.2 -> ../../devices/soc0/regulators/regulators:sd1_vmmc/regulator/regulator.2
+lrwxrwxrwx    1 root     root             0 Nov 23 00:14 regulator.3 -> ../../devices/soc0/regulators/regulators:sd2_vmmc/regulator/regulator.3
+lrwxrwxrwx    1 root     root             0 Nov 23 00:14 regulator.4 -> ../../devices/soc0/soc/2100000.aips-bus/21a0000.i2c/i2c-0/0-004b/bd71827-pmic/regulator/regulator.4
+lrwxrwxrwx    1 root     root             0 Nov 23 00:14 regulator.5 -> ../../devices/soc0/soc/2100000.aips-bus/21a0000.i2c/i2c-0/0-004b/bd71827-pmic/regulator/regulator.5
+lrwxrwxrwx    1 root     root             0 Nov 23 00:14 regulator.6 -> ../../devices/soc0/soc/2100000.aips-bus/21a0000.i2c/i2c-0/0-004b/bd71827-pmic/regulator/regulator.6
+lrwxrwxrwx    1 root     root             0 Nov 23 00:14 regulator.7 -> ../../devices/soc0/soc/2100000.aips-bus/21a0000.i2c/i2c-0/0-004b/bd71827-pmic/regulator/regulator.7
+lrwxrwxrwx    1 root     root             0 Nov 23 00:14 regulator.8 -> ../../devices/soc0/soc/2100000.aips-bus/21a0000.i2c/i2c-0/0-004b/bd71827-pmic/regulator/regulator.8
+lrwxrwxrwx    1 root     root             0 Nov 23 00:14 regulator.9 -> ../../devices/soc0/soc/2100000.aips-bus/21a0000.i2c/i2c-0/0-004b/bd71827-pmic/regulator/regulator.9
+
+===== for d in /sys/class/input/input*; do echo "$d $(cat $d/name)"; done =====
+/sys/class/input/input0 20cc000.snvs:snvs-powerkey
+/sys/class/input/input1 bd71827-power
+/sys/class/input/input2 goodix-ts
+
+===== cat /sys/class/graphics/fb0/name /sys/class/graphics/fb0/modes /sys/class/graphics/fb0/virtual_size /sys/class/graphics/fb0/bits_per_pixel =====
+mxc_epdc_fb
+U:1072x1448p-0
+U:1072x1448p-0
+U:1448x1072p-0
+1088,6144
+8
+
+===== ls -la /lib/firmware /lib/firmware/* 2>&1 | head -100 =====
+/lib/firmware:
+total 7
+drwxr-xr-x    6 root     root          1024 May 21  2026 .
+drwxr-xr-x    8 root     root          2048 May 21  2026 ..
+drwxr-xr-x    2 root     root          1024 May 21  2026 cyttsp5
+drwxr-xr-x    2 root     root          1024 May 21  2026 goodixfw
+drwxr-xr-x    2 root     root          1024 May 21  2026 haptics
+drwxr-xr-x    3 root     root          1024 May 21  2026 imx
+
+/lib/firmware/cyttsp5:
+total 61
+drwxr-xr-x    2 root     root          1024 May 21  2026 .
+drwxr-xr-x    6 root     root          1024 May 21  2026 ..
+-rw-r--r--    1 root     root         59204 May 21  2026 ms_cyttsp5_fw_pid00.bin
+
+/lib/firmware/goodixfw:
+total 94
+drwxr-xr-x    2 root     root          1024 May 21  2026 .
+drwxr-xr-x    6 root     root          1024 May 21  2026 ..
+-rwxr-xr-x    1 root     root          1139 May 21  2026 _goodix_config_.cfg
+-rwxr-xr-x    1 root     root         90126 May 21  2026 _goodix_update_.bin
+
+/lib/firmware/haptics:
+total 4
+drwxr-xr-x    2 root     root          1024 May 21  2026 .
+drwxr-xr-x    6 root     root          1024 May 21  2026 ..
+-rw-r--r--    1 root     root            94 May 21  2026 haptics0.config
+-rw-r--r--    1 root     root            47 May 21  2026 haptics1.config
+
+/lib/firmware/imx:
+total 3
+drwxr-xr-x    3 root     root          1024 May 21  2026 .
+drwxr-xr-x    6 root     root          1024 May 21  2026 ..
+drwxr-xr-x    2 root     root          1024 May 21  2026 epdc
+
+===== cat /proc/interrupts =====
+           CPU0       
+ 16:      34811       GPC  55 Level     i.MX Timer Tick
+ 18:        811       GPC  26 Level     2020000.serial
+ 19:          0       GPC  28 Level     2034000.serial
+119:          0  gpio-mxc  29 Edge      BT hostwake
+121:       2568  gpio-mxc  31 Level     bcmsdh_sdmmc
+127:        163  gpio-mxc   3 Edge      gt9xx-ts
+138:          0  gpio-mxc  14 Edge      hall_sensor
+148:          4  gpio-mxc  24 Level     bd71827
+224:          0       GPC  80 Level     20bc000.wdog
+227:          0       GPC  49 Level     imx_thermal
+232:          0       GPC  19 Level     rtc alarm
+234:          0       GPC   4 Level     20cc000.snvs:snvs-powerkey
+238:          0       GPC   2 Level     sdma
+239:        135       GPC  98 Level     pxp-dmaengine
+240:        137       GPC 102 Level     pxp-dmaengine-std
+241:        135       GPC  97 Level     epdc
+242:          0       GPC  99 Level     dcp-vmi-irq
+243:          0       GPC 100 Level     dcp-irq
+245:       8142       GPC  43 Level     2184000.usb
+246:      24471       GPC  22 Level     mmc0
+248:      42717       GPC  36 Level     21a0000.i2c
+249:       5488       GPC  37 Level     21a4000.i2c
+250:         40       GPC  38 Level     21a8000.i2c
+251:          2       GPC   5 Level     imx-rng
+254:          2   bd71827   2 Edge      bd71827-power
+255:          0   bd71827   3 Edge      bd71827-power
+259:          1   bd71827   7 Edge      bd71827-power
+262:          0   bd71827  10 Edge      bd71827-power
+263:          0   bd71827  11 Edge      bd71827-rtc
+IPI0:          0  CPU wakeup interrupts
+IPI1:          0  Timer broadcast interrupts
+IPI2:          0  Rescheduling interrupts
+IPI3:          0  Function call interrupts
+IPI4:          0  Single function call interrupts
+IPI5:          0  CPU stop interrupts
+IPI6:          0  IRQ work interrupts
+IPI7:          0  completion interrupts
+IPI8:          0  CPU backtrace
+Err:          0
+
+===== cat /proc/cpu/alignment 2>/dev/null; ls /sys/devices/system/cpu; cat /sys/devices/system/cpu/online =====
+User:		0
+System:		0 (  (null))
+Skipped:	0
+Half:		0
+Word:		0
+DWord:		0
+Multi:		0
+User faults:	5 (signal+warn)
+cpu0
+cpufreq
+cpuidle
+kernel_max
+offline
+online
+possible
+power
+present
+uevent
+0
+
+===== ls -la /dev/mmcblk* /dev/block 2>&1 =====
+brw-rw----    1 root     disk      253,   0 Nov 23 00:14 /dev/mmcblk1
+brw-rw----    1 root     disk      253,  16 Nov 23 00:14 /dev/mmcblk1boot0
+brw-rw----    1 root     disk      253,  32 Nov 23 00:14 /dev/mmcblk1boot1
+brw-rw----    1 root     disk      253,   1 Nov 23 00:14 /dev/mmcblk1p1
+brw-rw----    1 root     disk      253,  10 Nov 23 00:21 /dev/mmcblk1p10
+brw-rw----    1 root     disk      253,   2 Nov 23 00:14 /dev/mmcblk1p2
+brw-rw----    1 root     disk      253,   3 Nov 23 00:14 /dev/mmcblk1p3
+brw-rw----    1 root     disk      253,   4 Nov 23 00:14 /dev/mmcblk1p4
+brw-rw----    1 root     disk      253,   5 Nov 23 00:14 /dev/mmcblk1p5
+brw-rw----    1 root     disk      253,   6 Nov 23 00:14 /dev/mmcblk1p6
+brw-rw----    1 root     disk      253,   7 Nov 23 00:14 /dev/mmcblk1p7
+brw-rw----    1 root     disk      253,   8 Nov 23 00:14 /dev/mmcblk1p8
+brw-rw----    1 root     disk      253,   9 Nov 23 00:14 /dev/mmcblk1p9
+
+/dev/block:
+total 0
+drwxr-xr-x    2 root     root           900 Nov 23 00:14 .
+drwxr-xr-x   18 root     root          1360 Nov 23 00:14 ..
+lrwxrwxrwx    1 root     root             7 Nov 23 00:14 1:0 -> ../rd/0
+lrwxrwxrwx    1 root     root             7 Nov 23 00:14 1:1 -> ../rd/1
+lrwxrwxrwx    1 root     root             8 Nov 23 00:14 1:10 -> ../rd/10
+lrwxrwxrwx    1 root     root             8 Nov 23 00:14 1:11 -> ../rd/11
+lrwxrwxrwx    1 root     root             8 Nov 23 00:14 1:12 -> ../rd/12
+lrwxrwxrwx    1 root     root             8 Nov 23 00:14 1:13 -> ../rd/13
+lrwxrwxrwx    1 root     root             8 Nov 23 00:14 1:14 -> ../rd/14
+lrwxrwxrwx    1 root     root             8 Nov 23 00:14 1:15 -> ../rd/15
+lrwxrwxrwx    1 root     root             7 Nov 23 00:14 1:2 -> ../rd/2
+lrwxrwxrwx    1 root     root             7 Nov 23 00:14 1:3 -> ../rd/3
+lrwxrwxrwx    1 root     root             7 Nov 23 00:14 1:4 -> ../rd/4
+lrwxrwxrwx    1 root     root             7 Nov 23 00:14 1:5 -> ../rd/5
+lrwxrwxrwx    1 root     root             7 Nov 23 00:14 1:6 -> ../rd/6
+lrwxrwxrwx    1 root     root             7 Nov 23 00:14 1:7 -> ../rd/7
+lrwxrwxrwx    1 root     root             7 Nov 23 00:14 1:8 -> ../rd/8
+lrwxrwxrwx    1 root     root             7 Nov 23 00:14 1:9 -> ../rd/9
+lrwxrwxrwx    1 root     root            10 Nov 23 00:14 253:0 -> ../mmcblk1
+lrwxrwxrwx    1 root     root            12 Nov 23 00:14 253:1 -> ../mmcblk1p1
+lrwxrwxrwx    1 root     root            13 Nov 23 00:14 253:10 -> ../mmcblk1p10
+lrwxrwxrwx    1 root     root            15 Nov 23 00:14 253:16 -> ../mmcblk1boot0
+lrwxrwxrwx    1 root     root            12 Nov 23 00:14 253:2 -> ../mmcblk1p2
+lrwxrwxrwx    1 root     root            12 Nov 23 00:14 253:3 -> ../mmcblk1p3
+lrwxrwxrwx    1 root     root            15 Nov 23 00:14 253:32 -> ../mmcblk1boot1
+lrwxrwxrwx    1 root     root            12 Nov 23 00:14 253:4 -> ../mmcblk1p4
+lrwxrwxrwx    1 root     root            12 Nov 23 00:14 253:5 -> ../mmcblk1p5
+lrwxrwxrwx    1 root     root            12 Nov 23 00:14 253:6 -> ../mmcblk1p6
+lrwxrwxrwx    1 root     root            12 Nov 23 00:14 253:7 -> ../mmcblk1p7
+lrwxrwxrwx    1 root     root            12 Nov 23 00:14 253:8 -> ../mmcblk1p8
+lrwxrwxrwx    1 root     root            12 Nov 23 00:14 253:9 -> ../mmcblk1p9
+lrwxrwxrwx    1 root     root             8 Nov 23 00:14 254:0 -> ../zram0
+lrwxrwxrwx    1 root     root             9 Nov 23 00:14 7:0 -> ../loop/0
+lrwxrwxrwx    1 root     root             9 Nov 23 00:14 7:1 -> ../loop/1
+lrwxrwxrwx    1 root     root            10 Nov 23 00:14 7:10 -> ../loop/10
+lrwxrwxrwx    1 root     root            10 Nov 23 00:14 7:11 -> ../loop/11
+lrwxrwxrwx    1 root     root            10 Nov 23 00:14 7:12 -> ../loop/12
+lrwxrwxrwx    1 root     root             9 Nov 23 00:14 7:2 -> ../loop/2
+lrwxrwxrwx    1 root     root             9 Nov 23 00:14 7:3 -> ../loop/3
+lrwxrwxrwx    1 root     root             9 Nov 23 00:14 7:4 -> ../loop/4
+lrwxrwxrwx    1 root     root             9 Nov 23 00:14 7:5 -> ../loop/5
+lrwxrwxrwx    1 root     root             9 Nov 23 00:14 7:6 -> ../loop/6
+lrwxrwxrwx    1 root     root             9 Nov 23 00:14 7:7 -> ../loop/7
+lrwxrwxrwx    1 root     root             9 Nov 23 00:14 7:8 -> ../loop/8
+lrwxrwxrwx    1 root     root             9 Nov 23 00:14 7:9 -> ../loop/9
+
+===== cat /proc/mtd 2>/dev/null; ls /dev/mtd* 2>&1 =====
+dev:    size   erasesize  name
+ls: /dev/mtd*: No such file or directory

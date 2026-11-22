@@ -1,0 +1,892 @@
+
+===== date; id; uname -a =====
+Mon Nov 23 00:29:53 GMT+8:0100 2026
+uid=0(root) gid=0(root) groups=0(root)
+Linux kindle 4.1.15-lab126 #1 SMP PREEMPT Thu May 21 05:14:34 UTC 2026 armv7l GNU/Linux
+
+===== memory dumps =====
+pm_test_show: 80069564 page 0x80069
+2+0 records in
+2+0 records out
+8192 bytes (8.0KB) copied, 0.005691 seconds, 1.4MB/s
+outer_cache: 80b9a104 page 0x80b9a
+2+0 records in
+2+0 records out
+8192 bytes (8.0KB) copied, 0.001618 seconds, 4.8MB/s
+l2c210_flush_all: 800229b8 page 0x80022
+2+0 records in
+2+0 records out
+8192 bytes (8.0KB) copied, 0.001733 seconds, 4.5MB/s
+l2c310_disable: 80021cec page 0x80021
+2+0 records in
+2+0 records out
+8192 bytes (8.0KB) copied, 0.001630 seconds, 4.8MB/s
+l2c310_flush_all_erratum: not found
+l2c210_sync: 80021b48 page 0x80021
+2+0 records in
+2+0 records out
+8192 bytes (8.0KB) copied, 0.001654 seconds, 4.7MB/s
+l2c310_resume: 80022988 page 0x80022
+2+0 records in
+2+0 records out
+8192 bytes (8.0KB) copied, 0.001648 seconds, 4.7MB/s
+soft_restart: 80012598 page 0x80012
+2+0 records in
+2+0 records out
+8192 bytes (8.0KB) copied, 0.001663 seconds, 4.7MB/s
+cpu_v7_proc_fin: 8002158c page 0x80021
+2+0 records in
+2+0 records out
+8192 bytes (8.0KB) copied, 0.001653 seconds, 4.7MB/s
+
+===== grep -E " (l2c[0-9a-z_]*|outer_cache|l2x0_[a-z_]*)$" /proc/kallsyms =====
+80021874 t l2c_enable
+800219c4 t l2c_disable
+80021a1c t l2c_save
+80021a34 t l2c_resume
+80021a50 t l2c210_inv_range
+80021ab8 t l2c210_clean_range
+80021b00 t l2c210_flush_range
+80021b48 t l2c210_sync
+80021b70 t l2c220_enable
+80021b78 t l2c310_configure
+80021cec t l2c310_disable
+80021e0c t l2c220_sync
+80021f18 t l2c220_op_way
+8002204c t l2c220_flush_all
+80022060 t l2c220_op_pa_range
+800220e4 t l2c220_flush_range
+8002224c t l2c220_clean_range
+800223b4 t l2c220_inv_range
+80022944 t l2c310_cpu_enable_flz
+80022988 t l2c310_resume
+800229b8 t l2c210_flush_all
+80022b3c T l2c310_early_resume
+80736798 t l2cap_seq_list_append
+807369d8 T l2cap_add_psm
+80736a70 T l2cap_chan_set_defaults
+80736acc t l2cap_state_change
+80736b70 t l2cap_classify_txseq
+80736f1c t l2cap_get_ident
+80736f58 T l2cap_register_user
+80736fe8 T l2cap_unregister_user
+80737050 t l2cap_get_chan_by_scid
+807370cc t l2cap_get_chan_by_dcid
+80737148 T l2cap_chan_create
+80737258 t l2cap_seq_list_init
+807372dc t l2cap_chan_destroy
+80737364 T l2cap_chan_put
+807373d4 t l2cap_abort_rx_srej_sent
+80737470 T l2cap_chan_del
+80737758 t l2cap_conn_update_id_addr
+807377f0 t l2cap_add_conf_opt
+807378a4 t l2cap_add_opt_efs
+80737934 t l2cap_build_conf_req
+80737d7c t l2cap_do_send
+80737e7c t l2cap_send_cmd
+807380f0 t l2cap_send_disconn_req
+807381ec t l2cap_send_move_chan_rsp
+80738294 t l2cap_send_move_chan_cfm_rsp
+807382fc t l2cap_conn_free
+8073831c T l2cap_conn_put
+80738350 t l2cap_send_efs_conf_rsp
+80738424 t l2cap_request_info
+8073849c t l2cap_connect_create_rsp
+80738674 t l2cap_reassemble_sdu
+80738874 t l2cap_debugfs_open
+80738888 t l2cap_debugfs_show
+807389c4 T l2cap_conn_get
+80738a30 t l2cap_move_setup
+80738c00 t l2cap_send_sframe
+80738e5c t l2cap_send_rr_or_rnr
+80738efc t l2cap_ack_timeout
+80738f90 t l2cap_send_srej
+8073909c t l2cap_send_srej_tail
+80739120 t l2cap_process_reqseq
+80739288 t l2cap_le_start
+80739588 t l2cap_ertm_resend
+807398a8 t l2cap_retransmit_all
+807399f8 t l2cap_retransmit
+80739afc T l2cap_add_scid
+80739b3c T l2cap_chan_hold
+80739bd4 T l2cap_chan_close
+80739e3c t l2cap_chan_timeout
+80739fe0 t l2cap_ertm_send
+8073a22c t l2cap_do_move_cancel
+8073a268 t l2cap_send_i_or_rr_or_rnr
+8073a388 t l2cap_send_ack
+8073a6ac t l2cap_tx
+8073ab3c T l2cap_chan_send
+8073bad4 t l2cap_monitor_timeout
+8073bb54 t l2cap_retrans_timeout
+8073bbd0 t l2cap_move_done
+8073bc58 t l2cap_pass_to_tx
+8073bcb0 t l2cap_handle_rej
+8073be34 t l2cap_handle_srej
+8073c078 t l2cap_rx_state_recv
+8073c4f0 t l2cap_rx
+8073cd98 t l2cap_data_channel
+8073d6a4 t l2cap_send_move_chan_cfm
+8073d7bc t l2cap_send_move_chan_req
+8073d8d0 t l2cap_global_chan_by_psm
+8073dac0 t l2cap_conn_del
+8073dc7c t l2cap_disconn_cfm
+8073dce4 t l2cap_global_fixed_chan
+8073e024 T l2cap_chan_add
+8073e054 T l2cap_chan_check_security
+8073e158 t l2cap_connect
+8073e664 T l2cap_send_conn_req
+8073e6c0 t l2cap_do_create
+8073e888 t l2cap_start_connection
+8073e980 t l2cap_conn_start
+8073ec00 t l2cap_info_timeout
+8073ec20 t l2cap_do_start
+8073ec94 T l2cap_chan_connect
+8073f494 t l2cap_connect_cfm
+8073f86c t l2cap_security_cfm
+8073fce8 T l2cap_ertm_init
+8073fe68 t l2cap_recv_frame
+80742ba0 T l2cap_logical_cfm
+80742df0 T l2cap_move_start
+80742f84 T l2cap_chan_busy
+80742fa8 T l2cap_connect_ind
+807430f8 T l2cap_disconn_ind
+8074313c T l2cap_recv_acldata
+807433f0 T l2cap_exit
+80743418 T l2cap_is_socket
+8074343c t l2cap_sock_state_change_cb
+80743454 t l2cap_sock_get_sndtimeo_cb
+80743460 t l2cap_sock_set_shutdown_cb
+8074348c t l2cap_sock_defer_cb
+807434c0 t l2cap_sock_recvmsg
+8074360c t l2cap_sock_recv_cb
+80743680 t l2cap_sock_listen
+80743770 t l2cap_sock_ready_cb
+807437ec t l2cap_sock_sendmsg
+80743904 t l2cap_sock_getsockopt
+80743e0c t l2cap_sock_suspend_cb
+80743e30 t l2cap_sock_setsockopt
+807444dc t l2cap_sock_shutdown
+80744824 t l2cap_sock_getname
+80744950 t l2cap_skb_msg_name
+8074499c t l2cap_sock_accept
+80744b40 t l2cap_sock_connect
+80744cfc t l2cap_sock_bind
+80744f34 t l2cap_sock_destruct
+80744fa8 t l2cap_sock_init
+80745154 t l2cap_sock_alloc_skb_cb
+80745270 t l2cap_sock_resume_cb
+807452b4 t l2cap_sock_kill
+80745378 t l2cap_sock_release
+8074542c t l2cap_sock_close_cb
+80745434 t l2cap_sock_teardown_cb
+807456f4 t l2cap_sock_new_connection_cb
+80745798 t l2cap_sock_create
+80745880 T l2cap_cleanup_sockets
+807458b0 t l2cap_chan_no_new_connection
+807458b8 t l2cap_chan_no_recv
+807458c0 t l2cap_chan_no_alloc_skb
+807458c8 t l2cap_chan_no_teardown
+807458cc t l2cap_chan_no_close
+807458d0 t l2cap_chan_no_ready
+807458d4 t l2cap_chan_no_state_change
+807458d8 t l2cap_chan_no_defer
+807458dc t l2cap_chan_no_suspend
+807458e0 t l2cap_chan_no_resume
+807458e4 t l2cap_chan_no_set_shutdown
+807458e8 t l2cap_chan_no_get_sndtimeo
+8074c780 t l2cap_chan_no_new_connection
+8074c788 t l2cap_chan_no_teardown
+8074c78c t l2cap_chan_no_ready
+8074c790 t l2cap_chan_no_defer
+8074c794 t l2cap_chan_no_resume
+8074c798 t l2cap_chan_no_set_shutdown
+8074c79c t l2cap_chan_no_get_sndtimeo
+807ee6b0 t l2cap_send_move_chan_cfm_icid
+807f5c5c r l2c220_data
+8089de60 r l2cap_debugfs_fops
+8089e8e4 r l2cap_sock_ops
+8089e968 r l2cap_chan_ops
+8089e99c r l2cap_sock_family_ops
+80b4464c t l2c310_save
+80b446fc t l2c310_fixup
+80b447cc t l2c310_enable
+80b449cc t l2x0_cache_size_of_parse
+80b44ba8 t l2c310_of_parse
+80b44ed0 t l2x0_of_parse
+80b45290 T l2x0_init
+80b45320 T l2x0_of_init
+80b7775c T l2cap_init
+80b77810 T l2cap_init_sockets
+80b8b41c t l2c210_data
+80b8b460 t l2c310_init_fns
+80b8b4e8 t l2x0_ids
+80b9a104 D outer_cache
+80c064f8 d l2cap_cb
+80c06518 d l2cap_proto
+80c067b8 d l2cap_mtu
+80c45550 B l2x0_saved_regs
+80c45578 b l2x0_data
+80c4557c b l2x0_way_mask
+80c45580 b l2x0_base
+80c45584 b l2x0_lock
+80c45588 b l2x0_size
+80cb2854 b l2cap_debugfs
+80cb2858 b l2cap_sk_list
+80cb2884 b l2cap_ertm
+
+===== for f in name rotate stride mode modes virtual_size bits_per_pixel pan blank; do echo "$f: $(cat /sys/class/graphics/fb0/$f 2>&1)"; done =====
+name: mxc_epdc_fb
+rotate: 3
+stride: 1088
+mode: 
+modes: U:1072x1448p-0
+U:1072x1448p-0
+U:1448x1072p-0
+virtual_size: 1088,6144
+bits_per_pixel: 8
+pan: 0,0
+blank: 
+
+===== fbset 2>&1; fbset -i 2>&1 =====
+
+mode "1072x1448-0"
+	# D: 0.012 MHz, H: 0.010 kHz, V: 0.007 Hz
+	geometry 1072 1448 1088 6144 8
+	timings 83333333 24 80 4 12 36 1
+	accel false
+	rgba 8/0,8/0,8/0,0/0
+endmode
+
+
+===== ls -laR /mnt/wfm 2>&1 | head -50 =====
+/mnt/wfm:
+total 2
+drwxr-xr-x    2 root     root          1024 May 21  2026 .
+drwxr-xr-x    9 root     root          1024 May 21  2026 ..
+
+===== ls -la /lib/firmware/imx/epdc 2>&1 =====
+total 4581
+drwxr-xr-x    2 root     root          1024 May 21  2026 .
+drwxr-xr-x    3 root     root          1024 May 21  2026 ..
+-rw-r--r--    1 root     root       2327256 May 21  2026 epdc_ED060KC4.fw
+-rw-r--r--    1 root     root       2340056 May 21  2026 epdc_default_wfm.fw
+
+===== for p in /sys/module/mxc_epdc_v2_fb/parameters/*; do echo "$p: $(cat $p 2>&1)"; done =====
+/sys/module/mxc_epdc_v2_fb/parameters/waveform: 320_R278_AI4103_ED060KC4C3_TC.wrf.gz
+
+===== ls /sys/devices/platform/ 2>&1 | head; ls /sys/class/graphics/fb0/ 2>&1 =====
+Vivante GCCore
+alarmtimer
+bcmdhd_wlan.1
+falconblk
+imx6q-cpufreq
+power
+reg-dummy
+regulatory.0
+snd-soc-dummy
+uevent
+bits_per_pixel
+blank
+console
+cursor
+dev
+device
+mode
+modes
+name
+pan
+power
+rotate
+state
+stride
+subsystem
+uevent
+virtual_size
+
+===== ls -laR /opt/brcm_4343w 2>&1 | head -60 =====
+/opt/brcm_4343w:
+total 4
+drwxr-xr-x    4 root     root          1024 May 21  2026 .
+drwxr-xr-x    8 root     root          1024 May 21  2026 ..
+drwxr-xr-x    3 root     root          1024 May 21  2026 bluetooth
+drwxr-xr-x    4 root     root          1024 May 21  2026 wifi
+
+/opt/brcm_4343w/bluetooth:
+total 3
+drwxr-xr-x    3 root     root          1024 May 21  2026 .
+drwxr-xr-x    4 root     root          1024 May 21  2026 ..
+drwxr-xr-x    2 root     root          1024 May 21  2026 firmware
+
+/opt/brcm_4343w/bluetooth/firmware:
+total 4958
+drwxr-xr-x    2 root     root          1024 May 21  2026 .
+drwxr-xr-x    3 root     root          1024 May 21  2026 ..
+-rwxr-xr-x    1 root     root         36221 May 21  2026 BCM4343A1_001.002.009.0062.0363.hcd
+-rwxr-xr-x    1 root     root         37010 May 21  2026 BCM4343A1_001.002.009.0083.0380.hcd
+-rwxr-xr-x    1 root     root         35461 May 21  2026 BCM4343A1_001.002.009.0096.0406.hcd
+-rwxr-xr-x    1 root     root         35461 May 21  2026 BCM4343A1_001.002.009.0096.0411.hcd
+-rwxr-xr-x    1 root     root         35461 May 21  2026 BCM4343A1_001.002.009.0096.0416.hcd
+-rwxr-xr-x    1 root     root         35468 May 21  2026 BCM4343A1_001.002.009.0121.0473.hcd
+-rwxr-xr-x    1 root     root         35468 May 21  2026 BCM4343A1_001.002.009.0121.0474.hcd
+-rwxr-xr-x    1 root     root         35468 May 21  2026 BCM4343A1_001.002.009.0121.0497.hcd
+-rwxr-xr-x    1 root     root         35568 May 21  2026 BCM4343A1_001.002.009.0152.0515.hcd
+-rwxr-xr-x    1 root     root         35568 May 21  2026 BCM4343A1_001.002.009.0152.0516.hcd
+-rwxr-xr-x    1 root     root         35568 May 21  2026 BCM4343A1_001.002.009.0152.0517.hcd
+-rwxr-xr-x    1 root     root       4646184 May 21  2026 sample.wav
+
+/opt/brcm_4343w/wifi:
+total 4
+drwxr-xr-x    4 root     root          1024 May 21  2026 .
+drwxr-xr-x    4 root     root          1024 May 21  2026 ..
+drwxr-xr-x    2 root     root          1024 May 21  2026 firmware
+drwxr-xr-x    2 root     root          1024 May 21  2026 nvram
+
+/opt/brcm_4343w/wifi/firmware:
+total 735
+drwxr-xr-x    2 root     root          1024 May 21  2026 .
+drwxr-xr-x    4 root     root          1024 May 21  2026 ..
+-rwxr-xr-x    1 root     root        373867 May 21  2026 fw_bcmdhd_mfg.bin
+-rwxr-xr-x    1 root     root        369119 May 21  2026 fw_bcmdhd_sr.bin
+
+/opt/brcm_4343w/wifi/nvram:
+total 6
+drwxr-xr-x    2 root     root          1024 May 21  2026 .
+drwxr-xr-x    4 root     root          1024 May 21  2026 ..
+-rwxr-xr-x    1 root     root          1105 May 21  2026 nvram_wan.txt
+-rwxr-xr-x    1 root     root          1166 May 21  2026 nvram_wfo.txt
+
+===== for p in /sys/module/bcmdhd/parameters/*; do echo "$p: $(cat $p 2>&1)"; done =====
+/sys/module/bcmdhd/parameters/clockoverride: 0
+/sys/module/bcmdhd/parameters/dhd_doflow: 0
+/sys/module/bcmdhd/parameters/dhd_dpcpoll: 0
+/sys/module/bcmdhd/parameters/dhd_oob_gpio_num: -1
+/sys/module/bcmdhd/parameters/disable_proptx: 0
+/sys/module/bcmdhd/parameters/firmware_path: /opt/brcm_4343w/wifi/firmware/fw_bcmdhd_sr.bin
+/sys/module/bcmdhd/parameters/info_string:   Driver: 1.363.110.23 (r)
+  Firmware: wl0: Mar 29 2021 18:23:27 version 7.45.102.16 (r728411 CY) FWID 01-361e1702 
+  Chip: a9a6 Rev 1 Pkg 3
+/sys/module/bcmdhd/parameters/instance_base: 0
+/sys/module/bcmdhd/parameters/nvram_path: /opt/brcm_4343w/wifi/nvram/nvram_wfo.txt
+/sys/module/bcmdhd/parameters/op_mode: 0
+/sys/module/bcmdhd/parameters/passive_channel_skip: 0
+
+===== for d in /sys/block/mmcblk1/mmcblk1*; do echo "== $d"; cat $d/uevent; echo "start=$(cat $d/start 2>/dev/null) size=$(cat $d/size)"; done =====
+== /sys/block/mmcblk1/mmcblk1p1
+MAJOR=253
+MINOR=1
+DEVNAME=mmcblk1p1
+DEVTYPE=partition
+PARTN=1
+PARTNAME=kernel
+start=2048 size=32768
+== /sys/block/mmcblk1/mmcblk1p10
+MAJOR=253
+MINOR=10
+DEVNAME=mmcblk1p10
+DEVTYPE=partition
+PARTN=10
+PARTNAME=userdata
+start=2179072 size=13090749
+== /sys/block/mmcblk1/mmcblk1p2
+MAJOR=253
+MINOR=2
+DEVNAME=mmcblk1p2
+DEVTYPE=partition
+PARTN=2
+PARTNAME=wfm
+start=34816 size=8192
+== /sys/block/mmcblk1/mmcblk1p3
+MAJOR=253
+MINOR=3
+DEVNAME=mmcblk1p3
+DEVTYPE=partition
+PARTN=3
+PARTNAME=keys
+start=43008 size=4096
+== /sys/block/mmcblk1/mmcblk1p4
+MAJOR=253
+MINOR=4
+DEVNAME=mmcblk1p4
+DEVTYPE=partition
+PARTN=4
+PARTNAME=reserved0
+start=47104 size=1024
+== /sys/block/mmcblk1/mmcblk1p5
+MAJOR=253
+MINOR=5
+DEVNAME=mmcblk1p5
+DEVTYPE=partition
+PARTN=5
+PARTNAME=reserved1
+start=48128 size=1024
+== /sys/block/mmcblk1/mmcblk1p6
+MAJOR=253
+MINOR=6
+DEVNAME=mmcblk1p6
+DEVTYPE=partition
+PARTN=6
+PARTNAME=miscdata
+start=49152 size=32768
+== /sys/block/mmcblk1/mmcblk1p7
+MAJOR=253
+MINOR=7
+DEVNAME=mmcblk1p7
+DEVTYPE=partition
+PARTN=7
+PARTNAME=snapshot
+start=81920 size=524288
+== /sys/block/mmcblk1/mmcblk1p8
+MAJOR=253
+MINOR=8
+DEVNAME=mmcblk1p8
+DEVTYPE=partition
+PARTN=8
+PARTNAME=system
+start=606208 size=1048576
+== /sys/block/mmcblk1/mmcblk1p9
+MAJOR=253
+MINOR=9
+DEVNAME=mmcblk1p9
+DEVTYPE=partition
+PARTN=9
+PARTNAME=cache
+start=1654784 size=524288
+
+===== cat /sys/block/mmcblk1/device/name /sys/block/mmcblk1/device/type /sys/block/mmcblk1/device/manfid 2>&1 =====
+cat: can't open '/sys/block/mmcblk1/device/name': No such file or directory
+cat: can't open '/sys/block/mmcblk1/device/type': No such file or directory
+cat: can't open '/sys/block/mmcblk1/device/manfid': No such file or directory
+
+===== cat /proc/bus/input/devices =====
+I: Bus=0019 Vendor=0000 Product=0000 Version=0000
+N: Name="20cc000.snvs:snvs-powerkey"
+P: Phys=snvs-pwrkey/input0
+S: Sysfs=/devices/soc0/soc/2000000.aips-bus/20cc000.snvs/20cc000.snvs:snvs-powerkey/input/input0
+U: Uniq=
+H: Handlers=kbd event0 
+B: PROP=0
+B: EV=3
+B: KEY=100000 0 0 0
+
+I: Bus=0019 Vendor=0000 Product=0000 Version=0000
+N: Name="bd71827-power"
+P: Phys=pwrkey/input0
+S: Sysfs=/devices/soc0/soc/2100000.aips-bus/21a0000.i2c/i2c-0/0-004b/bd71827-power/input/input1
+U: Uniq=
+H: Handlers=kbd event1 
+B: PROP=0
+B: EV=3
+B: KEY=100000 0 0 0
+
+I: Bus=0018 Vendor=dead Product=beef Version=28bb
+N: Name="goodix-ts"
+P: Phys=input/ts
+S: Sysfs=/devices/virtual/input/input2
+U: Uniq=
+H: Handlers=event2 
+B: PROP=2
+B: EV=b
+B: KEY=0
+B: ABS=6e58000 0
+
+
+===== cat /proc/gt9xx_config 2>&1 | head -40 =====
+==== GT9XX config init value====
+0x63 0x30 0x04 0xA8 0x05 0x02 0x3D 0x00 
+0x22 0x08 0x1F 0x0A 0x4E 0x32 0x05 0x05 
+0x00 0x00 0x00 0x00 0x24 0x44 0x08 0x16 
+0x13 0x1D 0x14 0x87 0x27 0xDD 0x7A 0x7C 
+0xD3 0x07 0x00 0x00 0x00 0x22 0x03 0x11 
+0x30 0x08 0x00 0x00 0x00 0x00 0x00 0x32 
+0x00 0x00 0x00 0x70 0x84 0x94 0xE2 0x53 
+0x12 0x0A 0x03 0x04 0x86 0x71 0x00 0x83 
+0x75 0x50 0x80 0x79 0x00 0x7E 0x7D 0x00 
+0x7B 0x81 0x00 0x7B 0x00 0x00 0x00 0x00 
+0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 
+0x00 0x25 0x00 0x00 0x00 0x00 0x00 0x00 
+0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 
+0x00 0x0A 0x00 0x00 0x01 0x21 0x00 0x0F 
+0x1D 0x1C 0x1B 0x1A 0x19 0x18 0x17 0x16 
+0x13 0x12 0x11 0x10 0x0F 0x0E 0x0D 0x0C 
+0x09 0x08 0x07 0x06 0x05 0x04 0x03 0x02 
+0x01 0x00 0xFF 0xFF 0xFF 0xFF 0x0E 0x0D 
+0x0C 0x0B 0x0A 0x09 0x08 0x2A 0x29 0x28 
+0x27 0x26 0x25 0x24 0xFF 0xFF 0xFF 0xFF 
+0xFF 0xFF 0xF0 0xF0 0xF0 0x00 0x00 0x00 
+0x00 0x00 0x7F 0x00 0x00 0x0B 0x14 0xFA 
+0x55 0x46 0x32 0x06 0x06 0xC8 0x12 0x65 
+0x2F 0x2F 0x2F 0x2F 0x2F 0x2F 0x2F 0x2F 
+0x2F 0x2F 0x2F 0x2F 0x2F 0x2F 0x00 0x00 
+0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 
+0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 
+0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 
+0x00 0x00 0x16 0x00 
+==== GT9XX config real value====
+0x63 0x30 0x04 0xA8 0x05 0x02 0x3D 0x00 
+0x22 0x08 0x1F 0x0A 0x4E 0x32 0x05 0x05 
+0x00 0x00 0x00 0x00 0x24 0x44 0x08 0x16 
+0x13 0x1D 0x14 0x87 0x27 0xDD 0x7A 0x7C 
+0xD3 0x07 0x00 0x00 0x00 0x22 0x03 0x11 
+0x30 0x08 0x00 0x00 0x00 0x00 0x00 0x32 
+0x00 0x00 0x00 0x70 0x84 0x94 0xE2 0x53 
+0x12 0x0A 0x03 0x04 0x86 0x71 0x00 0x83 
+0x75 0x50 0x80 0x79 0x00 0x7E 0x7D 0x00 
+
+===== for f in /sys/class/input/input2/*; do [ -f "$f" ] && echo "$f: $(cat $f 2>&1)"; done =====
+/sys/class/input/input2/modalias: input:b0018vDEADpBEEFe28BB-e0,1,3,kra2F,30,32,35,36,37,39,3A,mlsfw
+/sys/class/input/input2/name: goodix-ts
+/sys/class/input/input2/phys: input/ts
+/sys/class/input/input2/properties: 2
+/sys/class/input/input2/uevent: PRODUCT=18/dead/beef/28bb
+NAME="goodix-ts"
+PHYS="input/ts"
+PROP=2
+EV=b
+KEY=0
+ABS=6e58000 0
+MODALIAS=input:b0018vDEADpBEEFe28BB-e0,1,3,kra2F,30,32,35,36,37,39,3A,mlsfw
+/sys/class/input/input2/uniq: 
+
+===== cat /sys/class/power_supply/bd71827_bat/uevent /sys/class/power_supply/bd71827_ac/uevent =====
+POWER_SUPPLY_NAME=bd71827_bat
+POWER_SUPPLY_STATUS=Discharging
+POWER_SUPPLY_HEALTH=Good
+POWER_SUPPLY_CHARGE_TYPE=N/A
+POWER_SUPPLY_ONLINE=1
+POWER_SUPPLY_VOLTAGE_NOW=3640000
+POWER_SUPPLY_CAPACITY=19
+POWER_SUPPLY_HEALTH=Good
+POWER_SUPPLY_PRESENT=1
+POWER_SUPPLY_TECHNOLOGY=Li-ion
+POWER_SUPPLY_CHARGE_NOW=318000
+POWER_SUPPLY_CHARGE_FULL_DESIGN=1507000
+POWER_SUPPLY_CHARGE_FULL=1503000
+POWER_SUPPLY_CURRENT_NOW=-262000
+POWER_SUPPLY_CURRENT_AVG=-51666
+POWER_SUPPLY_TEMP=22
+POWER_SUPPLY_VOLTAGE_MAX=4350000
+POWER_SUPPLY_VOLTAGE_MIN=3400000
+POWER_SUPPLY_CURRENT_MAX=900000
+POWER_SUPPLY_NAME=bd71827_ac
+POWER_SUPPLY_ONLINE=0
+POWER_SUPPLY_VOLTAGE_NOW=20000
+
+===== cat /sys/class/backlight/bl/max_brightness /sys/class/backlight/bl/brightness /sys/class/backlight/bl/actual_brightness =====
+2047
+944
+944
+
+===== cat /sys/power/state; cat /sys/power/pm_test; ls /sys/power =====
+freeze standby mem
+[none] core processors platform devices freezer
+pm_async
+pm_freeze_timeout
+pm_print_times
+pm_test
+state
+wakeup_count
+
+===== cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_frequencies /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor 2>&1 =====
+396000 996000 
+ondemand
+
+===== for f in soc_id revision machine family; do echo "$f: $(cat /sys/devices/soc0/$f 2>&1)"; done =====
+soc_id: i.MX6SLL
+revision: 1.1
+machine: Lab126 i.MX6SLL Board
+family: Freescale i.MX
+
+===== grep -rnE "insmod|modprobe|g_mass_storage|bcmdhd|gt9xx|mxc_epdc" /etc/upstart /etc/init.d /etc/init 2>/dev/null | head -80 =====
+/etc/upstart/cyttsp:18:	modprobe cyttsp
+/etc/upstart/cyttsp:29:	modprobe cyttsp4_i2c
+/etc/upstart/cyttsp:30:	modprobe cyttsp4_core
+/etc/upstart/cyttsp:31:	modprobe cyttsp4_mt_b
+/etc/upstart/cyttsp:36:		modprobe -r cyttsp4_mt_b
+/etc/upstart/cyttsp:37:		modprobe -r cyttsp4_device_access
+/etc/upstart/cyttsp:38:		modprobe -r cyttsp4_core
+/etc/upstart/cyttsp:40:		modprobe cyttsp4_core recovery_mode=y ;
+/etc/upstart/cyttsp:42:		modprobe cyttsp4_loader
+/etc/upstart/cyttsp:63:				modprobe cyttsp4_loader
+/etc/upstart/cyttsp5:17:	modprobe cyttsp5_i2c
+/etc/upstart/cyttsp5:37:		modprobe cyttsp5_loader
+/etc/upstart/cyttsp5:64:            modprobe cyttsp5_loader
+/etc/upstart/haptics:11:	modprobe drv26xx_haptics
+/etc/upstart/haptics:12:	modprobe fsr_keypad
+/etc/upstart/whiskey_button:7:    modprobe gpiokey
+/etc/upstart/whiskey_button:8:    modprobe gpiokey_pgturn
+/etc/upstart/pt5:17:	modprobe pt_i2c
+/etc/upstart/pt5:43:		modprobe pt_loader
+/etc/upstart/pt5:118:				modprobe pt_loader
+/etc/upstart/stylus:10:	f_modprobe wacom_i2c
+/etc/upstart/touch:9:	f_modprobe bma2x2
+/etc/upstart/touch:15:			f_modprobe gt9xx_ts
+/etc/upstart/touch:45:						f_modprobe focaltech_tp
+/etc/upstart/touch:48:						f_modprobe goodix_core
+/etc/upstart/touch:68:#		f_modprobe gin_keypad
+/etc/upstart/touch:69:#		f_modprobe lis3dh_acc_misc
+/etc/upstart/touch:70: 		f_modprobe bma2x2_wario
+/etc/upstart/touch:101:		f_modprobe gt9xx_ts
+/etc/upstart/zforce:45:modprobe zforce && true
+/etc/upstart/zforce:86:  modprobe -r zforce
+/etc/upstart/zforce:87:  modprobe zforce
+/etc/upstart/zforce:95:  modprobe -r zforce
+/etc/upstart/zforce2:45:modprobe zforce2 && true
+/etc/upstart/zforce2:90:  modprobe -r zforce2
+/etc/upstart/zforce2:91:  modprobe zforce2
+/etc/upstart/zforce2:99:  modprobe -r zforce2
+/etc/upstart/zforce2_heisenberg:5:modprobe zforce2 bpbc=0  deviceType=1
+/etc/upstart/functions:155:f_modprobe() {
+/etc/upstart/functions:156: f_log I modules modprobe "loading module $1"
+/etc/upstart/functions:157: ( modprobe $* && f_emit loaded_$1 ) || f_log C modules modprobe_failed "failed to load module $1"
+/etc/upstart/filesystems_userstore.conf:66:        modprobe g_mass_storage file="" removable=1 idVendor=0x1949 idProduct=$BOARD_ID_PRODUCT stall=$BOARD_STALL
+/etc/upstart/filesystems_userstore.conf:68:        modprobe g_mass_storage file="" removable=1 idVendor=0x1949 idProduct=$BOARD_ID_PRODUCT
+/etc/upstart/filesystems_userstore.conf:71:    modprobe g_file_storage
+/etc/upstart/modules.conf:28:    f_modprobe fsl_otg_arc
+/etc/upstart/modules.conf:29:    f_modprobe ehci_hcd
+/etc/upstart/modules.conf:30:    f_modprobe fuse
+/etc/upstart/modules.conf:38:    f_modprobe falcon
+/etc/upstart/modules.conf:43:      f_modprobe $BOARD_MODULES_CONF_MODPROBE_PROX
+/etc/upstart/modules.conf:47:      f_modprobe mwan
+/etc/upstart/modules.conf:52:      f_modprobe ppp_async
+/etc/upstart/modules.conf:66:        f_modprobe $SENSOR
+/etc/upstart/modules.conf:73:        f_modprobe $SENSOR
+/etc/upstart/modules.conf:78:    f_modprobe $BORAD_MODULES_CONF_MODPROBE_KEY
+/etc/upstart/phd.conf:14:    modprobe pkt_monitor notify_threshold=4 notify_timelimit=1
+/etc/upstart/phd.conf:26:    modprobe -r pkt_monitor
+/etc/init/cyttsp:18:	modprobe cyttsp
+/etc/init/cyttsp:29:	modprobe cyttsp4_i2c
+/etc/init/cyttsp:30:	modprobe cyttsp4_core
+/etc/init/cyttsp:31:	modprobe cyttsp4_mt_b
+/etc/init/cyttsp:36:		modprobe -r cyttsp4_mt_b
+/etc/init/cyttsp:37:		modprobe -r cyttsp4_device_access
+/etc/init/cyttsp:38:		modprobe -r cyttsp4_core
+/etc/init/cyttsp:40:		modprobe cyttsp4_core recovery_mode=y ;
+/etc/init/cyttsp:42:		modprobe cyttsp4_loader
+/etc/init/cyttsp:63:				modprobe cyttsp4_loader
+/etc/init/cyttsp5:17:	modprobe cyttsp5_i2c
+/etc/init/cyttsp5:37:		modprobe cyttsp5_loader
+/etc/init/cyttsp5:64:            modprobe cyttsp5_loader
+/etc/init/haptics:11:	modprobe drv26xx_haptics
+/etc/init/haptics:12:	modprobe fsr_keypad
+/etc/init/whiskey_button:7:    modprobe gpiokey
+/etc/init/whiskey_button:8:    modprobe gpiokey_pgturn
+/etc/init/pt5:17:	modprobe pt_i2c
+/etc/init/pt5:43:		modprobe pt_loader
+/etc/init/pt5:118:				modprobe pt_loader
+/etc/init/stylus:10:	f_modprobe wacom_i2c
+/etc/init/touch:9:	f_modprobe bma2x2
+/etc/init/touch:15:			f_modprobe gt9xx_ts
+/etc/init/touch:45:						f_modprobe focaltech_tp
+
+===== ls -la /etc/upstart 2>&1 | head -120 =====
+total 416
+drwxr-xr-x    2 root     root          4096 Nov 23 00:13 .
+drwxr-xr-x   37 root     root          2048 Jul 15 20:54 ..
+-rw-r--r--    1 root     root           604 May 21  2026 ace_eventmgr.conf
+-rw-r--r--    1 root     root           377 May 21  2026 ace_messaging_service.conf
+-rw-r--r--    1 root     root           373 May 21  2026 acedropboxd.conf
+-rw-r--r--    1 root     root          1064 May 21  2026 appmgrd.conf
+-rw-r--r--    1 root     root           253 May 21  2026 archive.conf
+-rw-r--r--    1 root     root          1523 May 21  2026 asr.conf
+-rw-r--r--    1 root     root           730 May 21  2026 asr_bt_reboot.conf
+-rw-r--r--    1 root     root           909 May 21  2026 asr_bt_userstore.conf
+-rw-r--r--    1 root     root          2763 May 21  2026 asr_setup.conf
+-rw-r--r--    1 root     root           495 May 21  2026 audiomgrd.conf
+-rwxr-xr-x    1 root     root          3763 May 21  2026 battery
+-rw-r--r--    1 root     root           277 May 21  2026 battery.conf
+-rw-r--r--    1 root     root          3052 May 21  2026 blanket_functions
+-rw-r--r--    1 root     root          1080 May 21  2026 bootactions.conf
+-rw-r--r--    1 root     root          3140 May 21  2026 bootactions_monitor.conf
+-rw-r--r--    1 root     root          1007 May 21  2026 btd.conf
+-rw-r--r--    1 root     root          1245 May 21  2026 btfd.conf
+-rwxr-xr-x    1 root     root         13460 May 21  2026 bundlefuncs
+-rw-r--r--    1 root     root           554 May 21  2026 cgroups.conf
+-rw-r--r--    1 root     root          1432 May 21  2026 chk_enc_errors.conf
+-rw-r--r--    1 root     root          2397 May 21  2026 chroot.conf
+-rw-r--r--    1 root     root           572 May 21  2026 clickstream_logging.conf
+-rw-r--r--    1 root     root           717 May 21  2026 cmd.conf
+-rw-r--r--    1 root     root          1880 May 21  2026 console.conf
+-rw-r--r--    1 root     root           710 May 21  2026 contentpack_fonts_dependency.conf
+-rw-r--r--    1 root     root           107 May 21  2026 contentpackd.conf
+-rw-r--r--    1 root     root           270 May 21  2026 cron.conf
+-rwxr-xr-x    1 root     root           142 May 21  2026 custom-login
+-rwxr-xr-x    1 root     root          2036 May 21  2026 cyttsp
+-rwxr-xr-x    1 root     root          2347 May 21  2026 cyttsp5
+-rw-r--r--    1 root     root          1109 May 21  2026 dbus.conf
+-rw-r--r--    1 root     root           404 May 21  2026 demd.conf
+-rw-r--r--    1 root     root           320 May 21  2026 devcap.conf
+-rw-r--r--    1 root     root           386 May 21  2026 deviced.conf
+-rwxr-xr-x    1 root     root           104 May 21  2026 display
+-rw-r--r--    1 root     root           318 May 21  2026 display.conf
+-rw-r--r--    1 root     root           236 May 21  2026 dpmd.conf
+-rw-r--r--    1 root     root           486 May 21  2026 dynconfig.conf
+-rw-r--r--    1 root     root          1252 May 21  2026 eink_ttsd.conf
+-rw-r--r--    1 root     root           550 May 21  2026 ekart_setup.conf
+-rwxr-xr-x    1 root     root           511 May 21  2026 env
+-rw-r--r--    1 root     root           456 May 21  2026 fastmetrics.conf
+-rw-r--r--    1 root     root          1205 May 21  2026 ffsd.conf
+-rw-r--r--    1 root     root           202 May 21  2026 filesystems.conf
+-rw-r--r--    1 root     root          3200 May 21  2026 filesystems_keys.conf
+-rw-r--r--    1 root     root          3022 May 21  2026 filesystems_nh.conf
+-rw-r--r--    1 root     root          1800 May 21  2026 filesystems_pdata.conf
+-rw-r--r--    1 root     root          4502 May 21  2026 filesystems_setup.conf
+-rw-r--r--    1 root     root          2933 May 21  2026 filesystems_userstore.conf
+-rw-r--r--    1 root     root         17867 May 21  2026 filesystems_var_local.conf
+-rwxr-xr-x    1 root     root          2332 May 21  2026 firsttime
+-rwxr-xr-x    1 root     root             0 May 21  2026 flagfuncs
+-rwxr-xr-x    1 root     root         11483 May 21  2026 framework
+-rw-r--r--    1 root     root          1953 May 21  2026 framework.conf
+-rw-r--r--    1 root     root          7651 May 21  2026 framework_setup.conf
+-rw-r--r--    1 root     root           292 May 21  2026 fuelgauge.conf
+-rw-r--r--    1 root     root         15543 May 21  2026 functions
+-rwxr-xr-x    1 root     root          1767 May 21  2026 haptics
+-rwxr-xr-x    1 root     root           144 May 21  2026 hibernate_partition_functions
+-rw-r--r--    1 root     root           497 May 21  2026 home_wait.conf
+-rw-r--r--    1 root     root            75 May 21  2026 hooks
+-rwxr-xr-x    1 root     root          1247 May 21  2026 init.sh
+-rw-r--r--    1 root     root           389 May 21  2026 iohwlogs.conf
+-rw-r--r--    1 root     root           328 May 21  2026 ipcservicemanager.conf
+-rw-r--r--    1 root     root           470 May 21  2026 juno-acs-helper.conf
+-rw-r--r--    1 root     root           539 May 21  2026 kb.conf
+-rw-r--r--    1 root     root           613 May 21  2026 kfxreader.conf
+-rw-r--r--    1 root     root           247 May 21  2026 kfxview.conf
+-rw-r--r--    1 root     root           122 May 21  2026 kindle.conf
+-rw-rw-r--    1 root     root           867 Nov 23 00:13 kmc.conf
+-rwxr-xr-x    1 root     root          1549 May 21  2026 kppmainapp.conf
+-rw-r--r--    1 root     root           217 May 21  2026 lab126.conf
+-rw-r--r--    1 root     root          5892 May 21  2026 lab126_gui.conf
+-rw-r--r--    1 root     root          1712 May 21  2026 lab126_gui_monitor.conf
+-rw-r--r--    1 root     root           252 May 21  2026 lab126_gui_setup.conf
+-rw-r--r--    1 root     root          4571 May 21  2026 langpicker.conf
+-rw-r--r--    1 root     root           796 May 21  2026 last_debug_info.conf
+-rw-r--r--    1 root     root           667 May 21  2026 libc_err_patterns.txt
+-rw-r--r--    1 root     root           320 May 21  2026 lipcd.conf
+-rw-r--r--    1 root     root           365 May 21  2026 logmgr.conf
+-rwxr-xr-x    1 root     root         11356 May 21  2026 makexconfig
+-rw-------    1 root     root           203 May 21  2026 maruinstall.conf
+-rwxr-xr-x    1 root     root          2403 May 21  2026 mesquite_copy
+-rw-r--r--    1 root     root          4410 May 21  2026 mesquite_functions
+-rw-r--r--    1 root     root          1525 May 21  2026 migrate_db.conf
+-rw-r--r--    1 root     root           470 May 21  2026 minerva_service.conf
+-rw-r--r--    1 root     root           420 May 21  2026 minervad.conf
+-rw-r--r--    1 root     root           423 May 21  2026 minervaproxy.conf
+-rw-r--r--    1 root     root          2028 May 21  2026 modules.conf
+-rwxr-xr-x    1 root     root          3199 May 21  2026 monitor_functions
+-rw-r--r--    1 root     root           303 May 21  2026 monitor_wand_threads.conf
+-rw-r--r--    1 root     root           505 May 21  2026 n_setup.conf
+-rw-r--r--    1 root     root           266 May 21  2026 network.conf
+-rw-r--r--    1 root     root          3740 May 21  2026 ota-update.conf
+-rw-r--r--    1 root     root           239 May 21  2026 otaupd.conf
+-rw-r--r--    1 root     root           254 May 21  2026 otav3.conf
+-rw-r--r--    1 root     root           340 May 21  2026 perfd.conf
+-rw-r--r--    1 root     root           735 May 21  2026 perfdfuncs
+-rw-r--r--    1 root     root           522 May 21  2026 phd.conf
+-rw-r--r--    1 root     root           544 May 21  2026 pillow.conf
+-rw-r--r--    1 root     root           389 May 21  2026 playermgr.conf
+-rw-r--r--    1 root     root           234 May 21  2026 playermgr_limit.conf
+-rw-r--r--    1 root     root           298 May 21  2026 poll_daemons.conf
+-rw-r--r--    1 root     root           399 May 21  2026 powerd.conf
+-rw-r--r--    1 root     root          5618 May 21  2026 prereg.conf
+-rw-r--r--    1 root     root          1540 May 21  2026 printklogs.conf
+-rw-r--r--    1 root     root           454 May 21  2026 progressivedownloads.conf
+-rwxr-xr-x    1 root     root          1630 May 21  2026 prox_init
+-rwxr-xr-x    1 root     root          3775 May 21  2026 pt5
+-rw-r--r--    1 root     root           215 May 21  2026 rcm.conf
+-rw-r--r--    1 root     root           472 May 21  2026 recevent.conf
+-rw-r--r--    1 root     root           494 May 21  2026 register_oobe.conf
+-rw-r--r--    1 root     root           584 May 21  2026 scanner.conf
+-rw-r--r--    1 root     root          3846 May 21  2026 shutdown.conf
+-rw-r--r--    1 root     root           802 May 21  2026 shutdown_modes
+-rwxr-xr-x    1 root     root          2689 May 21  2026 shutdown_showimage
+-rwxr-xr-x    1 root     root         24833 May 21  2026 shutdown_special
+
+===== cat /proc/modules; for m in /sys/module/*/parameters; do echo "$m"; done 2>&1 | head -80 =====
+bcmdhd 669206 0 - Live 0x7f07c000
+g_mass_storage 4203 0 - Live 0x7f076000
+usb_f_mass_storage 51007 2 g_mass_storage, Live 0x7f061000
+libcomposite 49114 2 g_mass_storage,usb_f_mass_storage, Live 0x7f04d000
+configfs 26493 3 usb_f_mass_storage,libcomposite, Live 0x7f041000
+gt9xx_ts 49578 1 - Live 0x7f02e000
+falcon 22088 0 [permanent], Live 0x7f024000 (PO)
+mxc_epdc_v2_fb 109207 4 - Live 0x7f000000
+/sys/module/ahci_imx/parameters
+/sys/module/auth_rpcgss/parameters
+/sys/module/bcmdhd/parameters
+/sys/module/bd71827_power/parameters
+/sys/module/block/parameters
+/sys/module/bluetooth/parameters
+/sys/module/bnep/parameters
+/sys/module/brd/parameters
+/sys/module/btusb/parameters
+/sys/module/can/parameters
+/sys/module/can_gw/parameters
+/sys/module/cfg80211/parameters
+/sys/module/cpuidle/parameters
+/sys/module/dns_resolver/parameters
+/sys/module/drm/parameters
+/sys/module/dynamic_debug/parameters
+/sys/module/ehci_hcd/parameters
+/sys/module/firmware_class/parameters
+/sys/module/fuse/parameters
+/sys/module/g_mass_storage/parameters
+/sys/module/galcore/parameters
+/sys/module/hci_uart/parameters
+/sys/module/hid/parameters
+/sys/module/i2c_algo_bit/parameters
+/sys/module/ip_vs/parameters
+/sys/module/ir_kbd_i2c/parameters
+/sys/module/kernel/parameters
+/sys/module/keyboard/parameters
+/sys/module/libahci/parameters
+/sys/module/libata/parameters
+/sys/module/lockd/parameters
+/sys/module/loop/parameters
+/sys/module/mac80211/parameters
+/sys/module/mmcblk/parameters
+/sys/module/mousedev/parameters
+/sys/module/mt20xx/parameters
+/sys/module/mxc_epdc_v2_fb/parameters
+/sys/module/mxc_ipu/parameters
+/sys/module/nf_conntrack/parameters
+/sys/module/nf_conntrack_amanda/parameters
+/sys/module/nf_conntrack_ftp/parameters
+/sys/module/nf_conntrack_h323/parameters
+/sys/module/nf_conntrack_ipv4/parameters
+/sys/module/nf_conntrack_irc/parameters
+/sys/module/nf_conntrack_netbios_ns/parameters
+/sys/module/nf_conntrack_sane/parameters
+/sys/module/nf_conntrack_sip/parameters
+/sys/module/nf_conntrack_snmp/parameters
+/sys/module/nf_conntrack_tftp/parameters
+/sys/module/nf_nat_snmp_basic/parameters
+/sys/module/nfs/parameters
+/sys/module/printk/parameters
+/sys/module/rc_core/parameters
+/sys/module/rcupdate/parameters
+/sys/module/rcutree/parameters
+/sys/module/rfcomm/parameters
+/sys/module/rng_core/parameters
+/sys/module/scsi_mod/parameters
+/sys/module/sdhci/parameters
+/sys/module/smc911x/parameters
+/sys/module/smc91x/parameters
+/sys/module/snd/parameters
+/sys/module/snd_pcm/parameters
+/sys/module/snd_timer/parameters
+/sys/module/spurious/parameters
+/sys/module/sunrpc/parameters
+/sys/module/suspend/parameters
+/sys/module/sysrq/parameters
+/sys/module/tcp_cubic/parameters
+/sys/module/tda18271/parameters
+/sys/module/tda827x/parameters
+/sys/module/tda8290/parameters
+/sys/module/tda9887/parameters
+/sys/module/tea5761/parameters
+/sys/module/tea5767/parameters
+/sys/module/tuner_simple/parameters
+/sys/module/tuner_xc2028/parameters
+/sys/module/usb_storage/parameters
+/sys/module/usbcore/parameters
+/sys/module/usbhid/parameters
