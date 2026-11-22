@@ -48,7 +48,7 @@ make O=<out> ARCH=arm olddefconfig
   - 关掉 `MXC_GPU_VIV`：i.MX6SLL 没有 GPU 核心，而 galcore 在开了 Android 同步框架后找不到 `sync.h`
 - `LOCALVERSION="-lab126-pw4-android81"`，沿用 PW3 的命名规矩
 
-用这份配置，加上下面十个补丁，**vmlinux 和模块都能编出来**（binder、hwbinder、vndbinder，ashmem，SELinux，ambient capabilities 都在）。还没在设备上跑过。
+用这份配置，加上下面九个补丁，**vmlinux 和模块都能编出来**（binder、hwbinder、vndbinder，ashmem，SELinux，ambient capabilities 都在）。还没在设备上跑过。
 
 ## 四、补丁（`patches/`，按顺序应用在原样的 4.1.15 上）
 
