@@ -1,7 +1,7 @@
 From d5aef82bdf1c963a5d06016446df5385fcdb32bc Mon Sep 17 00:00:00 2001
 From: pw4-port <pw4-port@localhost>
 Date: Mon, 23 Nov 2026 02:01:49 +0800
-Subject: [PATCH 2/4] binder: replace 4.1's binder with Readom's Oreo binder,
+Subject: [PATCH 2/5] binder: replace 4.1's binder with Readom's Oreo binder,
  adapted to 4.1 APIs
 
 The binder in Amazon's 4.1.15 predates Android 8: one /dev/binder, no

@@ -1,7 +1,7 @@
 From a10848c04c265ad53ce7207c7eb2c70118609145 Mon Sep 17 00:00:00 2001
 From: pw4-port <pw4-port@localhost>
 Date: Mon, 23 Nov 2026 01:53:21 +0800
-Subject: [PATCH 1/4] uid_cputime: drop the per-task cpu_power accounting this
+Subject: [PATCH 1/5] uid_cputime: drop the per-task cpu_power accounting this
  tree does not have
 
 Amazon's 4.1.15 ships drivers/misc/uid_cputime.c from an Android tree that

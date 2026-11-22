@@ -1,7 +1,7 @@
 From dbed72f21ef6da0c018d638e2f09bbcb91fa412e Mon Sep 17 00:00:00 2001
 From: Andy Lutomirski <luto@kernel.org>
 Date: Mon, 23 Nov 2026 02:05:35 +0800
-Subject: [PATCH 3/4] capabilities: ambient capabilities
+Subject: [PATCH 3/5] capabilities: ambient capabilities
 
 Upstream commit 58319057b7847667f0c9585b9de0e8932b0fdb08 (v4.3), applied
 to Amazon's 4.1.15 with offsets only (include/linux/cred.h with fuzz 2).

@@ -1,0 +1,160 @@
+From 81292dbf16081bafd5e0394ba0ed45ee769393d8 Mon Sep 17 00:00:00 2001
+From: pw4-port <pw4-port@localhost>
+Date: Mon, 23 Nov 2026 02:15:56 +0800
+Subject: [PATCH 5/5] net: fib_rules: speak upstream FRA_UID_RANGE instead of
+ FRA_UID_START/END
+
+This tree carries the older Android uid-routing patches: rules take
+FRA_UID_START and FRA_UID_END, attributes 18 and 19. Android 8.1's netd
+(system/netd/server/RouteController.cpp) only sends FRA_UID_RANGE = 20 with
+a struct fib_rule_uid_range, the upstream (4.10) layout that also puts
+FRA_PAD and FRA_L3MDEV at 18 and 19. With the old numbering netd's
+per-network and VPN rules would be rejected or misread.
+
+Keep the existing kuid_t uid_start/uid_end and the flow-uid matching, which
+already work; change only the netlink side: the uapi enum and a
+struct fib_rule_uid_range, the policy, parsing, delete matching, dump and
+message size. Readom does the same for PW3 in patch 0333, where the uid
+plumbing also had to be added.
+---
+ include/net/fib_rules.h        |  3 +--
+ include/uapi/linux/fib_rules.h | 10 ++++++--
+ net/core/fib_rules.c           | 46 ++++++++++++++++++----------------
+ 3 files changed, 34 insertions(+), 25 deletions(-)
+
+diff --git a/include/net/fib_rules.h b/include/net/fib_rules.h
+index ed97c0df..02ef812b 100644
+--- a/include/net/fib_rules.h
++++ b/include/net/fib_rules.h
+@@ -89,8 +89,7 @@ struct fib_rules_ops {
+ 	[FRA_FWMASK]	= { .type = NLA_U32 }, \
+ 	[FRA_TABLE]     = { .type = NLA_U32 }, \
+ 	[FRA_GOTO]	= { .type = NLA_U32 }, \
+-	[FRA_UID_START]	= { .type = NLA_U32 }, \
+-	[FRA_UID_END]	= { .type = NLA_U32 }, \
++	[FRA_UID_RANGE]	= { .len = sizeof(struct fib_rule_uid_range) }, \
+ 	[FRA_SUPPRESS_PREFIXLEN] = { .type = NLA_U32 }, \
+ 	[FRA_SUPPRESS_IFGROUP] = { .type = NLA_U32 }, \
+ 	[FRA_GOTO]	= { .type = NLA_U32 }
+diff --git a/include/uapi/linux/fib_rules.h b/include/uapi/linux/fib_rules.h
+index 743e3008..4e6bcad1 100644
+--- a/include/uapi/linux/fib_rules.h
++++ b/include/uapi/linux/fib_rules.h
+@@ -15,6 +15,11 @@
+ /* try to find source address in routing lookups */
+ #define FIB_RULE_FIND_SADDR	0x00010000
+ 
++struct fib_rule_uid_range {
++	__u32		start;
++	__u32		end;
++};
++
+ struct fib_rule_hdr {
+ 	__u8		family;
+ 	__u8		dst_len;
+@@ -49,8 +54,9 @@ enum {
+ 	FRA_TABLE,	/* Extended table id */
+ 	FRA_FWMASK,	/* mask for netfilter mark */
+ 	FRA_OIFNAME,
+-	FRA_UID_START,	/* UID range */
+-	FRA_UID_END,
++	FRA_PAD,
++	FRA_L3MDEV,	/* reserved: l3mdev is not implemented here */
++	FRA_UID_RANGE,	/* UID range */
+ 	__FRA_MAX
+ };
+ 
+diff --git a/net/core/fib_rules.c b/net/core/fib_rules.c
+index 9fb12ec2..fa5ad694 100644
+--- a/net/core/fib_rules.c
++++ b/net/core/fib_rules.c
+@@ -174,14 +174,22 @@ void fib_rules_unregister(struct fib_rules_ops *ops)
+ }
+ EXPORT_SYMBOL_GPL(fib_rules_unregister);
+ 
+-static inline kuid_t fib_nl_uid(struct nlattr *nla)
++static void fib_nl_uid_range(struct nlattr *nla, kuid_t *start, kuid_t *end)
+ {
+-	return make_kuid(current_user_ns(), nla_get_u32(nla));
++	struct fib_rule_uid_range *in = nla_data(nla);
++
++	*start = make_kuid(current_user_ns(), in->start);
++	*end = make_kuid(current_user_ns(), in->end);
+ }
+ 
+-static int nla_put_uid(struct sk_buff *skb, int idx, kuid_t uid)
++static int nla_put_uid_range(struct sk_buff *skb, struct fib_rule *rule)
+ {
+-	return nla_put_u32(skb, idx, from_kuid_munged(current_user_ns(), uid));
++	struct fib_rule_uid_range out = {
++		from_kuid_munged(current_user_ns(), rule->uid_start),
++		from_kuid_munged(current_user_ns(), rule->uid_end)
++	};
++
++	return nla_put(skb, FRA_UID_RANGE, sizeof(out), &out);
+ }
+ 
+ static int fib_uid_range_match(struct flowi *fl, struct fib_rule *rule)
+@@ -390,13 +398,11 @@ static int fib_nl_newrule(struct sk_buff *skb, struct nlmsghdr* nlh)
+ 	} else if (rule->action == FR_ACT_GOTO)
+ 		goto errout_free;
+ 
+-	/* UID start and end must either both be valid or both unspecified. */
++	/* A UID range must be valid and ordered, or absent. */
+ 	rule->uid_start = rule->uid_end = INVALID_UID;
+-	if (tb[FRA_UID_START] || tb[FRA_UID_END]) {
+-		if (tb[FRA_UID_START] && tb[FRA_UID_END]) {
+-			rule->uid_start = fib_nl_uid(tb[FRA_UID_START]);
+-			rule->uid_end = fib_nl_uid(tb[FRA_UID_END]);
+-		}
++	if (tb[FRA_UID_RANGE]) {
++		fib_nl_uid_range(tb[FRA_UID_RANGE], &rule->uid_start,
++				 &rule->uid_end);
+ 		if (!uid_valid(rule->uid_start) ||
+ 		    !uid_valid(rule->uid_end) ||
+ 		    !uid_lte(rule->uid_start, rule->uid_end))
+@@ -508,13 +514,14 @@ static int fib_nl_delrule(struct sk_buff *skb, struct nlmsghdr* nlh)
+ 		    (rule->mark_mask != nla_get_u32(tb[FRA_FWMASK])))
+ 			continue;
+ 
+-		if (tb[FRA_UID_START] &&
+-		    !uid_eq(rule->uid_start, fib_nl_uid(tb[FRA_UID_START])))
+-			continue;
++		if (tb[FRA_UID_RANGE]) {
++			kuid_t start, end;
+ 
+-		if (tb[FRA_UID_END] &&
+-		    !uid_eq(rule->uid_end, fib_nl_uid(tb[FRA_UID_END])))
+-			continue;
++			fib_nl_uid_range(tb[FRA_UID_RANGE], &start, &end);
++			if (!uid_eq(rule->uid_start, start) ||
++			    !uid_eq(rule->uid_end, end))
++				continue;
++		}
+ 
+ 		if (!ops->compare(rule, frh, tb))
+ 			continue;
+@@ -579,8 +586,7 @@ static inline size_t fib_rule_nlmsg_size(struct fib_rules_ops *ops,
+ 			 + nla_total_size(4) /* FRA_SUPPRESS_IFGROUP */
+ 			 + nla_total_size(4) /* FRA_FWMARK */
+ 			 + nla_total_size(4) /* FRA_FWMASK */
+-			 + nla_total_size(4) /* FRA_UID_START */
+-			 + nla_total_size(4); /* FRA_UID_END */
++			 + nla_total_size(sizeof(struct fib_rule_uid_range)); /* FRA_UID_RANGE */
+ 
+ 	if (ops->nlmsg_payload)
+ 		payload += ops->nlmsg_payload(rule);
+@@ -638,9 +644,7 @@ static int fib_nl_fill_rule(struct sk_buff *skb, struct fib_rule *rule,
+ 	    (rule->target &&
+ 	     nla_put_u32(skb, FRA_GOTO, rule->target)) ||
+ 	    (uid_valid(rule->uid_start) &&
+-	     nla_put_uid(skb, FRA_UID_START, rule->uid_start)) ||
+-	    (uid_valid(rule->uid_end) &&
+-	     nla_put_uid(skb, FRA_UID_END, rule->uid_end)))
++	     nla_put_uid_range(skb, rule)))
+ 		goto nla_put_failure;
+ 
+ 	if (rule->suppress_ifgroup != -1) {
+-- 
+2.53.0
+

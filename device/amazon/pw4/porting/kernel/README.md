@@ -48,7 +48,7 @@ make O=<out> ARCH=arm olddefconfig
   - 关掉 `MXC_GPU_VIV`：i.MX6SLL 没有 GPU 核心，而 galcore 在开了 Android 同步框架后找不到 `sync.h`
 - `LOCALVERSION="-lab126-pw4-android81"`，沿用 PW3 的命名规矩
 
-用这份配置，加上下面四个补丁，**vmlinux 和模块都能编出来**（binder、hwbinder、vndbinder，ashmem，SELinux，ambient capabilities 都在）。还没在设备上跑过。
+用这份配置，加上下面五个补丁，**vmlinux 和模块都能编出来**（binder、hwbinder、vndbinder，ashmem，SELinux，ambient capabilities 都在）。还没在设备上跑过。
 
 ## 四、补丁（`patches/`，按顺序应用在原样的 4.1.15 上）
 
@@ -58,15 +58,15 @@ make O=<out> ARCH=arm olddefconfig
 | `0002` binder | 把 4.1 自带的旧 binder 换成 Readom 给 PW3 用的 Oreo binder（`0001`、`0003`、`0008`、`0900`、`0901` 叠出来的那份），按 4.1 的接口改：fd 操作用 `__alloc_fd`/`__fd_install`/`__close_fd`，`kuid_t`，`task_active_pid_ns()`，三参数的 `hlist_for_each_entry`，`map_vm_area()` 直接传页数组；加 `ANDROID_BINDER_DEVICES` | `0001`、`0003`、`0008`、`0900`、`0901` 里的 binder 部分 |
 | `0003` ambient capabilities | 直接用上游提交 `58319057b784`（v4.3），在 4.1.15 上只有偏移 | `1050` |
 | `0004` quota2 LOG | `NETFILTER_XT_MATCH_QUOTA2_LOG` 依赖 `IP_NF_TARGET_ULOG=n` 并包含 `ipt_ULOG.h`，而 ULOG 在 3.17 已从上游删掉，这个选项在 4.1 上根本选不上。去掉依赖，在 `xt_quota2.c` 里按原布局定义 `ulog_packet_msg_t`（netd 读的就是这个结构）| PW3 不需要（3.0.35 还有 ULOG） |
+| `0005` uid 范围路由 | 这棵树带的是老 Android 内核的 `FRA_UID_START`/`FRA_UID_END`（属性号 18、19），而 8.1 的 netd（`system/netd/server/RouteController.cpp`）只发上游的 `FRA_UID_RANGE = 20`，前面是 `FRA_PAD`、`FRA_L3MDEV`。把 netlink 这一侧换成上游的布局（uapi 枚举、`struct fib_rule_uid_range`、校验、解析、删除匹配、导出、消息长度），按 uid 匹配流的那部分原样保留 | `0333`（PW3 那边连 uid 的管道也要补，这里树里已经有） |
 
 ## 五、第 0 阶段分类的修正
 
 逐项核对后（`../phase0.md` 第四节的表还没改，以这里为准）：
 
 - **再去掉 7 个**，4.1 里已经有：`0103`（timekeeping 已改写）、`1012`（自发 siginfo，主线 3.9）、`1014`（`mm_access` 已在 `kernel/fork.c`）、`1051`（`net/ipv4/sysfs_net_ipv4.c` 已有）、`1052`（`tcp_default_init_rwnd` 已有）、`1055`（`same_thread_group` 判断，主线 3.9）、`0332`（`xt_IDLETIMER` 已有 revision 1）
-- **已做**：`1053`、`1050`、binder 那 5 个（见第四节）
+- **已做**：`1053`、`1050`、`0333`、binder 那 5 个（见第四节）
 - **要注意的**：
-  - `0333` uid 范围路由：这棵树带的是**老 Android 内核的** `FRA_UID_START`/`FRA_UID_END`（属性号 18、19），而 Readom 给 8.1 做的是上游的 `FRA_UID_RANGE`（20，前面是 `FRA_PAD`、`FRA_L3MDEV`）。编号冲突，不能叠加，要把老的那套换成上游的。等 AOSP 同步完，对照 `system/netd` 确认 8.1 发的是哪一个
   - `0402`、`0600` 网络权限：这棵树有 Android 原版的 `ANDROID_PARANOID_NETWORK`（`include/linux/android_aid.h`），原厂没开。Readom 为 PW3 写的是自己的 `ANDROID_INET_GROUP_PERMISSION`、`ANDROID_GID_NET_CAPABILITIES`，要比较两者，再决定用哪个
   - `0004` lmk：这棵树的 lowmemorykiller 已经按 `oom_score_adj` 工作，多半可以去掉，待核
 - 宿主机的两个问题（不改源码）：较新的宿主 gcc 默认 `-fno-common`，`scripts/dtc` 链接时报 `yylloc` 重复定义，用 `HOSTCFLAGS=... -fcommon` 绕过；打包 `zImage` 要 `lzop`
@@ -86,6 +86,6 @@ ls /lib/modules/$(uname -r)/
 ## 七、下一步
 
 1. 设备上拷一个原厂模块回来，做第六节的 CRC 核对
-2. `0333` uid 范围路由，`0402`/`0600` 网络权限，`1010` ARM mmap 随机化
+2. `0402`/`0600` 网络权限，`1010` ARM mmap 随机化
 3. 其余「移植」类：`0002` 剩下的 SELinux 部分、`0330`、`0810`–`0813`（Readom 自己修的 qtaguid、idletimer、quota2 问题）、`1015`、`1033`、`1040`、`1041`、`1043`、`1048`、`1054`、`1056`、`1057`
 4. 开始写交接模块的 PW4 版本（DTB 代替 ATAG，2G/2G 页表，L2 回调），先在 QEMU 里跑
