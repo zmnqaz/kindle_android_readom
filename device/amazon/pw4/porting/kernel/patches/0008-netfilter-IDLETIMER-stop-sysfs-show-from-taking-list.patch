@@ -1,0 +1,134 @@
+From 42dcc9939472e28943ff663cb7515359e42cac13 Mon Sep 17 00:00:00 2001
+From: pw4-port <pw4-port@localhost>
+Date: Mon, 23 Nov 2026 02:19:49 +0800
+Subject: [PATCH 8/9] netfilter: IDLETIMER: stop sysfs show from taking
+ list_mutex; drain on removal
+
+Readom's patch 0812 for PW3. Hunks 2-5 apply with offsets; hunk 1 is redone
+by hand because this tree's idletimer_tg_show() differs slightly (it
+dereferences timer->send_nl_msg even when the label lookup failed).
+
+- show: find the timer from its own attribute and read under
+  timestamp_lock; taking list_mutex deadlocks against removal, which holds
+  it while sysfs waits for active readers
+- create: kzalloc, initialise the timer, work and expiry before the sysfs
+  file and the list entry make it visible
+- destroy: unregister the PM notifier first, then del_timer_sync and
+  cancel_work_sync, then remove the sysfs file
+---
+ net/netfilter/xt_IDLETIMER.c | 56 ++++++++++++++++++++----------------
+ 1 file changed, 32 insertions(+), 24 deletions(-)
+
+diff --git a/net/netfilter/xt_IDLETIMER.c b/net/netfilter/xt_IDLETIMER.c
+index 0975c993..93646a80 100644
+--- a/net/netfilter/xt_IDLETIMER.c
++++ b/net/netfilter/xt_IDLETIMER.c
+@@ -186,23 +186,24 @@ struct idletimer_tg *__idletimer_tg_find_by_label(const char *label)
+ static ssize_t idletimer_tg_show(struct kobject *kobj, struct attribute *attr,
+ 				 char *buf)
+ {
+-	struct idletimer_tg *timer;
+-	unsigned long expires = 0;
++	struct idletimer_tg *timer = container_of(attr, struct idletimer_tg,
++					       attr.attr);
++	unsigned long expires;
++	bool send_nl_msg;
+ 	unsigned long now = jiffies;
+ 
+-	mutex_lock(&list_mutex);
+-
+-	timer =	__idletimer_tg_find_by_label(attr->name);
+-	if (timer)
+-		expires = timer->timer.expires;
+-
+-	mutex_unlock(&list_mutex);
++	/* sysfs holds an active reference until show returns. Do not take
++	 * list_mutex: removal waits for this callback while holding it. */
++	spin_lock_bh(&timestamp_lock);
++	expires = timer->timer.expires;
++	send_nl_msg = timer->send_nl_msg;
++	spin_unlock_bh(&timestamp_lock);
+ 
+ 	if (time_after(expires, now))
+ 		return sprintf(buf, "%u\n",
+ 			       jiffies_to_msecs(expires - now) / 1000);
+ 
+-	if (timer->send_nl_msg)
++	if (send_nl_msg)
+ 		return sprintf(buf, "0 %d\n",
+ 			jiffies_to_msecs(now - expires) / 1000);
+ 	else
+@@ -280,7 +281,7 @@ static int idletimer_tg_create(struct idletimer_tg_info *info)
+ {
+ 	int ret;
+ 
+-	info->timer = kmalloc(sizeof(*info->timer), GFP_KERNEL);
++	info->timer = kzalloc(sizeof(*info->timer), GFP_KERNEL);
+ 	if (!info->timer) {
+ 		ret = -ENOMEM;
+ 		goto out;
+@@ -295,14 +296,6 @@ static int idletimer_tg_create(struct idletimer_tg_info *info)
+ 	info->timer->attr.attr.mode = S_IRUGO;
+ 	info->timer->attr.show = idletimer_tg_show;
+ 
+-	ret = sysfs_create_file(idletimer_tg_kobj, &info->timer->attr.attr);
+-	if (ret < 0) {
+-		pr_debug("couldn't add file to sysfs");
+-		goto out_free_attr;
+-	}
+-
+-	list_add(&info->timer->entry, &idletimer_tg_list);
+-
+ 	setup_timer(&info->timer->timer, idletimer_tg_expired,
+ 		    (unsigned long) info->timer);
+ 	info->timer->refcnt = 1;
+@@ -316,16 +309,26 @@ static int idletimer_tg_create(struct idletimer_tg_info *info)
+ 	info->timer->uid = 0;
+ 	get_monotonic_boottime(&info->timer->last_modified_timer);
+ 
++	info->timer->last_suspend_time = info->timer->last_modified_timer;
++	INIT_WORK(&info->timer->work, idletimer_tg_work);
++	info->timer->timer.expires =
++		msecs_to_jiffies(info->timeout * 1000) + jiffies;
++
++	ret = sysfs_create_file(idletimer_tg_kobj, &info->timer->attr.attr);
++	if (ret < 0) {
++		pr_debug("couldn't add file to sysfs");
++		goto out_free_attr;
++	}
++
++	list_add(&info->timer->entry, &idletimer_tg_list);
++
+ 	info->timer->pm_nb.notifier_call = idletimer_resume;
+ 	ret = register_pm_notifier(&info->timer->pm_nb);
+ 	if (ret)
+ 		printk(KERN_WARNING "[%s] Failed to register pm notifier %d\n",
+ 				__func__, ret);
+ 
+-	mod_timer(&info->timer->timer,
+-		  msecs_to_jiffies(info->timeout * 1000) + jiffies);
+-
+-	INIT_WORK(&info->timer->work, idletimer_tg_work);
++	mod_timer(&info->timer->timer, info->timer->timer.expires);
+ 
+ 	return 0;
+ 
+@@ -453,9 +456,14 @@ static void idletimer_tg_destroy(const struct xt_tgdtor_param *par)
+ 		pr_debug("deleting timer %s\n", info->label);
+ 
+ 		list_del(&info->timer->entry);
++		/* The last xtables reference has quiesced packet users. Stop PM
++		 * callbacks before they can rearm the timer or queue work. */
++		unregister_pm_notifier(&info->timer->pm_nb);
+ 		del_timer_sync(&info->timer->timer);
++		/* This 3.0 API also drains work that requeues itself. No
++		 * timestamp_lock is held during any synchronous wait. */
++		cancel_work_sync(&info->timer->work);
+ 		sysfs_remove_file(idletimer_tg_kobj, &info->timer->attr.attr);
+-		unregister_pm_notifier(&info->timer->pm_nb);
+ 		kfree(info->timer->attr.attr.name);
+ 		kfree(info->timer);
+ 	} else {
+-- 
+2.53.0
+

@@ -1,0 +1,74 @@
+From 4f875465a90d5acc5f0fd1e264699bf0dd719b5f Mon Sep 17 00:00:00 2001
+From: pw4-port <pw4-port@localhost>
+Date: Mon, 23 Nov 2026 02:21:27 +0800
+Subject: [PATCH 9/9] netfilter: qtaguid: keep other UIDs' tags and kernel
+ pointers out of ctrl
+
+Readom's patch 0811 for PW3, redone for this tree's seq_file version of
+/proc/net/xt_qtaguid/ctrl (the PW3 tree builds the text by hand, so none
+of its hunks apply).
+
+- split can_read_all_uid_stats() out of can_read_other_uid_stats()
+- a reader without the read-all privilege sees only its own UID's tags
+- print sock=0 instead of the struct sock address
+- the global event counters describe every UID, so they need read-all
+---
+ net/netfilter/xt_qtaguid.c | 18 +++++++++++++-----
+ 1 file changed, 13 insertions(+), 5 deletions(-)
+
+diff --git a/net/netfilter/xt_qtaguid.c b/net/netfilter/xt_qtaguid.c
+index 90b2c6aa..960490e8 100644
+--- a/net/netfilter/xt_qtaguid.c
++++ b/net/netfilter/xt_qtaguid.c
+@@ -155,15 +155,20 @@ static bool can_impersonate_uid(kuid_t uid)
+ 	return uid_eq(uid, current_fsuid()) || can_manipulate_uids();
+ }
+ 
+-static bool can_read_other_uid_stats(kuid_t uid)
++static bool can_read_all_uid_stats(void)
+ {
+ 	/* root pwnd */
+ 	return in_egroup_p(xt_qtaguid_stats_file->gid)
+-		|| unlikely(!from_kuid(&init_user_ns, current_fsuid())) || uid_eq(uid, current_fsuid())
++		|| unlikely(!from_kuid(&init_user_ns, current_fsuid()))
+ 		|| unlikely(!proc_stats_readall_limited)
+ 		|| unlikely(uid_eq(current_fsuid(), xt_qtaguid_ctrl_file->uid));
+ }
+ 
++static bool can_read_other_uid_stats(kuid_t uid)
++{
++	return uid_eq(uid, current_fsuid()) || can_read_all_uid_stats();
++}
++
+ static inline void dc_add_byte_packets(struct data_counters *counters, int set,
+ 				  enum ifs_tx_rx direction,
+ 				  enum ifs_proto ifs_proto,
+@@ -1936,6 +1941,8 @@ static int qtaguid_ctrl_proc_show(struct seq_file *m, void *v)
+ 
+ 	if (sock_tag_entry != SEQ_START_TOKEN) {
+ 		uid = get_uid_from_tag(sock_tag_entry->tag);
++		if (!can_read_other_uid_stats(make_kuid(&init_user_ns, uid)))
++			return 0;
+ 		CT_DEBUG("qtaguid: proc_read(): sk=%p tag=0x%llx (uid=%u) "
+ 			 "pid=%u\n",
+ 			 sock_tag_entry->sk,
+@@ -1945,12 +1952,13 @@ static int qtaguid_ctrl_proc_show(struct seq_file *m, void *v)
+ 			);
+ 		f_count = atomic_long_read(
+ 			&sock_tag_entry->socket->file->f_count);
+-		seq_printf(m, "sock=%p tag=0x%llx (uid=%u) pid=%u "
++		seq_printf(m, "sock=0 tag=0x%llx (uid=%u) pid=%u "
+ 			   "f_count=%lu\n",
+-			   sock_tag_entry->sk,
+ 			   sock_tag_entry->tag, uid,
+ 			   sock_tag_entry->pid, f_count);
+-	} else {
++	} else if (can_read_all_uid_stats()) {
++		/* Global counters describe every UID, so use the read-all
++		 * privilege instead of revealing them through an own-UID view. */
+ 		seq_printf(m, "events: sockets_tagged=%llu "
+ 			   "sockets_untagged=%llu "
+ 			   "counter_set_changes=%llu "
+-- 
+2.53.0
+

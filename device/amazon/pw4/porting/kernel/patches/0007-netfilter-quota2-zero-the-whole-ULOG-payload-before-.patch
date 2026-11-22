@@ -1,0 +1,30 @@
+From 435002c1c6b59d12994d49b9bd914194d94841b1 Mon Sep 17 00:00:00 2001
+From: pw4-port <pw4-port@localhost>
+Date: Mon, 23 Nov 2026 02:18:21 +0800
+Subject: [PATCH 7/9] netfilter: quota2: zero the whole ULOG payload before
+ sending it
+
+Readom's patch 0813 for PW3, redone by hand for this tree's nlmsg_put()
+version of quota2_log(). Only some fields of ulog_packet_msg_t are filled
+(mark, timestamps, mac_len and mac are not), and the whole struct is
+broadcast on NETLINK_NFLOG, so uninitialised skb bytes reached userspace.
+---
+ net/netfilter/xt_quota2.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/net/netfilter/xt_quota2.c b/net/netfilter/xt_quota2.c
+index 15a84827..307db541 100644
+--- a/net/netfilter/xt_quota2.c
++++ b/net/netfilter/xt_quota2.c
+@@ -105,6 +105,8 @@ static void quota2_log(unsigned int hooknum,
+ 		return;
+ 	}
+ 	pm = nlmsg_data(nlh);
++	/* Every byte of the fixed ULOG payload is sent to userspace. */
++	memset(pm, 0, sizeof(*pm));
+ 	if (skb->tstamp.tv64 == 0)
+ 		__net_timestamp((struct sk_buff *)skb);
+ 	pm->data_len = 0;
+-- 
+2.53.0
+

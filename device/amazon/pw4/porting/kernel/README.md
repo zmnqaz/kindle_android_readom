@@ -48,7 +48,7 @@ make O=<out> ARCH=arm olddefconfig
   - 关掉 `MXC_GPU_VIV`：i.MX6SLL 没有 GPU 核心，而 galcore 在开了 Android 同步框架后找不到 `sync.h`
 - `LOCALVERSION="-lab126-pw4-android81"`，沿用 PW3 的命名规矩
 
-用这份配置，加上下面五个补丁，**vmlinux 和模块都能编出来**（binder、hwbinder、vndbinder，ashmem，SELinux，ambient capabilities 都在）。还没在设备上跑过。
+用这份配置，加上下面十个补丁，**vmlinux 和模块都能编出来**（binder、hwbinder、vndbinder，ashmem，SELinux，ambient capabilities 都在）。还没在设备上跑过。
 
 ## 四、补丁（`patches/`，按顺序应用在原样的 4.1.15 上）
 
@@ -59,15 +59,20 @@ make O=<out> ARCH=arm olddefconfig
 | `0003` ambient capabilities | 直接用上游提交 `58319057b784`（v4.3），在 4.1.15 上只有偏移 | `1050` |
 | `0004` quota2 LOG | `NETFILTER_XT_MATCH_QUOTA2_LOG` 依赖 `IP_NF_TARGET_ULOG=n` 并包含 `ipt_ULOG.h`，而 ULOG 在 3.17 已从上游删掉，这个选项在 4.1 上根本选不上。去掉依赖，在 `xt_quota2.c` 里按原布局定义 `ulog_packet_msg_t`（netd 读的就是这个结构）| PW3 不需要（3.0.35 还有 ULOG） |
 | `0005` uid 范围路由 | 这棵树带的是老 Android 内核的 `FRA_UID_START`/`FRA_UID_END`（属性号 18、19），而 8.1 的 netd（`system/netd/server/RouteController.cpp`）只发上游的 `FRA_UID_RANGE = 20`，前面是 `FRA_PAD`、`FRA_L3MDEV`。把 netlink 这一侧换成上游的布局（uapi 枚举、`struct fib_rule_uid_range`、校验、解析、删除匹配、导出、消息长度），按 uid 匹配流的那部分原样保留 | `0333`（PW3 那边连 uid 的管道也要补，这里树里已经有） |
+| `0006` ashmem | `ASHMEM_SET_SIZE`、`ASHMEM_GET_SIZE` 加 `ashmem_mutex`，和 `ashmem_mmap()` 对齐。路径从 `mm/ashmem.c` 换到 `drivers/staging/android/ashmem.c`，fuzz 1 | `0800` |
+| `0007` quota2 清零 | `ulog_packet_msg_t` 只填了一部分字段就整个广播出去，未初始化的内核字节会到用户空间。按这棵树 `nlmsg_put()` 的写法手工重做 | `0813` |
+| `0008` IDLETIMER | sysfs 读取不再拿 `list_mutex`（和删除互相等待会死锁）；创建时先初始化再挂出来；删除时先注销 PM 通知，再 `del_timer_sync`、`cancel_work_sync`。第 2–5 块带偏移打上，第 1 块手工重做（这棵树的 `idletimer_tg_show()` 在查不到时还会解引用空指针） | `0812` |
+| `0009` qtaguid ctrl | `/proc/net/xt_qtaguid/ctrl` 不再把别的 UID 的标签和 `struct sock` 地址给没有读全量权限的进程看；全局计数要读全量权限。这棵树是 seq_file 写法，按原意重做 | `0811` |
 
 ## 五、第 0 阶段分类的修正
 
 逐项核对后（`../phase0.md` 第四节的表还没改，以这里为准）：
 
 - **再去掉 7 个**，4.1 里已经有：`0103`（timekeeping 已改写）、`1012`（自发 siginfo，主线 3.9）、`1014`（`mm_access` 已在 `kernel/fork.c`）、`1051`（`net/ipv4/sysfs_net_ipv4.c` 已有）、`1052`（`tcp_default_init_rwnd` 已有）、`1055`（`same_thread_group` 判断，主线 3.9）、`0332`（`xt_IDLETIMER` 已有 revision 1）
-- **已做**：`1053`、`1050`、`0333`、binder 那 5 个（见第四节）
+- **已做**：`1053`、`1050`、`0333`、`0800`、`0811`、`0812`、`0813`、binder 那 5 个（见第四节）
+- **换成配置项**：`0402`、`0600`（网络按组授权）。这棵树有 Android 原版的 `ANDROID_PARANOID_NETWORK`（`af_inet`、`af_inet6`、`commoncap`、`tun` 都接上了），原厂没开；草稿配置里打开它。4.1 的 netlink 权限检查走 `cap_capable`，也由 `commoncap` 里那段覆盖，所以不需要 PW3 上为 3.0 的 `cap_netlink_send` 写的那部分
 - **要注意的**：
-  - `0402`、`0600` 网络权限：这棵树有 Android 原版的 `ANDROID_PARANOID_NETWORK`（`include/linux/android_aid.h`），原厂没开。Readom 为 PW3 写的是自己的 `ANDROID_INET_GROUP_PERMISSION`、`ANDROID_GID_NET_CAPABILITIES`，要比较两者，再决定用哪个
+  - `0810` qtaguid 标签生命周期：改动集中在 `uid_tag_data_tree_lock` 和 `sock_tag_list_lock` 的加锁顺序上，要逐段对照这棵树的版本做，还没动
   - `0004` lmk：这棵树的 lowmemorykiller 已经按 `oom_score_adj` 工作，多半可以去掉，待核
 - 宿主机的两个问题（不改源码）：较新的宿主 gcc 默认 `-fno-common`，`scripts/dtc` 链接时报 `yylloc` 重复定义，用 `HOSTCFLAGS=... -fcommon` 绕过；打包 `zImage` 要 `lzop`
 
@@ -86,6 +91,6 @@ ls /lib/modules/$(uname -r)/
 ## 七、下一步
 
 1. 设备上拷一个原厂模块回来，做第六节的 CRC 核对
-2. `0402`/`0600` 网络权限，`1010` ARM mmap 随机化
-3. 其余「移植」类：`0002` 剩下的 SELinux 部分、`0330`、`0810`–`0813`（Readom 自己修的 qtaguid、idletimer、quota2 问题）、`1015`、`1033`、`1040`、`1041`、`1043`、`1048`、`1054`、`1056`、`1057`
+2. `0810` qtaguid 标签生命周期，`1010` ARM mmap 随机化
+3. 其余「移植」类：`0002` 剩下的 SELinux 部分、`0330`、`1015`、`1033`、`1040`、`1041`、`1043`、`1048`、`1054`、`1056`、`1057`
 4. 开始写交接模块的 PW4 版本（DTB 代替 ATAG，2G/2G 页表，L2 回调），先在 QEMU 里跑

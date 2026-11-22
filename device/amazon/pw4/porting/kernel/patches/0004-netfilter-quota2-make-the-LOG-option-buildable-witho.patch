@@ -1,7 +1,7 @@
 From 3cb14651f0723a7ad08f72017203755d7947ea08 Mon Sep 17 00:00:00 2001
 From: pw4-port <pw4-port@localhost>
 Date: Mon, 23 Nov 2026 02:08:59 +0800
-Subject: [PATCH 4/5] netfilter: quota2: make the LOG option buildable without
+Subject: [PATCH 4/9] netfilter: quota2: make the LOG option buildable without
  ipt_ULOG
 
 NETFILTER_XT_MATCH_QUOTA2_LOG depends on IP_NF_TARGET_ULOG=n and includes

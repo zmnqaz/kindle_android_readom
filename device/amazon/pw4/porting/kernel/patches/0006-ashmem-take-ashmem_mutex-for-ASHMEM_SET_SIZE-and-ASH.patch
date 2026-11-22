@@ -1,0 +1,42 @@
+From f5c05d19c5a0724f6a9861619bb270d13d338681 Mon Sep 17 00:00:00 2001
+From: pw4-port <pw4-port@localhost>
+Date: Mon, 23 Nov 2026 02:18:07 +0800
+Subject: [PATCH 6/9] ashmem: take ashmem_mutex for ASHMEM_SET_SIZE and
+ ASHMEM_GET_SIZE
+
+Readom's patch 0800 for PW3, moved from mm/ashmem.c to this tree's
+drivers/staging/android/ashmem.c (applies with fuzz 1). ashmem_mmap()
+publishes asma->file under ashmem_mutex, but SET_SIZE read asma->file and
+wrote asma->size without it, so a size change could race with the mapping
+that froze it. The code here is the same as on PW3.
+---
+ drivers/staging/android/ashmem.c | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/drivers/staging/android/ashmem.c b/drivers/staging/android/ashmem.c
+index 64e48572..cc3c5941 100644
+--- a/drivers/staging/android/ashmem.c
++++ b/drivers/staging/android/ashmem.c
+@@ -755,14 +755,19 @@ static long ashmem_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
+ 		ret = get_name(asma, (void __user *)arg);
+ 		break;
+ 	case ASHMEM_SET_SIZE:
++		/* Freeze size atomically with ashmem_mmap's backing publication. */
++		mutex_lock(&ashmem_mutex);
+ 		ret = -EINVAL;
+ 		if (!asma->file) {
+ 			ret = 0;
+ 			asma->size = (size_t) arg;
+ 		}
++		mutex_unlock(&ashmem_mutex);
+ 		break;
+ 	case ASHMEM_GET_SIZE:
++		mutex_lock(&ashmem_mutex);
+ 		ret = asma->size;
++		mutex_unlock(&ashmem_mutex);
+ 		break;
+ 	case ASHMEM_SET_PROT_MASK:
+ 		ret = set_prot_mask(asma, arg);
+-- 
+2.53.0
+
