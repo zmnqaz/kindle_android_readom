@@ -1,0 +1,82 @@
+From a10848c04c265ad53ce7207c7eb2c70118609145 Mon Sep 17 00:00:00 2001
+From: pw4-port <pw4-port@localhost>
+Date: Mon, 23 Nov 2026 01:53:21 +0800
+Subject: [PATCH 1/4] uid_cputime: drop the per-task cpu_power accounting this
+ tree does not have
+
+Amazon's 4.1.15 ships drivers/misc/uid_cputime.c from an Android tree that
+also carried a cpu_power field in task_struct. This tree has no such field,
+so the driver has never compiled here (UID_CPUTIME is off in the stock
+config). Drop the power column and the exiting-task sentinel built on it;
+the output becomes "uid: utime stime", the same format Readom's PW3 patch
+1053 produces and Android 8.1's KernelUidCpuTimeReader reads.
+---
+ drivers/misc/uid_cputime.c | 18 ++----------------
+ 1 file changed, 2 insertions(+), 16 deletions(-)
+
+diff --git a/drivers/misc/uid_cputime.c b/drivers/misc/uid_cputime.c
+index c751188c..c1ad5246 100644
+--- a/drivers/misc/uid_cputime.c
++++ b/drivers/misc/uid_cputime.c
+@@ -38,8 +38,6 @@ struct uid_entry {
+ 	cputime_t stime;
+ 	cputime_t active_utime;
+ 	cputime_t active_stime;
+-	unsigned long long active_power;
+-	unsigned long long power;
+ 	struct hlist_node hash;
+ };
+ 
+@@ -85,7 +83,6 @@ static int uid_stat_show(struct seq_file *m, void *v)
+ 	hash_for_each(hash_table, bkt, uid_entry, hash) {
+ 		uid_entry->active_stime = 0;
+ 		uid_entry->active_utime = 0;
+-		uid_entry->active_power = 0;
+ 	}
+ 
+ 	read_lock(&tasklist_lock);
+@@ -100,15 +97,9 @@ static int uid_stat_show(struct seq_file *m, void *v)
+ 				task_uid(task)));
+ 			return -ENOMEM;
+ 		}
+-		/* if this task is exiting, we have already accounted for the
+-		 * time and power.
+-		 */
+-		if (task->cpu_power == ULLONG_MAX)
+-			continue;
+ 		task_cputime_adjusted(task, &utime, &stime);
+ 		uid_entry->active_utime += utime;
+ 		uid_entry->active_stime += stime;
+-		uid_entry->active_power += task->cpu_power;
+ 	} while_each_thread(temp, task);
+ 	read_unlock(&tasklist_lock);
+ 
+@@ -117,14 +108,11 @@ static int uid_stat_show(struct seq_file *m, void *v)
+ 							uid_entry->active_utime;
+ 		cputime_t total_stime = uid_entry->stime +
+ 							uid_entry->active_stime;
+-		unsigned long long total_power = uid_entry->power +
+-							uid_entry->active_power;
+-		seq_printf(m, "%d: %llu %llu %llu\n", uid_entry->uid,
++		seq_printf(m, "%d: %llu %llu\n", uid_entry->uid,
+ 			(unsigned long long)jiffies_to_msecs(
+ 				cputime_to_jiffies(total_utime)) * USEC_PER_MSEC,
+ 			(unsigned long long)jiffies_to_msecs(
+-				cputime_to_jiffies(total_stime)) * USEC_PER_MSEC,
+-			total_power);
++				cputime_to_jiffies(total_stime)) * USEC_PER_MSEC);
+ 	}
+ 
+ 	mutex_unlock(&uid_lock);
+@@ -218,8 +206,6 @@ static int process_notifier(struct notifier_block *self,
+ 	task_cputime_adjusted(task, &utime, &stime);
+ 	uid_entry->utime += utime;
+ 	uid_entry->stime += stime;
+-	uid_entry->power += task->cpu_power;
+-	task->cpu_power = ULLONG_MAX;
+ 
+ exit:
+ 	mutex_unlock(&uid_lock);
+-- 
+2.53.0
+

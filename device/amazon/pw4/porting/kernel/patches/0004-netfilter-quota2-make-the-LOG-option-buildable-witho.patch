@@ -1,0 +1,66 @@
+From 3cb14651f0723a7ad08f72017203755d7947ea08 Mon Sep 17 00:00:00 2001
+From: pw4-port <pw4-port@localhost>
+Date: Mon, 23 Nov 2026 02:08:59 +0800
+Subject: [PATCH 4/4] netfilter: quota2: make the LOG option buildable without
+ ipt_ULOG
+
+NETFILTER_XT_MATCH_QUOTA2_LOG depends on IP_NF_TARGET_ULOG=n and includes
+linux/netfilter_ipv4/ipt_ULOG.h, but ipt_ULOG and its header were removed
+upstream in 3.17 and this 4.1 tree has neither. An undefined symbol never
+compares equal to n, so the option could not even be selected.
+
+Drop the dependency (the two only conflicted over NETLINK_NFLOG, and ULOG
+is gone) and define ulog_packet_msg_t locally with the old layout, which is
+what netd reads for data-limit alerts. Readom's PW3 config asks for
+QUOTA2_LOG.
+---
+ net/netfilter/Kconfig     |  1 -
+ net/netfilter/xt_quota2.c | 20 +++++++++++++++++++-
+ 2 files changed, 19 insertions(+), 2 deletions(-)
+
+diff --git a/net/netfilter/Kconfig b/net/netfilter/Kconfig
+index 6447d76c..f64a5e53 100644
+--- a/net/netfilter/Kconfig
++++ b/net/netfilter/Kconfig
+@@ -1338,7 +1338,6 @@ config NETFILTER_XT_MATCH_QUOTA2
+ config NETFILTER_XT_MATCH_QUOTA2_LOG
+ 	bool '"quota2" Netfilter LOG support'
+ 	depends on NETFILTER_XT_MATCH_QUOTA2
+-	depends on IP_NF_TARGET_ULOG=n    # not yes, not module, just no
+ 	default n
+ 	help
+ 	  This option allows `quota2' to log ONCE when a quota limit
+diff --git a/net/netfilter/xt_quota2.c b/net/netfilter/xt_quota2.c
+index 99592ae5..15a84827 100644
+--- a/net/netfilter/xt_quota2.c
++++ b/net/netfilter/xt_quota2.c
+@@ -22,7 +22,25 @@
+ #include <linux/netfilter/x_tables.h>
+ #include <linux/netfilter/xt_quota2.h>
+ #ifdef CONFIG_NETFILTER_XT_MATCH_QUOTA2_LOG
+-#include <linux/netfilter_ipv4/ipt_ULOG.h>
++/* Copied from linux/netfilter_ipv4/ipt_ULOG.h, which was removed with
++ * ipt_ULOG in 3.17. The message layout is what netd reads from the
++ * NETLINK_NFLOG socket, so it must stay exactly as it was. */
++#define ULOG_MAC_LEN	80
++#define ULOG_PREFIX_LEN	32
++
++typedef struct ulog_packet_msg {
++	unsigned long mark;
++	long timestamp_sec;
++	long timestamp_usec;
++	unsigned int hook;
++	char indev_name[IFNAMSIZ];
++	char outdev_name[IFNAMSIZ];
++	size_t data_len;
++	char prefix[ULOG_PREFIX_LEN];
++	unsigned char mac_len;
++	unsigned char mac[ULOG_MAC_LEN];
++	unsigned char payload[0];
++} ulog_packet_msg_t;
+ #endif
+ 
+ /**
+-- 
+2.53.0
+
