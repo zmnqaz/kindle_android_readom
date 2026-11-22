@@ -1,0 +1,274 @@
+From f992ee7d97f851ee822bff795988482f65df627f Mon Sep 17 00:00:00 2001
+From: pw4-port <pw4-port@localhost>
+Date: Mon, 23 Nov 2026 02:24:14 +0800
+Subject: [PATCH 10/10] mm, arm: configurable mmap_base randomisation
+ (ARCH_MMAP_RND_BITS)
+
+Upstream d07e22597d1d ("mm: mmap: add new /proc tunable for mmap_base
+ASLR") and e0c25d958f78 ("arm: mm: support ARCH_MMAP_RND_BITS"), both
+v4.5, squashed. The arch/Kconfig block is placed by hand after
+ARCH_HAS_ELF_RANDOMIZE: its context differs in 4.1 and a fuzzy apply puts
+it inside CLONE_BACKWARDS2's help text. The rest applies with offsets (the
+arch/arm/Kconfig select line with fuzz 3, checked).
+
+On this 2G/2G kernel the ARM maximum is 15 bits; Android 8.1 raises
+/proc/sys/vm/mmap_rnd_bits at boot. Readom carries the same for PW3 as
+patch 1010.
+---
+ Documentation/sysctl/vm.txt | 29 ++++++++++++++++
+ arch/Kconfig                | 68 +++++++++++++++++++++++++++++++++++++
+ arch/arm/Kconfig            |  9 +++++
+ arch/arm/mm/mmap.c          |  3 +-
+ include/linux/mm.h          | 11 ++++++
+ kernel/sysctl.c             | 22 ++++++++++++
+ mm/mmap.c                   | 12 +++++++
+ 7 files changed, 152 insertions(+), 2 deletions(-)
+
+diff --git a/Documentation/sysctl/vm.txt b/Documentation/sysctl/vm.txt
+index 4c7c6ed2..5871a8c0 100644
+--- a/Documentation/sysctl/vm.txt
++++ b/Documentation/sysctl/vm.txt
+@@ -43,6 +43,8 @@ Currently, these files are in /proc/sys/vm:
+ - min_slab_ratio
+ - min_unmapped_ratio
+ - mmap_min_addr
++- mmap_rnd_bits
++- mmap_rnd_compat_bits
+ - nr_hugepages
+ - nr_overcommit_hugepages
+ - nr_trim_pages         (only if CONFIG_MMU=n)
+@@ -501,6 +503,33 @@ against future potential kernel bugs.
+ 
+ ==============================================================
+ 
++mmap_rnd_bits:
++
++This value can be used to select the number of bits to use to
++determine the random offset to the base address of vma regions
++resulting from mmap allocations on architectures which support
++tuning address space randomization.  This value will be bounded
++by the architecture's minimum and maximum supported values.
++
++This value can be changed after boot using the
++/proc/sys/vm/mmap_rnd_bits tunable
++
++==============================================================
++
++mmap_rnd_compat_bits:
++
++This value can be used to select the number of bits to use to
++determine the random offset to the base address of vma regions
++resulting from mmap allocations for applications run in
++compatibility mode on architectures which support tuning address
++space randomization.  This value will be bounded by the
++architecture's minimum and maximum supported values.
++
++This value can be changed after boot using the
++/proc/sys/vm/mmap_rnd_compat_bits tunable
++
++==============================================================
++
+ nr_hugepages
+ 
+ Change the minimum size of the hugepage pool.
+diff --git a/arch/Kconfig b/arch/Kconfig
+index a65eafb2..922a5ab5 100644
+--- a/arch/Kconfig
++++ b/arch/Kconfig
+@@ -499,6 +499,74 @@ config ARCH_HAS_ELF_RANDOMIZE
+ 	  - arch_mmap_rnd()
+ 	  - arch_randomize_brk()
+ 
++config HAVE_ARCH_MMAP_RND_BITS
++	bool
++	help
++	  An arch should select this symbol if it supports setting a variable
++	  number of bits for use in establishing the base address for mmap
++	  allocations, has MMU enabled and provides values for both:
++	  - ARCH_MMAP_RND_BITS_MIN
++	  - ARCH_MMAP_RND_BITS_MAX
++
++config ARCH_MMAP_RND_BITS_MIN
++	int
++
++config ARCH_MMAP_RND_BITS_MAX
++	int
++
++config ARCH_MMAP_RND_BITS_DEFAULT
++	int
++
++config ARCH_MMAP_RND_BITS
++	int "Number of bits to use for ASLR of mmap base address" if EXPERT
++	range ARCH_MMAP_RND_BITS_MIN ARCH_MMAP_RND_BITS_MAX
++	default ARCH_MMAP_RND_BITS_DEFAULT if ARCH_MMAP_RND_BITS_DEFAULT
++	default ARCH_MMAP_RND_BITS_MIN
++	depends on HAVE_ARCH_MMAP_RND_BITS
++	help
++	  This value can be used to select the number of bits to use to
++	  determine the random offset to the base address of vma regions
++	  resulting from mmap allocations. This value will be bounded
++	  by the architecture's minimum and maximum supported values.
++
++	  This value can be changed after boot using the
++	  /proc/sys/vm/mmap_rnd_bits tunable
++
++config HAVE_ARCH_MMAP_RND_COMPAT_BITS
++	bool
++	help
++	  An arch should select this symbol if it supports running applications
++	  in compatibility mode, supports setting a variable number of bits for
++	  use in establishing the base address for mmap allocations, has MMU
++	  enabled and provides values for both:
++	  - ARCH_MMAP_RND_COMPAT_BITS_MIN
++	  - ARCH_MMAP_RND_COMPAT_BITS_MAX
++
++config ARCH_MMAP_RND_COMPAT_BITS_MIN
++	int
++
++config ARCH_MMAP_RND_COMPAT_BITS_MAX
++	int
++
++config ARCH_MMAP_RND_COMPAT_BITS_DEFAULT
++	int
++
++config ARCH_MMAP_RND_COMPAT_BITS
++	int "Number of bits to use for ASLR of mmap base address for compatible applications" if EXPERT
++	range ARCH_MMAP_RND_COMPAT_BITS_MIN ARCH_MMAP_RND_COMPAT_BITS_MAX
++	default ARCH_MMAP_RND_COMPAT_BITS_DEFAULT if ARCH_MMAP_RND_COMPAT_BITS_DEFAULT
++	default ARCH_MMAP_RND_COMPAT_BITS_MIN
++	depends on HAVE_ARCH_MMAP_RND_COMPAT_BITS
++	help
++	  This value can be used to select the number of bits to use to
++	  determine the random offset to the base address of vma regions
++	  resulting from mmap allocations for compatible applications This
++	  value will be bounded by the architecture's minimum and maximum
++	  supported values.
++
++	  This value can be changed after boot using the
++	  /proc/sys/vm/mmap_rnd_compat_bits tunable
++
+ #
+ # ABI hall of shame
+ #
+diff --git a/arch/arm/Kconfig b/arch/arm/Kconfig
+index 1ee6e778..456b91b6 100644
+--- a/arch/arm/Kconfig
++++ b/arch/arm/Kconfig
+@@ -37,6 +37,7 @@ config ARM
+ 	select HAVE_ARCH_TRACEHOOK
+ 	select HAVE_BPF_JIT
+ 	select HAVE_CC_STACKPROTECTOR
++	select HAVE_ARCH_MMAP_RND_BITS if MMU
+ 	select HAVE_CONTEXT_TRACKING
+ 	select HAVE_C_RECORDMCOUNT
+ 	select HAVE_DEBUG_KMEMLEAK
+@@ -305,6 +306,14 @@ config MMU
+ 	  Select if you want MMU-based virtualised addressing space
+ 	  support by paged memory management. If unsure, say 'Y'.
+ 
++config ARCH_MMAP_RND_BITS_MIN
++	default 8
++
++config ARCH_MMAP_RND_BITS_MAX
++	default 14 if PAGE_OFFSET=0x40000000
++	default 15 if PAGE_OFFSET=0x80000000
++	default 16
++
+ #
+ # The "ARM system type" choice list is ordered alphabetically by option
+ # text.  Please add new entries in the option alphabetic order.
+diff --git a/arch/arm/mm/mmap.c b/arch/arm/mm/mmap.c
+index 407dc786..4b4058db 100644
+--- a/arch/arm/mm/mmap.c
++++ b/arch/arm/mm/mmap.c
+@@ -173,8 +173,7 @@ unsigned long arch_mmap_rnd(void)
+ {
+ 	unsigned long rnd;
+ 
+-	/* 8 bits of randomness in 20 address space bits */
+-	rnd = (unsigned long)get_random_int() % (1 << 8);
++	rnd = (unsigned long)get_random_int() & ((1 << mmap_rnd_bits) - 1);
+ 
+ 	return rnd << PAGE_SHIFT;
+ }
+diff --git a/include/linux/mm.h b/include/linux/mm.h
+index 14891e97..41ebc5ab 100644
+--- a/include/linux/mm.h
++++ b/include/linux/mm.h
+@@ -49,6 +49,17 @@ extern int sysctl_legacy_va_layout;
+ #define sysctl_legacy_va_layout 0
+ #endif
+ 
++#ifdef CONFIG_HAVE_ARCH_MMAP_RND_BITS
++extern const int mmap_rnd_bits_min;
++extern const int mmap_rnd_bits_max;
++extern int mmap_rnd_bits __read_mostly;
++#endif
++#ifdef CONFIG_HAVE_ARCH_MMAP_RND_COMPAT_BITS
++extern const int mmap_rnd_compat_bits_min;
++extern const int mmap_rnd_compat_bits_max;
++extern int mmap_rnd_compat_bits __read_mostly;
++#endif
++
+ #include <asm/page.h>
+ #include <asm/pgtable.h>
+ #include <asm/processor.h>
+diff --git a/kernel/sysctl.c b/kernel/sysctl.c
+index 1a4a2a2d..21369891 100644
+--- a/kernel/sysctl.c
++++ b/kernel/sysctl.c
+@@ -1545,6 +1545,28 @@ static struct ctl_table vm_table[] = {
+ 		.mode		= 0644,
+ 		.proc_handler	= proc_doulongvec_minmax,
+ 	},
++#ifdef CONFIG_HAVE_ARCH_MMAP_RND_BITS
++	{
++		.procname	= "mmap_rnd_bits",
++		.data		= &mmap_rnd_bits,
++		.maxlen		= sizeof(mmap_rnd_bits),
++		.mode		= 0600,
++		.proc_handler	= proc_dointvec_minmax,
++		.extra1		= (void *)&mmap_rnd_bits_min,
++		.extra2		= (void *)&mmap_rnd_bits_max,
++	},
++#endif
++#ifdef CONFIG_HAVE_ARCH_MMAP_RND_COMPAT_BITS
++	{
++		.procname	= "mmap_rnd_compat_bits",
++		.data		= &mmap_rnd_compat_bits,
++		.maxlen		= sizeof(mmap_rnd_compat_bits),
++		.mode		= 0600,
++		.proc_handler	= proc_dointvec_minmax,
++		.extra1		= (void *)&mmap_rnd_compat_bits_min,
++		.extra2		= (void *)&mmap_rnd_compat_bits_max,
++	},
++#endif
+ 	{ }
+ };
+ 
+diff --git a/mm/mmap.c b/mm/mmap.c
+index 5c6c09e4..2031d3cd 100644
+--- a/mm/mmap.c
++++ b/mm/mmap.c
+@@ -57,6 +57,18 @@
+ #define arch_rebalance_pgtables(addr, len)		(addr)
+ #endif
+ 
++#ifdef CONFIG_HAVE_ARCH_MMAP_RND_BITS
++const int mmap_rnd_bits_min = CONFIG_ARCH_MMAP_RND_BITS_MIN;
++const int mmap_rnd_bits_max = CONFIG_ARCH_MMAP_RND_BITS_MAX;
++int mmap_rnd_bits __read_mostly = CONFIG_ARCH_MMAP_RND_BITS;
++#endif
++#ifdef CONFIG_HAVE_ARCH_MMAP_RND_COMPAT_BITS
++const int mmap_rnd_compat_bits_min = CONFIG_ARCH_MMAP_RND_COMPAT_BITS_MIN;
++const int mmap_rnd_compat_bits_max = CONFIG_ARCH_MMAP_RND_COMPAT_BITS_MAX;
++int mmap_rnd_compat_bits __read_mostly = CONFIG_ARCH_MMAP_RND_COMPAT_BITS;
++#endif
++
++
+ static void unmap_region(struct mm_struct *mm,
+ 		struct vm_area_struct *vma, struct vm_area_struct *prev,
+ 		unsigned long start, unsigned long end);
+-- 
+2.53.0
+

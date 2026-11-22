@@ -1,7 +1,7 @@
 From 81292dbf16081bafd5e0394ba0ed45ee769393d8 Mon Sep 17 00:00:00 2001
 From: pw4-port <pw4-port@localhost>
 Date: Mon, 23 Nov 2026 02:15:56 +0800
-Subject: [PATCH 5/9] net: fib_rules: speak upstream FRA_UID_RANGE instead of
+Subject: [PATCH 05/10] net: fib_rules: speak upstream FRA_UID_RANGE instead of
  FRA_UID_START/END
 
 This tree carries the older Android uid-routing patches: rules take

@@ -1,7 +1,7 @@
 From 4f875465a90d5acc5f0fd1e264699bf0dd719b5f Mon Sep 17 00:00:00 2001
 From: pw4-port <pw4-port@localhost>
 Date: Mon, 23 Nov 2026 02:21:27 +0800
-Subject: [PATCH 9/9] netfilter: qtaguid: keep other UIDs' tags and kernel
+Subject: [PATCH 09/10] netfilter: qtaguid: keep other UIDs' tags and kernel
  pointers out of ctrl
 
 Readom's patch 0811 for PW3, redone for this tree's seq_file version of

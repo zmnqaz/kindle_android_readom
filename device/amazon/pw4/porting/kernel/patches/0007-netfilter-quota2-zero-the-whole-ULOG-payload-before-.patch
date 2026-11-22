@@ -1,7 +1,7 @@
 From 435002c1c6b59d12994d49b9bd914194d94841b1 Mon Sep 17 00:00:00 2001
 From: pw4-port <pw4-port@localhost>
 Date: Mon, 23 Nov 2026 02:18:21 +0800
-Subject: [PATCH 7/9] netfilter: quota2: zero the whole ULOG payload before
+Subject: [PATCH 07/10] netfilter: quota2: zero the whole ULOG payload before
  sending it
 
 Readom's patch 0813 for PW3, redone by hand for this tree's nlmsg_put()

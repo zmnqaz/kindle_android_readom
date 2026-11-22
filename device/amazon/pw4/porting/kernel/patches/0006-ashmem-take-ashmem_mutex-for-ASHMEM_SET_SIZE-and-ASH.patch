@@ -1,7 +1,7 @@
 From f5c05d19c5a0724f6a9861619bb270d13d338681 Mon Sep 17 00:00:00 2001
 From: pw4-port <pw4-port@localhost>
 Date: Mon, 23 Nov 2026 02:18:07 +0800
-Subject: [PATCH 6/9] ashmem: take ashmem_mutex for ASHMEM_SET_SIZE and
+Subject: [PATCH 06/10] ashmem: take ashmem_mutex for ASHMEM_SET_SIZE and
  ASHMEM_GET_SIZE
 
 Readom's patch 0800 for PW3, moved from mm/ashmem.c to this tree's

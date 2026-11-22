@@ -10,7 +10,7 @@
 |---|---|---|
 | 内核源码 | `Kindle_src_5.18.1.1.1_4769680023.tar.gz` 里的 `linux-4.1.15.tar.gz` | 校验见 `../phase0.md` |
 | 交叉编译器 | AOSP `platform/prebuilts/gcc/linux-x86/arm/arm-linux-androideabi-4.9`，提交 `0390252b6bcc6217966ade31d07f8b12f6f78f89` | 和 `source-lock.json` 的 `cross_compiler` 是同一个提交。清华镜像可拉：`https://mirrors.tuna.tsinghua.edu.cn/git/AOSP/platform/prebuilts/gcc/linux-x86/arm/arm-linux-androideabi-4.9` |
-| AOSP 8.1 | `android-8.1.0_r81`，清华镜像 | `repo init` 后 `.repo/manifests` 的提交是 `d4ab87d25f7aa942e79e4f06b229df1f10a6aceb`，和 `source-lock.json` 一致 |
+| AOSP 8.1 | `android-8.1.0_r81`，清华镜像（`REPO_URL=https://mirrors.tuna.tsinghua.edu.cn/git/git-repo`，`repo init -u https://mirrors.tuna.tsinghua.edu.cn/git/AOSP/platform/manifest -b android-8.1.0_r81 --depth=1 --no-clone-bundle -g default,-darwin`） | `.repo/manifests` 的提交是 `d4ab87d25f7aa942e79e4f06b229df1f10a6aceb`，和 `source-lock.json` 一致。同步完约 39 GB |
 | 宿主机 | x86_64 Linux，gcc 较新 | 两处宿主机问题见第五节 |
 
 编译命令（`O=` 指向构建目录）：
@@ -42,13 +42,15 @@ make O=<out> ARCH=arm olddefconfig
 
 - 以**原厂配置**为底，不用 `imx_rex_android_defconfig`：原厂配置是设备上实际在跑的，设备树、initrd、Falcon 都和它对得上
 - 原 125 项里有 26 项 4.1 没有：改名的映射过去（`CGROUP_MEM_RES_CTLR` → `MEMCG`，`NETFILTER_TPROXY` → `NETFILTER_XT_TARGET_TPROXY`），其余列在文件末尾。它们分三类：要靠 Readom 补丁加的（`ANDROID_*`、`LAB126_*`、`ARM_MMAP_BASE_RANDOMIZATION`）、PW3 的硬件（Cypress、max77696、wario hall、ARC USB）、上游已经取消的（`EXPERIMENTAL`、`RESOURCE_COUNTERS`、`IPV6_PRIVACY`、`EXT4_FS_XATTR`）
-- 合并后请求的 113 项全部生效（核对方法同移植文档第六节）；`NETFILTER_XT_MATCH_QUOTA2_LOG` 要靠补丁 `0004` 才选得上
-- PW4 和 PW3 不同的两处：
+- 合并后请求的 117 项全部生效（核对方法同移植文档第六节）；`NETFILTER_XT_MATCH_QUOTA2_LOG` 要靠补丁 `0004` 才选得上
+- PW4 和原厂、和 PW3 不同的几处：
   - `USB_GADGET` 保持原厂的 `y`。PW3 片段里的 `=m` 会把 ChipIdea 一起变成模块，`bd71827-power`、`max14656`、`mwan_rex` 这几个内建驱动就链接不上（`ci_hdrc_set_phy_vcc`、`usb_udc_connected`）
+  - **内存划分用 3G/1G，不用原厂的 2G/2G**。Android 8.1 的 init（`system/core/init/init.cpp` 的 `set_mmap_rnd_bits_action`）在 32 位 ARM 上要求 `/proc/sys/vm/mmap_rnd_bits` 必须设到 16，否则 `security_failure()`，系统起不来；而上游对 2G/2G 的 ARM 上限是 15。交接是在原厂 2G/2G 内核里跑的，下一个内核用什么划分与它无关，所以和 PW3 一样用 3G/1G：512 MiB 内存两种划分下都全是 lowmem，用户空间还多 1 GiB。`drivers/falcon/` 里没有按 `PAGE_OFFSET` 写死的地址（搜到的 `0x80000000` 是标志位）。这一条要在真机上验证 Falcon 的 BIOS 调用
+  - 打开 `ANDROID_PARANOID_NETWORK`（见第五节）
   - 关掉 `MXC_GPU_VIV`：i.MX6SLL 没有 GPU 核心，而 galcore 在开了 Android 同步框架后找不到 `sync.h`
 - `LOCALVERSION="-lab126-pw4-android81"`，沿用 PW3 的命名规矩
 
-用这份配置，加上下面九个补丁，**vmlinux 和模块都能编出来**（binder、hwbinder、vndbinder，ashmem，SELinux，ambient capabilities 都在）。还没在设备上跑过。
+用这份配置，加上下面十个补丁，**vmlinux 和模块都能编出来**（binder、hwbinder、vndbinder，ashmem，SELinux，ambient capabilities 都在）。还没在设备上跑过。
 
 ## 四、补丁（`patches/`，按顺序应用在原样的 4.1.15 上）
 
@@ -63,13 +65,14 @@ make O=<out> ARCH=arm olddefconfig
 | `0007` quota2 清零 | `ulog_packet_msg_t` 只填了一部分字段就整个广播出去，未初始化的内核字节会到用户空间。按这棵树 `nlmsg_put()` 的写法手工重做 | `0813` |
 | `0008` IDLETIMER | sysfs 读取不再拿 `list_mutex`（和删除互相等待会死锁）；创建时先初始化再挂出来；删除时先注销 PM 通知，再 `del_timer_sync`、`cancel_work_sync`。第 2–5 块带偏移打上，第 1 块手工重做（这棵树的 `idletimer_tg_show()` 在查不到时还会解引用空指针） | `0812` |
 | `0009` qtaguid ctrl | `/proc/net/xt_qtaguid/ctrl` 不再把别的 UID 的标签和 `struct sock` 地址给没有读全量权限的进程看；全局计数要读全量权限。这棵树是 seq_file 写法，按原意重做 | `0811` |
+| `0010` mmap 随机化 | 上游 `d07e22597d1d`、`e0c25d958f78`（v4.5）合成一个。`arch/Kconfig` 那块手工放在 `ARCH_HAS_ELF_RANDOMIZE` 后面：4.1 的上下文不同，模糊匹配会把它塞进 `CLONE_BACKWARDS2` 的帮助文字里。配置里设 16 位（见第三节） | `1010` |
 
 ## 五、第 0 阶段分类的修正
 
 逐项核对后（`../phase0.md` 第四节的表还没改，以这里为准）：
 
 - **再去掉 7 个**，4.1 里已经有：`0103`（timekeeping 已改写）、`1012`（自发 siginfo，主线 3.9）、`1014`（`mm_access` 已在 `kernel/fork.c`）、`1051`（`net/ipv4/sysfs_net_ipv4.c` 已有）、`1052`（`tcp_default_init_rwnd` 已有）、`1055`（`same_thread_group` 判断，主线 3.9）、`0332`（`xt_IDLETIMER` 已有 revision 1）
-- **已做**：`1053`、`1050`、`0333`、`0800`、`0811`、`0812`、`0813`、binder 那 5 个（见第四节）
+- **已做**：`1053`、`1050`、`1010`、`0333`、`0800`、`0811`、`0812`、`0813`、binder 那 5 个（见第四节）
 - **换成配置项**：`0402`、`0600`（网络按组授权）。这棵树有 Android 原版的 `ANDROID_PARANOID_NETWORK`（`af_inet`、`af_inet6`、`commoncap`、`tun` 都接上了），原厂没开；草稿配置里打开它。4.1 的 netlink 权限检查走 `cap_capable`，也由 `commoncap` 里那段覆盖，所以不需要 PW3 上为 3.0 的 `cap_netlink_send` 写的那部分
 - **要注意的**：
   - `0810` qtaguid 标签生命周期：改动集中在 `uid_tag_data_tree_lock` 和 `sock_tag_list_lock` 的加锁顺序上，要逐段对照这棵树的版本做，还没动
@@ -91,6 +94,6 @@ ls /lib/modules/$(uname -r)/
 ## 七、下一步
 
 1. 设备上拷一个原厂模块回来，做第六节的 CRC 核对
-2. `0810` qtaguid 标签生命周期，`1010` ARM mmap 随机化
+2. `0810` qtaguid 标签生命周期
 3. 其余「移植」类：`0002` 剩下的 SELinux 部分、`0330`、`1015`、`1033`、`1040`、`1041`、`1043`、`1048`、`1054`、`1056`、`1057`
 4. 开始写交接模块的 PW4 版本（DTB 代替 ATAG，2G/2G 页表，L2 回调），先在 QEMU 里跑
