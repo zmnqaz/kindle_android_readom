@@ -104,6 +104,8 @@ def main():
     # Outside the PW3 build VM (the PW4 port builds on a plain Linux host):
     ap.add_argument('--kernel-source', help='stock kernel tree the module is built against (overrides the profile)')
     ap.add_argument('--kernel-output', help='its build output directory (overrides the profile)')
+    ap.add_argument('--probe-only', action='store_true',
+                    help='a module that can PROBE and cannot commit: the jump is not compiled in (first device runs)')
     ap.add_argument('--footprint', type=Path, help='footprint.json made for --kernel, for a profile derive_kernel_footprint.py does not know')
     a = ap.parse_args()
     if (platform.node() != 'lima-pw3' and not os.environ.get('READOM_ARM_TOOLS')) or os.geteuid() == 0:
@@ -144,7 +146,8 @@ def main():
         (' pw4_fdt.o' if fdt else '') + ('' if stock or fdt else ' stack.o') + '\n'
     if not stock:
         make += 'pw3_qemu_pm-y := qemu-pm.o\n'
-    make += ('ccflags-y += -fno-pic -fno-pie -Werror -DPWS_PROFILE=%d -DPW3_CONTROLLED_HANDOFF -DPW3_TRANSITION_BUILD_FOR_REVIEW\n'
+    make += ('ccflags-y += -fno-pic -fno-pie -Werror -DPWS_PROFILE=%d -DPW3_CONTROLLED_HANDOFF -DPW3_TRANSITION_BUILD_FOR_REVIEW' +
+             (' -DPWS_PROBE_ONLY' if a.probe_only else '') + '\n'
              'asflags-y += -DPW3_CONTROLLED_HANDOFF -DPW3_TRANSITION_BUILD_FOR_REVIEW\n') % profile['module_profile']
     (work / 'Makefile').write_text(make)
     command = ['make', '-C', a.kernel_source or profile['module_kernel_source'],
@@ -166,6 +169,7 @@ def main():
         'modules_sha256': {n: sha((a.output / (n + '.ko')).read_bytes()) for n in modules},
         'target_lock_sha256': sha((a.output / 'target-lock.h').read_bytes()),
         'contains_device_data': False,
+        'probe_only': bool(a.probe_only),
     }
     (a.output / 'build-result.json').write_text(json.dumps(receipt, indent=2) + '\n')
     print(json.dumps({k: receipt[k] for k in ['module_profile', 'modules_sha256', 'contains_device_data']}, indent=1))

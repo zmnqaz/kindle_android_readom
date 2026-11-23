@@ -41,6 +41,19 @@ static struct store *native_active;
 static struct task_struct *native_owner;
 static struct cache_backend native_backend;
 static int native_commit;
+/* What the last suspend callback read, raw, for pinning the profile from a
+ * device PROBE: midr sctlr ttbr0 ttbcr prrr nmrr dacr cpsr ccgr0..6 actlr.
+ * Registers only; no addresses of this kernel's data. */
+static unsigned int probe_raw[16];
+static int probe_raw_count=16;
+module_param_array(probe_raw,uint,&probe_raw_count,0444);
+#ifdef PWS_PROBE_ONLY
+/* A module built to look, not to jump: the commit path is not compiled in. */
+static const int probe_only=1;
+#else
+static const int probe_only=0;
+#endif
+module_param_named(probe_only,*(int *)&probe_only,int,0444);
 /* 4.1 does not export pm_mutex (3.0 did); kallsyms names it. */
 static struct mutex *native_pm_mutex;
 #if PWS_PROFILE == 3
@@ -141,6 +154,9 @@ static int native_sample(void)
     __asm__ volatile("mrc p15,0,%0,c10,c2,0":"=r"(prrr));
     __asm__ volatile("mrc p15,0,%0,c10,c2,1":"=r"(nmrr));
     __asm__ volatile("mrc p15,0,%0,c3,c0,0":"=r"(dacr));
+    probe_raw[0]=midr;probe_raw[1]=sctlr;probe_raw[3]=ttbcr;probe_raw[4]=prrr;probe_raw[5]=nmrr;probe_raw[6]=dacr;probe_raw[7]=cpsr;
+    __asm__ volatile("mrc p15,0,%0,c2,c0,0":"=r"(probe_raw[2]));probe_raw[2]&=0x3fffu;   /* walk attributes only */
+    __asm__ volatile("mrc p15,0,%0,c1,c0,1":"=r"(probe_raw[15]));
     native_report.irq_fiq_masked=(cpsr&0xff)==0xd3;
     native_report.cpu_profile_valid=native_report.irq_fiq_masked && pw3_identity_profile(sctlr,prrr,nmrr) && !ttbcr && (sctlr&0x1005)==0x1005 && !(sctlr&0x22000000) && (dacr&3)==1;
     native_report.cpu_profile_valid&=midr==TARGET_MIDR && prrr==TARGET_PRRR && nmrr==TARGET_NMRR;
@@ -187,6 +203,7 @@ static int native_sample(void)
     native_report.dcp_channel_enable=native_test_reject?1u:0u;
     native_report.dcp_stopped=!native_test_reject;
 #endif
+    for(i=0;i<7;i++)probe_raw[8+i]=ccgr[i];
     for(i=0;i<PWS_GATE_COUNT;i++){native_report.gate[i]=(ccgr[gate_bank[i]]>>gate_shift[i])&3u;if(native_report.gate[i])clear=0;}
     native_report.registers_valid=valid;native_report.gates_clear=clear;
     __asm__ volatile("dsb\n\tisb":::"memory");
@@ -218,7 +235,9 @@ static int native_core_suspend(void)
     rc=pw3_cache_backend_check(&native_backend);
     native_report.backend_result=rc;
     if(rc){native_report.callback_rejected=1;if(!native_commit)rc=0;goto out;}
+#ifndef PWS_PROBE_ONLY
     if(native_commit){rc=pw3_cache_backend(&native_backend);native_report.backend_result=rc;}
+#endif
 out:
     preempt_enable();__asm__ volatile("msr cpsr_c,%0"::"r"(flags):"memory","cc");return rc;
 }
@@ -231,7 +250,7 @@ static int native_cycle(struct store *s,int commit)
 {
     int rc;
     if(!native_mode_core())return -EPERM;
-    if(commit && !s->native_ready)return -EPERM;
+    if(commit && (probe_only || !s->native_ready))return -EPERM;
     s->native_ready=0;
     rc=native_prepare(s);if(rc)return rc;
     memset(&native_report,0,sizeof(native_report));native_report.version=5;native_report.profile=PWS_PROFILE;native_report.commit_requested=commit;
