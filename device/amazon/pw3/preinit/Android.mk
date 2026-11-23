@@ -5,6 +5,10 @@ LOCAL_CLANG := true
 LOCAL_MODULE_TAGS := optional
 LOCAL_SRC_FILES := PreInit.c
 LOCAL_CFLAGS := -std=gnu11 -Wall -Wextra -Werror -Wno-unused-function -D_FILE_OFFSET_BITS=64
+# The PW4 port's eMMC layout (Board.h).
+ifeq ($(TARGET_DEVICE),pw4)
+LOCAL_CFLAGS += -DPREINIT_BOARD_PW4
+endif
 LOCAL_FORCE_STATIC_EXECUTABLE := true
 LOCAL_STATIC_LIBRARIES := libcrypto libc
 LOCAL_SHARED_LIBRARIES :=

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 #define _GNU_SOURCE
 #define _FILE_OFFSET_BITS 64
+#include "Board.h"
 #include "StorageFormat.h"
 #include "../report/ReportStop.h"
 #include <openssl/sha.h>
@@ -205,9 +206,9 @@ static bool safe_path(const char *s) {
     return true;
 }
 static bool block_name(const char *s) {
-    if (!strcmp(s, "mmcblk0")) return true;
-    if (strncmp(s, "mmcblk0", 7)) return false;
-    s += 7;
+    if (!strcmp(s, BOARD_DISK)) return true;
+    if (strncmp(s, BOARD_DISK, BOARD_DISK_LEN)) return false;
+    s += BOARD_DISK_LEN;
     if (*s == 'p') ++s;
     else if (!strncmp(s, "boot", 4)) s += 4;
     else if (!strcmp(s, "rpmb")) return true;
@@ -251,7 +252,7 @@ static bool parse_config(const char *path, struct config *cfg) {
         else if (!strcmp(line, "system_sha256")) { bit = 8U; if (!hex_sha(eq, cfg->system_sha)) return false; }
         else if (!strcmp(line, "init_sha256")) { bit = 16U; if (!hex_sha(eq, cfg->init_sha)) return false; }
         else if (!strcmp(line, "cmdline_sha256")) { bit = 32U; if (!hex_sha(eq, cfg->cmdline_sha)) return false; }
-        else if (!strcmp(line, "kernel_release")) { bit = 64U; if (!safe_release(eq) || strlen(eq) >= sizeof(cfg->release) || !strstr(eq, "-pw3-android81")) return false; strcpy(cfg->release, eq); }
+        else if (!strcmp(line, "kernel_release")) { bit = 64U; if (!safe_release(eq) || strlen(eq) >= sizeof(cfg->release) || !strstr(eq, BOARD_RELEASE_TAG)) return false; strcpy(cfg->release, eq); }
         else if (!strcmp(line, "fat_offset")) { bit = 128U; if (!decimal(eq, &cfg->offset) || cfg->offset % 512) return false; }
         else if (!strcmp(line, "fat_sizelimit")) { bit = 256U; if (!decimal(eq, &cfg->sizelimit) || cfg->sizelimit % 512) return false; }
         else if (!strcmp(line, "adb_key_sha256")) { bit = 512U; cfg->adb_key = strcmp(eq, "none") != 0; if (cfg->adb_key && !hex_sha(eq, cfg->adb_sha)) return false; }
@@ -265,7 +266,7 @@ static bool parse_config(const char *path, struct config *cfg) {
             v = &cfg->blocks[cfg->block_count++]; strcpy(v->name, eq);
             if (!decimal(a, &v->sectors) || !v->sectors || v->sectors > INT64_MAX / 512) return false;
             v->has_start = strcmp(b, "-") != 0;
-            if (v->has_start != (strncmp(eq, "mmcblk0p", 8) == 0)) return false;
+            if (v->has_start != (strncmp(eq, BOARD_DISK, BOARD_DISK_LEN) == 0 && eq[BOARD_DISK_LEN] == 'p')) return false;
             if (v->has_start && !decimal(b, &v->start)) return false;
         } else return false;
         if (bit && (cfg->seen & bit)) return false;
@@ -276,8 +277,8 @@ static bool parse_config(const char *path, struct config *cfg) {
     uint64_t disk_size = 0, user_start = 0, user_size = 0;
     for (unsigned i = 0; i < cfg->block_count; ++i) {
         struct block *b = &cfg->blocks[i];
-        if (!strcmp(b->name, "mmcblk0")) { disk = !b->has_start; disk_size = b->sectors; }
-        if (!strcmp(b->name, "mmcblk0p4")) { user = b->has_start; user_start = b->start; user_size = b->sectors; }
+        if (!strcmp(b->name, BOARD_DISK)) { disk = !b->has_start; disk_size = b->sectors; }
+        if (!strcmp(b->name, BOARD_USER_PART)) { user = b->has_start; user_start = b->start; user_size = b->sectors; }
     }
     if (!(disk && user && user_start < disk_size && user_size <= disk_size - user_start &&
           cfg->offset < user_size * 512 && (!cfg->sizelimit || cfg->sizelimit <= user_size * 512 - cfg->offset)))
@@ -290,7 +291,7 @@ static bool parse_config(const char *path, struct config *cfg) {
      * a layout that does is not one this port will write to. */
     for (unsigned i = 0; i < cfg->block_count; ++i) {
         struct block *b = &cfg->blocks[i];
-        if (!b->has_start || !strcmp(b->name, "mmcblk0p4"))
+        if (!b->has_start || !strcmp(b->name, BOARD_USER_PART))
             continue;
         if (b->start < user_start + user_size && user_start < b->start + b->sectors)
             return false;

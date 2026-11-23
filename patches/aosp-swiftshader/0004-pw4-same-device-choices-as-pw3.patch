@@ -1,0 +1,22 @@
+# The PW4 port (device/amazon/pw4) takes the same choice as pw3 here.
+diff --git a/src/Android.mk b/src/Android.mk
+index 1029b83..e7ea6e7 100644
+--- a/src/Android.mk
++++ b/src/Android.mk
+@@ -138,6 +138,16 @@ endif
+ # Common Subzero defines
+ COMMON_CFLAGS += -DALLOW_DUMP=0 -DALLOW_TIMERS=0 -DALLOW_LLVM_CL=0 -DALLOW_LLVM_IR=0 -DALLOW_LLVM_IR_AS_INPUT=0 -DALLOW_MINIMAL_BUILD=0 -DALLOW_WASM=0 -DICE_THREAD_LOCAL_HACK=1
+ 
++# PW3's Cortex-A9 implements NEON, but no ARM SDIV/UDIV instructions.
++ifeq ($(TARGET_ARCH):$(TARGET_CPU_VARIANT),arm:cortex-a9)
++COMMON_CFLAGS += -DPW3_CORTEX_A9_NO_HW_DIV=1
++endif
++
++# PW3 software-rendering workers must not inherit SurfaceFlinger realtime scheduling.
++ifneq ($(filter pw3 pw4,$(TARGET_DEVICE)),)
++COMMON_CFLAGS += -DPW3_SOFTWARE_RENDERER_CFS=1
++endif
++
+ # Subzero target
+ LOCAL_CFLAGS_x86 += -DSZTARGET=X8632
+ LOCAL_CFLAGS_x86_64 += -DSZTARGET=X8664

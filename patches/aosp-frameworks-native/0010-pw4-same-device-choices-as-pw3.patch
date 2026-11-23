@@ -1,0 +1,17 @@
+# The PW4 port (device/amazon/pw4) takes the same choice as pw3 here.
+diff --git a/services/surfaceflinger/Android.mk b/services/surfaceflinger/Android.mk
+index 38529b6..1f1041b 100644
+--- a/services/surfaceflinger/Android.mk
++++ b/services/surfaceflinger/Android.mk
+@@ -49,6 +49,11 @@ LOCAL_C_INCLUDES := \
+ LOCAL_CFLAGS := -DLOG_TAG=\"SurfaceFlinger\"
+ LOCAL_CFLAGS += -DGL_GLEXT_PROTOTYPES -DEGL_EGLEXT_PROTOTYPES
+ 
++# PW3 uses software GLES; constant whole-display clears do not need shaders.
++ifneq ($(filter pw3 pw4,$(TARGET_DEVICE)),)
++    LOCAL_CFLAGS += -DPW3_SOFTWARE_FAST_CLEAR
++endif
++
+ ifeq ($(TARGET_USES_HWC2),true)
+     LOCAL_CFLAGS += -DUSE_HWC2
+     LOCAL_SRC_FILES += \

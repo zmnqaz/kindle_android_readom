@@ -94,18 +94,17 @@ static bool testfile_cmdline(const struct config *cfg) {
 static bool testfile_physical(const struct config *cfg) {
     // Never remove an existing read-only protection. The disk and user
     // partition must already be writable; every other observed area is locked.
-    static const char *names[] = {"mmcblk0", "mmcblk0p1", "mmcblk0p2", "mmcblk0p3",
-        "mmcblk0p4", "mmcblk0boot0", "mmcblk0boot1"};
-    if (cfg->block_count != 7) return false;
-    for (unsigned i = 0; i < 7; ++i) {
+    static const char *names[] = BOARD_BLOCKS;
+    if (cfg->block_count != BOARD_BLOCK_COUNT) return false;
+    for (unsigned i = 0; i < BOARD_BLOCK_COUNT; ++i) {
         bool found = false;
-        for (unsigned j = 0; j < 7; ++j) if (!strcmp(names[i], cfg->blocks[j].name)) found = true;
+        for (unsigned j = 0; j < BOARD_BLOCK_COUNT; ++j) if (!strcmp(names[i], cfg->blocks[j].name)) found = true;
         if (!found) return false;
     }
     DIR *dir = opendir("/sys/class/block"); struct dirent *e; unsigned found = 0; bool ok = true;
     if (!dir) return false;
     while ((e = readdir(dir))) {
-        if (strncmp(e->d_name, "mmcblk0", 7)) continue;
+        if (strncmp(e->d_name, BOARD_DISK, BOARD_DISK_LEN)) continue;
         ++found;
         const struct block *expected = NULL;
         for (unsigned i = 0; i < cfg->block_count; ++i)
@@ -117,13 +116,13 @@ static bool testfile_physical(const struct config *cfg) {
             ok = false; continue;
         }
         int fd = open(path, O_RDONLY | O_CLOEXEC | O_NOFOLLOW), value = -1;
-        bool writable = !strcmp(e->d_name, "mmcblk0") || !strcmp(e->d_name, "mmcblk0p4");
+        bool writable = !strcmp(e->d_name, BOARD_DISK) || !strcmp(e->d_name, BOARD_USER_PART);
         if (fd < 0 || (!writable && !readonly_fd(fd)) || ioctl(fd, BLKROGET, &value) ||
             value != (writable ? 0 : 1) || !sysnum(e->d_name, "ro", &ro) || ro != (writable ? 0U : 1U)) ok = false;
         if (fd >= 0) close(fd);
     }
     closedir(dir);
-    return ok && found == 7;
+    return ok && found == BOARD_BLOCK_COUNT;
 }
 static bool testfile_mapped_node(const char *name, unsigned expected_major,
         unsigned expected_minor, uint64_t bytes, bool ro, char path[128]) {
@@ -252,9 +251,9 @@ int main(void) {
         usleep(100000);
     }
     if (!locked) stop("testfile geometry or protected-area state rejected");
-    for (unsigned i = 0; i < cfg.block_count; ++i) if (!strcmp(cfg.blocks[i].name, "mmcblk0p4")) p4_size = cfg.blocks[i].sectors * 512;
+    for (unsigned i = 0; i < cfg.block_count; ++i) if (!strcmp(cfg.blocks[i].name, BOARD_USER_PART)) p4_size = cfg.blocks[i].sectors * 512;
     effective = cfg.sizelimit ? cfg.sizelimit : p4_size - cfg.offset;
-    if (cfg.offset != 8192 || cfg.sizelimit || !block_node("mmcblk0p4", p4) ||
+    if (cfg.offset != 8192 || cfg.sizelimit || !block_node(BOARD_USER_PART, p4) ||
         !node_from_sysfs("/sys/class/misc/device-mapper/dev", "/dev/device-mapper", S_IFCHR))
         stop("exact test FAT mapping interface unavailable");
     p4fd = open(p4, O_RDWR | O_CLOEXEC | O_NOFOLLOW);

@@ -1,0 +1,18 @@
+# The PW4 port (device/amazon/pw4) takes the same choice as pw3 here.
+diff --git a/Android.mk b/Android.mk
+index d41e184..72f4ca3 100644
+--- a/Android.mk
++++ b/Android.mk
+@@ -102,6 +102,12 @@ LOCAL_MIN_SDK_VERSION := 21
+ LOCAL_PACKAGE_NAME := Launcher3Go
+ LOCAL_PRIVILEGED_MODULE := true
+ LOCAL_OVERRIDES_PACKAGES := Home Launcher2 Launcher3
++# PW3 has no companion setup/backup feature and does not ship CTS shim APKs.
++# Keep this list with the launcher actually selected by the PW3 product.
++ifneq ($(filter pw3 pw4,$(TARGET_DEVICE)),)
++LOCAL_OVERRIDES_PACKAGES += \
++    CtsShimPrebuilt CtsShimPrivPrebuilt WallpaperBackup CompanionDeviceManager
++endif
+ 
+ LOCAL_FULL_LIBS_MANIFEST_FILES := \
+     $(LOCAL_PATH)/AndroidManifest.xml \
