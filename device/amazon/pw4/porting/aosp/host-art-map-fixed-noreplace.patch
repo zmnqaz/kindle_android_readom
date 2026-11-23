@@ -1,0 +1,26 @@
+diff --git a/runtime/mem_map.cc b/runtime/mem_map.cc
+index 7b41608..ebb9767 100644
+--- a/runtime/mem_map.cc
++++ b/runtime/mem_map.cc
+@@ -312,6 +312,9 @@ MemMap* MemMap::MapAnonymous(const char* name,
+     DCHECK(ContainedWithinExistingMap(expected_ptr, byte_count, error_msg)) << *error_msg;
+     flags |= MAP_FIXED;
+   }
++  if (!kIsTargetBuild && !reuse && expected_ptr != nullptr) {
++    flags |= 0x100000;  // MAP_FIXED_NOREPLACE, see MapFileAtAddress
++  }
+ 
+   if (use_ashmem) {
+     if (!kIsTargetBuild) {
+@@ -420,6 +423,11 @@ MemMap* MemMap::MapFileAtAddress(uint8_t* expected_ptr,
+     // Don't bother checking for an overlapping region here. We'll
+     // check this if required after the fact inside CheckMapRequest.
+   }
++  // Host build only (pw4 local): newer host kernels may place a large hinted file
++  // mapping elsewhere; ask for the exact address without replacing anything.
++  if (!kIsTargetBuild && !reuse && expected_ptr != nullptr) {
++    flags |= 0x100000;  // MAP_FIXED_NOREPLACE
++  }
+ 
+   if (byte_count == 0) {
+     return new MemMap(filename, nullptr, 0, nullptr, 0, prot, false);
