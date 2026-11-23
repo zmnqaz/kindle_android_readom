@@ -79,6 +79,8 @@ make O=<out> ARCH=arm olddefconfig
 
 补丁 `0015`（2026-11-23）：`0200`/`0202` 的 PW4 版。前光是 `lm3695`（`ti-lmu-backlight`，`/sys/class/backlight/bl`，0–2047），原驱动不看 `bl_power`；开 `LAB126_ANDROID_BACKLIGHT_BLANKING` 后 `bl_power` 不是 unblank 或帧缓冲 blank 时输出 0，请求的亮度保留，power HAL 灭屏就靠它。`bd71827` 的电压/电流/电量本来就是 µV/µA/µAh、充电器 `online` 就是 DCIN 检测，只有温度是整度（原厂读出 20），开 `LAB126_ANDROID_POWER_SUPPLY_ABI` 后按 0.1 °C 报。
 
+补丁 `0016`（2026-11-24，诊断用，查清后撤回或改成修复）：USB 唤醒与 DDR 调频的 `pw4-trace:` 日志，和参数 `pw4_busfreq_off`（`core_param`）。见 `../android.md`「插 USB 卡死的分析」。
+
 **编译参数（2026-11-23 补）**：安卓内核要带 `KCFLAGS="-fno-pic -fno-pie"`，和 Readom 的 `tools/build-kernel.sh`、交接模块一样。AOSP 的 gcc 4.9 默认生成位置无关代码，不带这个参数时内核本身还能启动，但模块里会引用 `_GLOBAL_OFFSET_TABLE_`，加载时报 `Unknown symbol _GLOBAL_OFFSET_TABLE_`（第十次交接时 EPDC 驱动就是这样没加载上）。
 
 ## 五、第 0 阶段分类的修正

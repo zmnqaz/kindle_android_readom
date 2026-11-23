@@ -31,6 +31,8 @@ def main():
     ap.add_argument('--kernel-release', required=True)
     ap.add_argument('--profile', type=Path, default=ROOT / 'boot/profiles/pw4-5.18.1.1.1.json')
     ap.add_argument('--output', type=Path, required=True, help='directory for public-initramfs.gz and cmdline.txt')
+    ap.add_argument('--cmdline-extra', action='append', default=[],
+                    help='a kernel parameter for a diagnostic jump (e.g. pw4_busfreq_off), appended')
     a = ap.parse_args()
     spec = importlib.util.spec_from_file_location('pack', ROOT / 'tools/preinit-pack/pack.py')
     pack = importlib.util.module_from_spec(spec); sys.modules['pack'] = pack; spec.loader.exec_module(pack)
@@ -66,7 +68,7 @@ def main():
 
     import json
     profile = json.loads(a.profile.read_text())
-    cmdline = ' '.join([profile['cmdline_base']] + CMDLINE_ANDROID)
+    cmdline = ' '.join([profile['cmdline_base']] + CMDLINE_ANDROID + a.cmdline_extra)
     a.output.mkdir(parents=True, exist_ok=True)
     (a.output / 'public-initramfs.gz').write_bytes(public)
     (a.output / 'cmdline.txt').write_text(cmdline + '\n')

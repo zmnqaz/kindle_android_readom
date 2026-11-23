@@ -95,3 +95,15 @@ preinit 改名 `.real`（同 `boot/build_entry.py`），公开 initramfs 由 `pa
 - 蓝牙：原厂不用 Linux 蓝牙栈，是 Broadcom 的 `bsa_server` 走 `/dev/ttymxc2`、加载 `.hcd` 固件。Readom 本来没有蓝牙，
   要做是新增功能（蓝牙 HAL、协议栈、应用），先不做。
 - 还没动：`pw3-fg-state`（读 PW3 的 `wario_battery`，PW4 上只会记一行读不到）；休眠（`/sys/power/state` 有 `mem`）未测。
+
+**插 USB 卡死的分析（2026-11-24 凌晨，未上机）**：Jump 13 卡死时日志里连 `bd71827` 充电器中断的
+`usb_gadget_chg_det_sync` 都没有，所以卡在插线后最先发生的事上：i.MX 自己的 USB 唤醒。控制器在没插线时处于
+低功耗（时钟关、`in_lpm`），`ci_irq` 收到 VBUS 唤醒中断就 `pm_runtime_get`，恢复路径
+`imx_controller_resume` 先 `request_bus_freq(BUS_FREQ_HIGH)`（DDR 从低频切回高频，由 OCRAM 里的
+`lpddr2_freq_imx6sll.S` 做），再开时钟、读写 USBNC/PHY——全程不打印。嫌疑最大的是 DDR 调频。
+- 内核补丁 `0016`（诊断）：USB 唤醒中断、恢复的每一步、每次 DDR 调频（开始/完成）各打一行 `pw4-trace:`。
+  Lab126 日志每条都写回内存（`0011`），卡死后最后一行就是卡住的那一步；平时 EPDC 刷新也会调频，日志同时说明
+  调频本身在不在工作。
+- 参数 `pw4_busfreq_off`：DDR 一直停在开机时的频率（原厂在进休眠前已切到高频，交接就从那里开始）。
+- Jump 15 = 跟踪；Jump 16 = 跟踪 + `pw4_busfreq_off`（同一个系统镜像，只差命令行）。15 卡、16 不卡，就是调频。
+  `pack-initramfs.py --cmdline-extra` 加这种参数，`cmdline_sha256` 随之改。
