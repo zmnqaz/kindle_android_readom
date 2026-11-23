@@ -30,7 +30,19 @@ bool Udc(Platform& p) {
 bool Gadget(Platform& p) {
     return Udc(p) && p.ModuleLive("g_android") && p.AndroidUsb() && p.FunctionFs();
 }
+// The PW4's 4.1 kernel: ChipIdea (built in) and the configfs gadget, whose
+// modules init.pw3.usb.modules.rc loads (device/amazon/pw4).
+bool Configfs(Platform& p) {
+    return p.ModuleLive("configfs") && p.ModuleLive("libcomposite") &&
+           p.ModuleLive("usb_f_fs") && p.FunctionFs();
+}
 bool Fail(Platform& p) { p.Set(kPhase, "error"); return false; }
+bool MakeSerial(Platform& p) {
+    if (ValidSerial(p.Get(kSerial))) return true;
+    std::string serial;
+    return p.RandomSerial(&serial) && ValidSerial(serial) &&
+           p.Set(kSerial, serial) && p.Get(kSerial) == serial;
+}
 }
 
 bool ValidSerial(const std::string& serial) {
@@ -56,12 +68,14 @@ bool RunUsbGate(Platform& p, const std::string& stage) {
         // the device again, instead of seeing a new one at every boot); never the
         // factory serial. Needs persistent properties, so it runs at boot.
         if (p.Get(kPhase) != "gadget-bound" || !Gadget(p)) return Fail(p);
-        if (!ValidSerial(p.Get(kSerial))) {
-            std::string serial;
-            if (!p.RandomSerial(&serial) || !ValidSerial(serial) ||
-                !p.Set(kSerial, serial) || p.Get(kSerial) != serial) return Fail(p);
-        }
+        if (!MakeSerial(p)) return Fail(p);
         return p.Set(kPhase, "ready");
+    }
+    if (stage == "configfs-serial") {
+        // The same serial for the configfs gadget, before the gadget is made.
+        if (p.Get(kPhase) != "configfs-loaded" || !Configfs(p)) return Fail(p);
+        if (!MakeSerial(p)) return Fail(p);
+        return p.Set(kPhase, "configfs-ready");
     }
     const char* expected = nullptr;
     const char* next = nullptr;

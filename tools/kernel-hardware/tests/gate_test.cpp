@@ -27,6 +27,7 @@ struct Fake : pw3::Platform {
     void otg() {live.insert("fsl_otg_arc");drivers.insert("fsl-usb2-otg");}
     void udc() {otg();live.insert("arcotg_udc");drivers.insert("fsl-usb2-udc");}
     void gadget() {udc();live.insert("g_android");android=true;fs=true;}
+    void configfs() {live.insert("configfs");live.insert("libcomposite");live.insert("usb_f_fs");fs=true;props["sys.pw3.usb.phase"]="configfs-loaded";}
     void bound() {assert(pw3::RunUsbGate(*this,"prepare"));otg();assert(pw3::RunUsbGate(*this,"otg"));udc();assert(pw3::RunUsbGate(*this,"udc"));gadget();assert(pw3::RunUsbGate(*this,"gadget"));assert(props["sys.pw3.usb.phase"]=="gadget-bound");}
 };
 void failed(Fake& f,const char* stage) { assert(!pw3::RunUsbGate(f,stage));assert(f.props["sys.pw3.usb.phase"]=="error"); }
@@ -65,6 +66,16 @@ int main() {
     {Fake f;f.failset="persist.pw3.usb.serial";f.bound();failed(f,"serial");}
     {Fake f;f.bound();f.android=false;failed(f,"serial");}
     {Fake f;assert(pw3::RunUsbGate(f,"prepare"));failed(f,"serial");assert(f.randoms==0);}
+    // PW4: the configfs gadget's serial, after its modules are loaded.
+    {Fake f;f.configfs();assert(pw3::RunUsbGate(f,"configfs-serial"));assert(f.props["persist.pw3.usb.serial"]==f.random);assert(f.props["sys.pw3.usb.phase"]=="configfs-ready");}
+    {Fake f;f.props["persist.pw3.usb.serial"]="fedcba9876543210fedcba9876543210";f.configfs();assert(pw3::RunUsbGate(f,"configfs-serial"));assert(f.randoms==0);}
+    for (const char* m:{"configfs","libcomposite","usb_f_fs"}) {Fake f;f.configfs();f.live.erase(m);failed(f,"configfs-serial");assert(f.randoms==0);}
+    {Fake f;f.configfs();f.fs=false;failed(f,"configfs-serial");}
+    {Fake f;f.configfs();f.props["sys.pw3.usb.phase"]="none";failed(f,"configfs-serial");}
+    {Fake f;f.configfs();f.modules["g_mass_storage"]=Presence::Present;failed(f,"configfs-serial");}
+    {Fake f;f.configfs();f.props["ro.adb.secure"]="0";failed(f,"configfs-serial");}
+    {Fake f;f.configfs();f.random="0";failed(f,"configfs-serial");}
+    {Fake f;f.bound();failed(f,"configfs-serial");}
     char root[]="/tmp/pw3-usb-test-XXXXXX";assert(mkdtemp(root));std::string dir=root;
     const std::string file=dir+"/state", target=dir+"/target", wrong=dir+"/wrong", link=dir+"/driver";
     mkdir(target.c_str(),0700);mkdir(wrong.c_str(),0700);

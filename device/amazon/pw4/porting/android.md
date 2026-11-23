@@ -88,5 +88,10 @@ preinit 改名 `.real`（同 `boot/build_entry.py`），公开 initramfs 由 `pa
   `bd71827_bat/charge_now`。充电灯用内核触发器：琥珀色充电中、绿色充满。
 - 按键/触摸：`input/bd71827-power.kl`（116 POWER WAKE）、`input/goodix-ts.idc`。
 - SELinux：`sepolicy/genfs_contexts` 给 PW4 的前光、`bl_power`、电池、充电器路径打上 PW3 同名标签。
-- 还没动：`pw3-fg-state`（读 PW3 的 `wario_battery`，PW4 上只会记一行读不到）；低电量关机的 3450 mV 门限沿用 PW3；休眠
-  （`/sys/power/state` 有 `mem`）未测。
+- USB 序列号：`pw3-usb-check` 加 `configfs-serial` 一步（configfs、libcomposite、usb_f_fs 都已加载、内核认 functionfs 后，
+  做出或沿用 `persist.pw3.usb.serial`），PW4 的 `init.pw3.usb.rc` 在建 gadget 前跑它，写进 `strings/0x409/serialnumber`。
+- 低电量：沿用 PW3 的 3450 mV 不改。PW4 驱动 3500 mV 报低电、3400 mV 报严重（原厂到这里关机），电量 0% 也定在 3400 mV，
+  3450 正在两者之间。
+- 蓝牙：原厂不用 Linux 蓝牙栈，是 Broadcom 的 `bsa_server` 走 `/dev/ttymxc2`、加载 `.hcd` 固件。Readom 本来没有蓝牙，
+  要做是新增功能（蓝牙 HAL、协议栈、应用），先不做。
+- 还没动：`pw3-fg-state`（读 PW3 的 `wario_battery`，PW4 上只会记一行读不到）；休眠（`/sys/power/state` 有 `mem`）未测。

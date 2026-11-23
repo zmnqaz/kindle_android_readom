@@ -12,3 +12,12 @@ on post-fs
     insmod /vendor/lib/modules/usb_f_fs.ko
     insmod /vendor/lib/modules/usb_f_mtp.ko
     setprop sys.pw3.usb.phase configfs-loaded
+
+# The per-device random USB serial (persist.pw3.usb.serial, never the factory
+# one), made by the PW3's checker in its configfs mode; init.pw3.usb.rc runs it
+# at boot, once persistent properties are loaded.
+service pw4-usb-serial /system/bin/pw3-usb-check configfs-serial
+    user root
+    group root
+    disabled
+    oneshot
