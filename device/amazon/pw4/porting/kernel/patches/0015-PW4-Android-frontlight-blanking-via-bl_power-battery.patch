@@ -1,0 +1,98 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: pw4-port <pw4-port@localhost>
+Date: Mon, 23 Nov 2026 22:15:53 +0800
+Subject: [PATCH] PW4 Android: frontlight blanking via bl_power, battery temp
+ in tenths
+
+ti-lmu-backlight zeroes the output while bl_power or the framebuffer
+blanks (LAB126_ANDROID_BACKLIGHT_BLANKING); bd71827 reports the battery
+temperature in tenths of a degree (LAB126_ANDROID_POWER_SUPPLY_ABI).
+---
+ drivers/power/Kconfig                      | 10 ++++++++++
+ drivers/power/bd71827-power.c              |  6 ++++++
+ drivers/video/backlight/Kconfig            | 10 ++++++++++
+ drivers/video/backlight/ti-lmu-backlight.c |  8 ++++++++
+ 4 files changed, 34 insertions(+)
+
+diff --git a/drivers/power/Kconfig b/drivers/power/Kconfig
+index fa949b17..8e92f9f8 100644
+--- a/drivers/power/Kconfig
++++ b/drivers/power/Kconfig
+@@ -439,6 +439,16 @@ config BATTERY_GOLDFISH
+ 	  Say Y to enable support for the battery and AC power in the
+ 	  Goldfish emulator.
+ 
++config LAB126_ANDROID_POWER_SUPPLY_ABI
++	bool "Linux power supply units for an Android-only PW4 image"
++	depends on BD71827_POWER
++	default n
++	help
++	  Export the BD71827 battery temperature in tenths of a degree Celsius,
++	  as the power_supply ABI and Android's healthd read it. The other
++	  values are already in uV/uA/uAh. Enable only in an Android-only
++	  kernel image.
++
+ config BD71827_POWER
+         tristate "ROHM BD71827 Charger for Battery and Adapter Power"
+         depends on MFD_BD71827
+diff --git a/drivers/power/bd71827-power.c b/drivers/power/bd71827-power.c
+index d572f774..fb15c796 100755
+--- a/drivers/power/bd71827-power.c
++++ b/drivers/power/bd71827-power.c
+@@ -3856,7 +3856,13 @@ static int bd71827_battery_get_property(struct power_supply *psy,
+ 		val->intval = pwr->curr;
+ 		break;
+ 	case POWER_SUPPLY_PROP_TEMP:
++#ifdef CONFIG_LAB126_ANDROID_POWER_SUPPLY_ABI
++		/* The power_supply ABI is tenths of a degree; pwr->temp is whole
++		 * degrees and stays so for the driver's own thresholds. */
++		val->intval = pwr->temp * 10;
++#else
+ 		val->intval = pwr->temp;
++#endif
+ 		break;
+ 	case POWER_SUPPLY_PROP_VOLTAGE_MAX:
+ 		val->intval = max_voltage;
+diff --git a/drivers/video/backlight/Kconfig b/drivers/video/backlight/Kconfig
+index b0de27a6..f5cd5f24 100644
+--- a/drivers/video/backlight/Kconfig
++++ b/drivers/video/backlight/Kconfig
+@@ -381,6 +381,16 @@ config BACKLIGHT_LM3639
+ 	help
+ 	  This supports TI LM3639 Backlight + 1.5A Flash LED Driver
+ 
++config LAB126_ANDROID_BACKLIGHT_BLANKING
++	bool "Honor Android power and framebuffer blanking for TI LMU"
++	depends on TI_LMU_BACKLIGHT
++	default n
++	help
++	  Apply zero frontlight output while bl_power is not unblank or the
++	  backlight core reports framebuffer blank. The requested brightness
++	  is kept for the next unblank. Enable only for Android; stock Lab126
++	  userspace switches the light off with brightness 0.
++
+ config BACKLIGHT_LM3695
+ 	tristate "Backlight driver for TI LM3695"
+ 	depends on BACKLIGHT_CLASS_DEVICE && MFD_TI_LMU
+diff --git a/drivers/video/backlight/ti-lmu-backlight.c b/drivers/video/backlight/ti-lmu-backlight.c
+index 1ae19e78..69d39d7d 100644
+--- a/drivers/video/backlight/ti-lmu-backlight.c
++++ b/drivers/video/backlight/ti-lmu-backlight.c
+@@ -125,6 +125,14 @@ static int ti_lmu_backlight_update_status(struct backlight_device *bl_dev)
+ #endif
+ #endif /* CONFIG_LAB126 */
+ 
++#ifdef CONFIG_LAB126_ANDROID_BACKLIGHT_BLANKING
++	/* Android blanks through bl_power (the power HAL) and the framebuffer;
++	 * only the output goes to zero, props.brightness stays as asked. */
++	if (bl_dev->props.power != FB_BLANK_UNBLANK ||
++	    (bl_dev->props.state & BL_CORE_FBBLANK))
++		brightness = 0;
++#endif
++
+ 	if (brightness > 0)
+ 		ret = ti_lmu_backlight_enable(lmu_bl, 1);
+ 	else
+-- 
+2.53.0
+

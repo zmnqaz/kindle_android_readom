@@ -10,6 +10,12 @@
 #include <sys/ioctl.h>
 #include <unistd.h>
 
+#ifdef PREINIT_BOARD_PW4
+#define PW3_FL_BLANK "/sys/class/backlight/bl/bl_power"
+#else
+#define PW3_FL_BLANK "/sys/class/backlight/max77696-bl/bl_power"
+#endif
+
 static int composer_owns_epdc(void) {
     char name[PROPERTY_VALUE_MAX];
     property_get("ro.hardware.hwcomposer", name, "");
@@ -19,7 +25,7 @@ static int composer_owns_epdc(void) {
 static void interactive(struct power_module *module, int on) {
     (void)module;
     /* Android-only backlight blanking patch preserves requested brightness. */
-    int fd = open("/sys/class/backlight/max77696-bl/bl_power", O_WRONLY|O_CLOEXEC);
+    int fd = open(PW3_FL_BLANK, O_WRONLY|O_CLOEXEC);
     if (fd < 0) ALOGE("Cannot open frontlight blanking: %d", errno);
     else {
         const char* value = on ? "0\n" : "4\n";

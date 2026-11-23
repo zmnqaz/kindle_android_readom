@@ -76,3 +76,17 @@ preinit 改名 `.real`（同 `boot/build_entry.py`），公开 initramfs 由 `pa
   `boot/handoff-init/pw4-usb-regs.h`），并留一个进程在安卓下每 0.2 s 看 VBUS/时钟/PLL3，有变化就写一行进内核日志——
   再卡死时日志最后一行就是卡住时的状态。原厂（无线、无 USB 线）读数：CCGR6=ffffff3c（usboh3 门关）、PLL_USB1=80003040、
   REG_3P0=00010f74、USB1_VBUS_DET_STAT=1。
+
+**其余驱动（Jump 15，2026-11-23 夜，未上机）**：
+- Wi-Fi：Readom 的 wificond（`patches/aosp-wificond/0001`）等的是 `/sys/module/ath6kl_sdio`、驱动 `ath6kl_sdio`，在 PW4 上
+  会加载 bcmdhd、空等 15 s、再卸掉。新补丁 `0008` 让板子给名字：PW4 的 `BoardConfig.mk` 设 `bcmdhd`、`bcmsdh_sdmmc`
+  （原厂上实测的模块和 SDIO 驱动名）；不设时还是 PW3 的，PW3 构建不变。
+- 前光：`lm3695`（`/sys/class/backlight/bl`，0–2047）。lights HAL 在 PW4 上用原厂 libfrontlight 的表：设备能力里没有 LED
+  类型时用的那张，唯一一张第 11 档是 653（原厂当时的读数）；最后的 4095 截到驱动最大值。灭屏靠内核补丁 `0015` 让驱动认
+  `bl_power`，power HAL 写 `/sys/class/backlight/bl/bl_power`。
+- 电池：`bd71827_bat`/`bd71827_ac`，单位本来就是 µV/µA/µAh，`0015` 只把温度改成 0.1 °C；healthd 的电量计数路径改到
+  `bd71827_bat/charge_now`。充电灯用内核触发器：琥珀色充电中、绿色充满。
+- 按键/触摸：`input/bd71827-power.kl`（116 POWER WAKE）、`input/goodix-ts.idc`。
+- SELinux：`sepolicy/genfs_contexts` 给 PW4 的前光、`bl_power`、电池、充电器路径打上 PW3 同名标签。
+- 还没动：`pw3-fg-state`（读 PW3 的 `wario_battery`，PW4 上只会记一行读不到）；低电量关机的 3450 mV 门限沿用 PW3；休眠
+  （`/sys/power/state` 有 `mem`）未测。

@@ -7,4 +7,7 @@ LOCAL_SRC_FILES := power.c
 LOCAL_SHARED_LIBRARIES := liblog libcutils
 LOCAL_HEADER_LIBRARIES := libhardware_headers
 LOCAL_CFLAGS := -Wall -Wextra -Werror -DLOG_TAG=\"PW3Power\"
+ifeq ($(TARGET_DEVICE),pw4)
+LOCAL_CFLAGS += -DPREINIT_BOARD_PW4
+endif
 include $(BUILD_SHARED_LIBRARY)

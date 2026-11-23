@@ -6,6 +6,10 @@ on post-fs-data
     chmod 0660 /sys/class/backlight/bl/brightness
     chown system system /sys/class/backlight/bl/bl_power
     chmod 0660 /sys/class/backlight/bl/bl_power
+    # The charge light: amber while charging, green once full. The stock system
+    # drives it from powerd; the kernel's own triggers do the same here.
+    write /sys/class/leds/amber/trigger bd71827_bat-charging
+    write /sys/class/leds/green/trigger bd71827_bat-full
 
 # Wi-Fi: BCM43430 on SDIO (mmc0), as the stock system loads it
 # (/etc/sysconfig/platform_variables, wifim_START_CMD_wifi). The firmware and

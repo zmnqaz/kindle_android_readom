@@ -7,4 +7,7 @@ LOCAL_SRC_FILES := lights.c
 LOCAL_SHARED_LIBRARIES := liblog
 LOCAL_HEADER_LIBRARIES := libhardware_headers
 LOCAL_CFLAGS := -Wall -Wextra -Werror -DLOG_TAG=\"PW3Lights\"
+ifeq ($(TARGET_DEVICE),pw4)
+LOCAL_CFLAGS += -DPREINIT_BOARD_PW4
+endif
 include $(BUILD_SHARED_LIBRARY)

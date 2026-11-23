@@ -1,0 +1,52 @@
+From: PW3 Android port
+Subject: [PW3] wificond: the Wi-Fi module and driver names from the board
+
+0001 waits for /sys/module/ath6kl_sdio and for wlan0 bound to ath6kl_sdio,
+the PW3's Atheros radio. The Kindle Paperwhite 4 port (device/amazon/pw4)
+has a Broadcom one: module bcmdhd, interface bound to bcmsdh_sdmmc. With the
+names fixed, turning Wi-Fi on there loads bcmdhd, waits 15 s for a module
+that never appears, and unloads it again.
+
+The board now names them (BOARD_PW3_WIFI_MODULE, BOARD_PW3_WIFI_DRIVER);
+without them the PW3's names stay, so the PW3 build is unchanged.
+
+--- a/Android.mk
++++ b/Android.mk
+@@ -16,6 +16,12 @@
+ wificond_cpp_flags := -Wall -Werror -Wno-unused-parameter
+ ifeq ($(BOARD_PW3_WIFI_MODULE_CONTROL),true)
+ wificond_cpp_flags += -DPW3_WIFI_MODULE_CONTROL
++ifneq ($(BOARD_PW3_WIFI_MODULE),)
++wificond_cpp_flags += -DPW3_WIFI_MODULE=\"$(BOARD_PW3_WIFI_MODULE)\"
++endif
++ifneq ($(BOARD_PW3_WIFI_DRIVER),)
++wificond_cpp_flags += -DPW3_WIFI_DRIVER=\"$(BOARD_PW3_WIFI_DRIVER)\"
++endif
+ endif
+ wificond_parent_dir := $(LOCAL_PATH)/../
+ wificond_includes := \
+--- a/pw3_radio.cpp
++++ b/pw3_radio.cpp
+@@ -12,11 +12,20 @@
+ namespace android {
+ namespace wificond {
+ namespace {
+-constexpr const char* kModule = "/sys/module/ath6kl_sdio";
++// The board's Wi-Fi module and the driver its interface is bound to
++// (BoardConfig: BOARD_PW3_WIFI_MODULE, BOARD_PW3_WIFI_DRIVER); the PW3's
++// Atheros ones unless the board names others.
++#ifndef PW3_WIFI_MODULE
++#define PW3_WIFI_MODULE "ath6kl_sdio"
++#endif
++#ifndef PW3_WIFI_DRIVER
++#define PW3_WIFI_DRIVER "ath6kl_sdio"
++#endif
++constexpr const char* kModule = "/sys/module/" PW3_WIFI_MODULE;
+ constexpr const char* kInterface = "/sys/class/net/wlan0";
+ constexpr const char* kDriver = "/sys/class/net/wlan0/phy80211/device/driver";
+ constexpr const char* kModuleProperty = "vendor.pw3.wifi.modules";
+-constexpr const char* kExpectedDriver = "ath6kl_sdio";
++constexpr const char* kExpectedDriver = PW3_WIFI_DRIVER;
+ 
+ bool ReadModuleState(bool* exists) {
+   struct stat st {};

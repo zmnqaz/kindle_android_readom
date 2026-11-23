@@ -6,7 +6,12 @@
 void healthd_board_init(healthd_config* config) {
     // Requires LAB126_ANDROID_POWER_SUPPLY_ABI: both polling and Binder
     // getProperty now observe micro-units at the single kernel boundary.
+#ifdef PREINIT_BOARD_PW4
+    // bd71827: already uAh (kernel patch 0015 only changes the temperature).
+    config->batteryChargeCounterPath = "/sys/class/power_supply/bd71827_bat/charge_now";
+#else
     config->batteryChargeCounterPath = "/sys/class/power_supply/max77696-battery/charge_now";
+#endif
     // On battery, wake the system once an hour instead of every ten minutes:
     // each wake-up from sleep costs about 1.3 s of resume work, and while the
     // system is awake the gauge driver reports every change itself.

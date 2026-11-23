@@ -1,0 +1,8 @@
+# PW4 sysfs (i.MX6SLL device tree, 4.1 kernel): the PW3 labels of
+# device/amazon/pw3/sepolicy/genfs_contexts for the PW4's own devices.
+# LM3695 frontlight: the lights HAL writes brightness, the power HAL bl_power.
+genfscon sysfs /devices/soc0/soc/2100000.aips-bus/21a0000.i2c/i2c-0/0-0063/lm3695-backlight.0/backlight/bl u:object_r:sysfs_leds:s0
+genfscon sysfs /devices/soc0/soc/2100000.aips-bus/21a0000.i2c/i2c-0/0-0063/lm3695-backlight.0/backlight/bl/bl_power u:object_r:sysfs_pw3_bl_power:s0
+# BD71827 PMIC: battery and charger for healthd.
+genfscon sysfs /devices/soc0/soc/2100000.aips-bus/21a0000.i2c/i2c-0/0-004b/bd71827-power/power_supply/bd71827_bat u:object_r:sysfs_batteryinfo:s0
+genfscon sysfs /devices/soc0/soc/2100000.aips-bus/21a0000.i2c/i2c-0/0-004b/bd71827-power/power_supply/bd71827_ac u:object_r:sysfs_batteryinfo:s0

@@ -77,6 +77,8 @@ make O=<out> ARCH=arm olddefconfig
 
 补丁 `0014`（2026-11-23）：`mxc_epdc_v2_fb` 回答 Readom 的 `MXCFB_GET_ANDROID_INFO`（`0400` 的 4.1 版；波形是面板自己 FAT 里的文件，驱动注册前已读入，控制器就绪即算就绪），并接受 PW3 3.0 的 72 字节 `MXCFB_SEND_UPDATE`（号相同、大小不同，按命令区分；PW3 的 `TEMP_USE_AUTO` 0x1001 换成本内核的 `TEMP_USE_AMBIENT`）。这样 Readom 的 gralloc 和 `pw3-init-check` 不用改 ABI。本机波形 `320_R278` 的 mode_version 是 0x41，`EpdcContract.h` 在 PW4 上另认这个值。
 
+补丁 `0015`（2026-11-23）：`0200`/`0202` 的 PW4 版。前光是 `lm3695`（`ti-lmu-backlight`，`/sys/class/backlight/bl`，0–2047），原驱动不看 `bl_power`；开 `LAB126_ANDROID_BACKLIGHT_BLANKING` 后 `bl_power` 不是 unblank 或帧缓冲 blank 时输出 0，请求的亮度保留，power HAL 灭屏就靠它。`bd71827` 的电压/电流/电量本来就是 µV/µA/µAh、充电器 `online` 就是 DCIN 检测，只有温度是整度（原厂读出 20），开 `LAB126_ANDROID_POWER_SUPPLY_ABI` 后按 0.1 °C 报。
+
 **编译参数（2026-11-23 补）**：安卓内核要带 `KCFLAGS="-fno-pic -fno-pie"`，和 Readom 的 `tools/build-kernel.sh`、交接模块一样。AOSP 的 gcc 4.9 默认生成位置无关代码，不带这个参数时内核本身还能启动，但模块里会引用 `_GLOBAL_OFFSET_TABLE_`，加载时报 `Unknown symbol _GLOBAL_OFFSET_TABLE_`（第十次交接时 EPDC 驱动就是这样没加载上）。
 
 ## 五、第 0 阶段分类的修正

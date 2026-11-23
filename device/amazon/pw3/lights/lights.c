@@ -22,6 +22,22 @@
  * first.
  */
 #define PW3_FL_STEPS 26
+#ifdef PREINIT_BOARD_PW4
+/*
+ * PW4 (stock 5.18.1.1.1, libfrontlight): its device capabilities name no LED
+ * type, and for that libfrontlight uses this table (slider 11 is 653 on the
+ * stock system, which this table alone has). The light is an LM3695, 0..2047:
+ * the "max" step of 4095 is above it, and the stock library falls back to the
+ * driver's maximum for it, as select_steps() does here. One LED lot.
+ */
+static uint16_t fl_pw4[PW3_FL_STEPS] = {
+    1, 1, 20, 127, 217, 288, 378, 448, 505, 554, 596, 653, 702, 743, 780, 814,
+    858, 896, 930, 961, 989, 1039, 1082, 1119, 1155, 4095,
+};
+#define PW3_FL_BRIGHTNESS "/sys/class/backlight/bl/brightness"
+#define PW3_FL_MAX "/sys/class/backlight/bl/max_brightness"
+#else
+#define PW3_FL_BRIGHTNESS "/sys/class/backlight/max77696-bl/brightness"
 static const uint16_t fl_lot_default[PW3_FL_STEPS] = {
     1, 2, 3, 4, 6, 14, 28, 49, 78, 120, 167, 245, 336, 465, 607, 775, 969,
     1162, 1382, 1627, 1898, 2195, 2531, 2893, 3280, 4095,
@@ -32,12 +48,35 @@ static const uint16_t fl_lot_low_ain1[PW3_FL_STEPS] = {
 };
 #define PW3_FL_LOT_INPUT "/sys/devices/platform/imx-i2c.0/i2c-0/0-003c/max77696-adc.0/ain1"
 #define PW3_FL_LOT_LIMIT 99
+#endif
 
 struct pw3_light {
     struct light_device_t base;
     const uint16_t *steps;
 };
 
+#ifdef PREINIT_BOARD_PW4
+static const uint16_t *select_steps(void) {
+    char text[16] = "";
+    long max = 2047;
+    int fd = open(PW3_FL_MAX, O_RDONLY|O_CLOEXEC);
+    if (fd < 0) ALOGW("frontlight maximum %s unreadable: %s", PW3_FL_MAX, strerror(errno));
+    else {
+        ssize_t count;
+        do { count = read(fd, text, sizeof(text) - 1); } while (count < 0 && errno == EINTR);
+        if (count > 0) {
+            char *end;
+            long parsed = strtol(text, &end, 10);
+            if (end != text && parsed > 0 && parsed <= 65535) max = parsed;
+        }
+        close(fd);
+    }
+    for (int i = 0; i < PW3_FL_STEPS; i++)
+        if (fl_pw4[i] > max) fl_pw4[i] = (uint16_t)max;
+    ALOGI("frontlight steps: pw4 table, maximum %ld", max);
+    return fl_pw4;
+}
+#else
 static const uint16_t *select_steps(void) {
     char text[16] = "";
     int value = -1;
@@ -60,6 +99,7 @@ static const uint16_t *select_steps(void) {
     ALOGI("frontlight steps: lot input=%d table=%s", value, low ? "low-ain1" : "default");
     return low ? fl_lot_low_ain1 : fl_lot_default;
 }
+#endif
 
 /*
  * Android hands over 0 for "off" and 1..255 for "on". The 255 "on" values are
@@ -78,7 +118,7 @@ static int set_light(struct light_device_t *device, const struct light_state_t *
     /* The kernel applies its blank state independently of this value. */
     char text[16];
     int count = snprintf(text, sizeof(text), "%u\n", raw_intensity(((struct pw3_light *)device)->steps, level));
-    int fd = open("/sys/class/backlight/max77696-bl/brightness", O_WRONLY|O_CLOEXEC);
+    int fd = open(PW3_FL_BRIGHTNESS, O_WRONLY|O_CLOEXEC);
     if (fd < 0) return -errno;
     ssize_t written;
     do { written = write(fd, text, count); } while (written < 0 && errno == EINTR);
