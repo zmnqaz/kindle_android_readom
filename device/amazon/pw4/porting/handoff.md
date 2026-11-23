@@ -117,4 +117,11 @@ PW3 的 profile 1、2 走原来的分支，行为不变：原有宿主机测试�
    9.6 s 干净关机重启，无读错误。至此 PW4 上：交接、内核启动、用户空间、PMIC/电池、eMMC 都通。
    之后的轮次改走 SSH（`probe/ReadomSSH.sh`：Wi-Fi 上的 dropbear，静态编译、只认密钥、端口 2222，运行在 `/tmp`，
    防火墙放行和禁止屏保都只到下次重启），不必每轮插拔。
+   **Jump 10：墨水屏点亮。** 观察者只读挂载 `mmcblk1p2`（FAT，`waveform_to_use/` 下是这块面板自己的
+   `320_R278_AI4103_ED060KC4C3_TC.wrf.gz`），以 `waveform=` 加载 `mxc_epdc_v2_fb.ko`；驱动先 `request_firmware`
+   通用的 `imx/epdc/epdc_ED060KC4.fw`（原厂根文件系统 `/lib/firmware` 里，亚马逊的二进制：启动时从设备现场取，
+   不入库），再由 Lab126 代码读面板波形覆盖（解压 3.26 MB，VC 数据 vddh/vee/xon 时序取出）。fb `1072x1448`、
+   8 bpp 灰度、rotate 3，与原厂一致；一次 GC16 全屏更新完成，用户在屏幕上看到了测试图。中途踩到两个坑：
+   eMMC 异步探测，PID 1 要等 `mmcblk1p2` 出现（约 0.3 s）；内核漏了 `KCFLAGS=-fno-pic -fno-pie`，模块引用 GOT 加载失败。
+   之后的轮次走 SSH（部署、跳转、读 `/proc/printkbuf`），用户每次重启后点一下 Readom SSH。
 7. 跳转之后：新内核要能自己重启（`panic=5`），日志写进 `0x9be00000`，回原厂系统读 `/proc/printkbuf`。
