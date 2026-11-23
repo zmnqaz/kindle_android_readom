@@ -73,6 +73,8 @@ make O=<out> ARCH=arm olddefconfig
 
 补丁 `0012`（新，2026-11-23）：`sdhci-esdhc-imx` 匹配 PW4 eMMC 节点的 `falcon_blk`，mmc 核心把 `no-removable` 当 `non-removable`；配合命令行 `nofalcon`，安卓内核不碰原厂已初始化过的 Falcon BIOS，用标准驱动读写 eMMC。
 
+**编译参数（2026-11-23 补）**：安卓内核要带 `KCFLAGS="-fno-pic -fno-pie"`，和 Readom 的 `tools/build-kernel.sh`、交接模块一样。AOSP 的 gcc 4.9 默认生成位置无关代码，不带这个参数时内核本身还能启动，但模块里会引用 `_GLOBAL_OFFSET_TABLE_`，加载时报 `Unknown symbol _GLOBAL_OFFSET_TABLE_`（第十次交接时 EPDC 驱动就是这样没加载上）。
+
 ## 五、第 0 阶段分类的修正
 
 逐项核对后（`../phase0.md` 第四节的表还没改，以这里为准）：
