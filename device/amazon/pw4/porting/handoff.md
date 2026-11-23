@@ -113,4 +113,8 @@ PW3 的 profile 1、2 走原来的分支，行为不变：原有宿主机测试�
    "fsl,imx6sx-usdhc"`（HS200，无 HS400）、`vqmmc-supply = <&buck3_reg>`（1.8 V）、8 位、`no-removable`；设备上的
    blob 是它套上 Falcon 版本（compatible 换成 `falcon_blk`）。`0012` 改为映射到 i.MX6SX 的数据。**Jump 9**。
    后面移植 EPDC、触摸、Wi-Fi、PMIC 都以 `imx6sll-rex.dts` 为第一参考。
+   **Jump 9：eMMC 通了。** `mmc1: new HS200 MMC card`、`mmcblk1: H8G4a2 7.28 GiB`、`mmcblk1: p1 … p10`（和原厂识别的分区一致），
+   9.6 s 干净关机重启，无读错误。至此 PW4 上：交接、内核启动、用户空间、PMIC/电池、eMMC 都通。
+   之后的轮次改走 SSH（`probe/ReadomSSH.sh`：Wi-Fi 上的 dropbear，静态编译、只认密钥、端口 2222，运行在 `/tmp`，
+   防火墙放行和禁止屏保都只到下次重启），不必每轮插拔。
 7. 跳转之后：新内核要能自己重启（`panic=5`），日志写进 `0x9be00000`，回原厂系统读 `/proc/printkbuf`。
