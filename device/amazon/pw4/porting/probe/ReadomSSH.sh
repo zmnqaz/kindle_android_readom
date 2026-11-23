@@ -15,6 +15,10 @@ eips 1 1 "Readom SSH: starting Wi-Fi and SSH...          " 2>/dev/null
 lipc-set-prop com.lab126.cmd wirelessEnable 1 >> "$LOG" 2>&1
 lipc-set-prop com.lab126.powerd preventScreenSaver 1 >> "$LOG" 2>&1
 
+# Stop a server a previous tap started, before its pid file goes with $RUN.
+[ -f "$RUN/pid" ] && kill "$(cat "$RUN/pid")" 2>/dev/null
+killall dropbearmulti 2>/dev/null
+sleep 1
 rm -rf "$RUN"; mkdir -p "$RUN"; chmod 700 "$RUN"
 cp "$SRC/dropbearmulti" "$RUN/" && chmod 755 "$RUN/dropbearmulti"
 # dropbear reads root's ~/.ssh/authorized_keys. On the Kindle root's home is
@@ -44,10 +48,9 @@ for i in $(seq 1 30); do
 done
 
 iptables -C INPUT -p tcp --dport 2222 -j ACCEPT 2>/dev/null || iptables -I INPUT -p tcp --dport 2222 -j ACCEPT >> "$LOG" 2>&1
-[ -f "$RUN/pid" ] && kill "$(cat "$RUN/pid")" 2>/dev/null
-"$RUN/dropbearmulti" dropbear -r "$RUN/host_ed25519" -p 2222 -s -g -P "$RUN/pid" >> "$LOG" 2>&1
+"$RUN/dropbearmulti" dropbear -E -r "$RUN/host_ed25519" -p 2222 -P "$RUN/pid" >> "$SRC/dropbear.log" 2>&1
 sleep 1
-{ date; echo "ip=$IP"; cat "$RUN/pid" 2>/dev/null; "$RUN/dropbearmulti" dropbearkey -y -f "$RUN/host_ed25519" 2>/dev/null | grep -E "^ssh-|Fingerprint"; } >> "$LOG" 2>&1
+{ date; echo "ip=$IP"; cat "$RUN/pid" 2>/dev/null;  } >> "$LOG" 2>&1
 echo "$IP" > "$SRC/ip.txt"
 sync
 if [ -n "$IP" ] && [ -s "$RUN/pid" ]; then
