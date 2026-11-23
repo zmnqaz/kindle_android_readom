@@ -49,3 +49,16 @@ Wi-Fi 上 SSH 写用户存储只有约 0.3 MB/s，大文件走 USB（1.5 GB 用 
 - 触摸 gt9xx、Wi-Fi bcmdhd 的模块和参数（`platform_variables` 里的 `firmware_path`/`nvram_path`）；
 - `pw3-init-check` 的 `CheckEpdcContract` 要 Readom 给 PW3 内核加的 `MXCFB_GET_ANDROID_INFO`：墨水屏那几个内核补丁
   （`0400`、`0401`、`0403`、`0500`）要对着 4.1 的 `mxc_epdc_v2_fb` 重写。
+
+**PW4 交接 PID 1（Jump 12，2026-11-23）**：`boot/handoff-init/pw4-handoff-init.c` 放在 `/pw3-testfile-init`，Readom 的
+preinit 改名 `.real`（同 `boot/build_entry.py`），公开 initramfs 由 `pack-initramfs.py` 打包（`fstab.pw3` 用
+`fstab.pw3-testfile`、日志节点、`/pw4-handoff/` 下的驱动）。它只读挂 `mmcblk1p2`、按 `waveform_to_use/` 里的文件名
+加载 `mxc_epdc_v2_fb.ko`（1.75 s）、卸载，画"正在启动 Android"（GC16 一次 572 ms），删掉设备那半带来的
+`epdc_ED060KC4.fw`，再执行 preinit。存储检查通过；停在 `CheckEpdcContract`（4.1 驱动不认 `MXCFB_GET_ANDROID_INFO`）。
+
+**安卓桌面（Jump 13，2026-11-23）**：内核补丁 `0014` 给 4.1 EPDC 驱动加上 `MXCFB_GET_ANDROID_INFO` 和 PW3 的 72 字节
+`MXCFB_SEND_UPDATE`；PW4 面板波形 mode_version 0x41，`EpdcContract.h` 在 PW4 上另认；交接 PID 1 另外加载原厂同样
+无参数加载的 `gt9xx-ts.ko`。init 检查全过，47 s `sys.boot_completed=1`，桌面显示、触摸可用，healthd 读到电量 95%。
+插上 USB 线后整机卡死，日志在 108 s 无任何报错地中断（Lab126 缓冲没写满也没回绕）。Wi-Fi 还在按 PW3 加载 `ath6kl_sdio`。
+
+下一步：USB（插线卡死、FunctionFS adb）、Wi-Fi bcmdhd。

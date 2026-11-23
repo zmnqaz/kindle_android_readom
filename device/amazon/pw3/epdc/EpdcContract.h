@@ -13,6 +13,10 @@ inline bool validEpdcContract(const EpdcAndroidInfo& info, const fb_var_screenin
         info.gc16Mode != 2 || info.gc16Mode >= info.modeCount) return false;
     switch (info.modeVersion) {
         case 7: case 18: case 19: case 24: case 25: break;
+#ifdef PREINIT_BOARD_PW4
+        // PW4: the panel's own 320_R278 ED060KC4 file (mmcblk1p2) has mode version 0x41.
+        case 65: break;
+#endif
         default: return false;
     }
     for (const auto field : info.reserved) if (field) return false;

@@ -10,4 +10,8 @@ LOCAL_HEADER_LIBRARIES := libhardware_headers
 # LOCAL_CPP_FEATURES is an NDK-build variable; AOSP 8.1 needs the flag here.
 LOCAL_CPPFLAGS := -std=c++11 -fexceptions
 LOCAL_CFLAGS := -DLOG_TAG=\"PW3Gralloc\" -Wno-missing-field-initializers
+# The PW4 port: its panel's waveform version (../epdc/EpdcContract.h).
+ifeq ($(TARGET_DEVICE),pw4)
+LOCAL_CFLAGS += -DPREINIT_BOARD_PW4
+endif
 include $(BUILD_SHARED_LIBRARY)

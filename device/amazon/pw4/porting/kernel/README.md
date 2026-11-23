@@ -73,6 +73,10 @@ make O=<out> ARCH=arm olddefconfig
 
 补丁 `0012`（新，2026-11-23）：`sdhci-esdhc-imx` 匹配 PW4 eMMC 节点的 `falcon_blk`，mmc 核心把 `no-removable` 当 `non-removable`；配合命令行 `nofalcon`，安卓内核不碰原厂已初始化过的 Falcon BIOS，用标准驱动读写 eMMC。
 
+补丁 `0013`（2026-11-23）：binder 每页用 `map_kernel_range_noflush` 映射（`0002` 在栈上的 `vm_struct` 上调 `map_vm_area()`，`flags` 未初始化，第 11 次跳转时 `binder_mmap` 全部 -12）。
+
+补丁 `0014`（2026-11-23）：`mxc_epdc_v2_fb` 回答 Readom 的 `MXCFB_GET_ANDROID_INFO`（`0400` 的 4.1 版；波形是面板自己 FAT 里的文件，驱动注册前已读入，控制器就绪即算就绪），并接受 PW3 3.0 的 72 字节 `MXCFB_SEND_UPDATE`（号相同、大小不同，按命令区分；PW3 的 `TEMP_USE_AUTO` 0x1001 换成本内核的 `TEMP_USE_AMBIENT`）。这样 Readom 的 gralloc 和 `pw3-init-check` 不用改 ABI。本机波形 `320_R278` 的 mode_version 是 0x41，`EpdcContract.h` 在 PW4 上另认这个值。
+
 **编译参数（2026-11-23 补）**：安卓内核要带 `KCFLAGS="-fno-pic -fno-pie"`，和 Readom 的 `tools/build-kernel.sh`、交接模块一样。AOSP 的 gcc 4.9 默认生成位置无关代码，不带这个参数时内核本身还能启动，但模块里会引用 `_GLOBAL_OFFSET_TABLE_`，加载时报 `Unknown symbol _GLOBAL_OFFSET_TABLE_`（第十次交接时 EPDC 驱动就是这样没加载上）。
 
 ## 五、第 0 阶段分类的修正

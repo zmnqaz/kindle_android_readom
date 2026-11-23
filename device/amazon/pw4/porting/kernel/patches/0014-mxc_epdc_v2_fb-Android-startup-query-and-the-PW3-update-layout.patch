@@ -1,0 +1,121 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: pw4-port <pw4-port@localhost>
+Date: Mon, 23 Nov 2026 20:25:26 +0800
+Subject: [PATCH] mxc_epdc_v2_fb: Android startup query and the PW3 update
+ layout
+
+Readom's Android display code asks MXCFB_GET_ANDROID_INFO before it starts
+and sends updates in the Lab126 3.0 (PW3) layout, 72 bytes. Answer the query
+from the loaded waveform, and translate the PW3 update (same ioctl number,
+other size; TEMP_USE_AUTO 0x1001 is this kernel's TEMP_USE_AMBIENT).
+---
+ drivers/video/fbdev/mxc/mxc_epdc_v2_fb.c | 45 ++++++++++++++++++++++++
+ include/uapi/linux/mxcfb.h               | 36 +++++++++++++++++++
+ 2 files changed, 81 insertions(+)
+
+diff --git a/drivers/video/fbdev/mxc/mxc_epdc_v2_fb.c b/drivers/video/fbdev/mxc/mxc_epdc_v2_fb.c
+index c673e5cc..78922d53 100755
+--- a/drivers/video/fbdev/mxc/mxc_epdc_v2_fb.c
++++ b/drivers/video/fbdev/mxc/mxc_epdc_v2_fb.c
+@@ -4932,6 +4932,51 @@ static int mxc_epdc_fb_ioctl(struct fb_info *info, unsigned int cmd,
+ 	int ret = -EINVAL;
+ 
+ 	switch (cmd) {
++	case MXCFB_GET_ANDROID_INFO: {
++		/* The waveform is the panel's own file (read_mnt_wfm), loaded
++		 * before the driver registered; ready once the controller is. */
++		struct mxc_epdc_fb_data *fb_data = (struct mxc_epdc_fb_data *)info;
++		struct mxcfb_android_info state;
++		memset(&state, 0, sizeof(state));
++		if (!fb_data->hw_ready || !fb_data->wv_header)
++			return -EAGAIN;
++		state.version = MXCFB_ANDROID_INFO_VERSION;
++		state.size = sizeof(state);
++		state.flags = MXCFB_ANDROID_INFO_WAVEFORM_VERIFIED |
++			      MXCFB_ANDROID_INFO_STARTUP_COMPLETE;
++		state.mode_version = fb_data->wv_header->mode_version;
++		state.gc16_mode = fb_data->wv_modes.mode_gc16;
++		state.rotate = info->var.rotate;
++		state.xres = info->var.xres;
++		state.yres = info->var.yres;
++		state.temperature_auto = MXCFB_TEMP_USE_AUTO_PW3;
++		state.mode_count = fb_data->wv_header->mc + 1;
++		return copy_to_user(argp, &state, sizeof(state)) ? -EFAULT : 0;
++	}
++	case MXCFB_SEND_UPDATE_PW3: {
++		struct mxcfb_update_data_pw3 old;
++		struct mxcfb_update_data upd_data;
++		if (copy_from_user(&old, argp, sizeof(old)))
++			return -EFAULT;
++		memset(&upd_data, 0, sizeof(upd_data));
++		upd_data.update_region = old.update_region;
++		upd_data.waveform_mode = old.waveform_mode;
++		upd_data.update_mode = old.update_mode;
++		upd_data.update_marker = old.update_marker;
++		/* PW3 AUTO is the display thermistor; on this kernel AMBIENT is. */
++		upd_data.temp = old.temp == MXCFB_TEMP_USE_AUTO_PW3 ? TEMP_USE_AMBIENT : old.temp;
++		upd_data.flags = old.flags;
++		upd_data.alt_buffer_data = old.alt_buffer_data;
++		upd_data.hist_bw_waveform_mode = old.hist_bw_waveform_mode;
++		upd_data.hist_gray_waveform_mode = old.hist_gray_waveform_mode;
++		ret = mxc_epdc_fb_send_update(&upd_data, info);
++		if (ret == 0) {
++			old.waveform_mode = upd_data.waveform_mode;
++			if (copy_to_user(argp, &old, sizeof(old)))
++				ret = -EFAULT;
++		}
++		break;
++	}
+ 	case MXCFB_SET_WAVEFORM_MODES:
+ 		{
+ 			struct mxcfb_waveform_modes modes;
+diff --git a/include/uapi/linux/mxcfb.h b/include/uapi/linux/mxcfb.h
+index 2e4223a8..df74c79d 100644
+--- a/include/uapi/linux/mxcfb.h
++++ b/include/uapi/linux/mxcfb.h
+@@ -214,6 +214,42 @@ struct mxcfb_csc_matrix {
+ #define MXCFB_SET_TEMPERATURE		_IOW('F', 0x2C, int32_t)
+ #define MXCFB_SET_AUTO_UPDATE_MODE	_IOW('F', 0x2D, __u32)
+ #define MXCFB_SEND_UPDATE		_IOW('F', 0x2E, struct mxcfb_update_data)
++
++/* Android on the PW4 (Readom): the update layout of the PW3's Lab126 3.0
++ * kernel, which the Android display code is written against. It has the same
++ * ioctl number with another size, so both are told apart by the command. */
++struct mxcfb_update_data_pw3 {
++	struct mxcfb_rect update_region;
++	__u32 waveform_mode;
++	__u32 update_mode;
++	__u32 update_marker;
++	__u32 hist_bw_waveform_mode;
++	__u32 hist_gray_waveform_mode;
++	int temp;
++	unsigned int flags;
++	struct mxcfb_alt_buffer_data alt_buffer_data;
++};
++#define MXCFB_SEND_UPDATE_PW3		_IOW('F', 0x2E, struct mxcfb_update_data_pw3)
++#define MXCFB_TEMP_USE_AUTO_PW3		0x1001
++
++/* Versioned read-only Android startup contract; no panel identity or voltages. */
++struct mxcfb_android_info {
++	__u32 version;
++	__u32 size;
++	__u32 flags;
++	__u32 mode_version;
++	__u32 gc16_mode;
++	__u32 rotate;
++	__u32 xres;
++	__u32 yres;
++	__u32 temperature_auto;
++	__u32 mode_count;
++	__u32 reserved[6];
++};
++#define MXCFB_ANDROID_INFO_VERSION 1
++#define MXCFB_ANDROID_INFO_WAVEFORM_VERIFIED 1
++#define MXCFB_ANDROID_INFO_STARTUP_COMPLETE 2
++#define MXCFB_GET_ANDROID_INFO _IOR('F', 0x80, struct mxcfb_android_info)
+ #define MXCFB_WAIT_FOR_UPDATE_COMPLETE	_IOWR('F', 0x2F, struct mxcfb_update_marker_data)
+ #define MXCFB_SET_PWRDOWN_DELAY		_IOW('F', 0x30, int32_t)
+ #define MXCFB_GET_PWRDOWN_DELAY		_IOR('F', 0x31, int32_t)
+-- 
+2.53.0
+
