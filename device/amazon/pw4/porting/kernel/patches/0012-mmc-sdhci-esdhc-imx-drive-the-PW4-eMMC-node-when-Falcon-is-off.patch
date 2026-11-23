@@ -4,14 +4,44 @@ Date: Mon, 23 Nov 2026 17:07:30 +0800
 Subject: [PATCH] mmc: let sdhci-esdhc-imx drive the PW4 eMMC node when Falcon
  is off
 
-The node is compatible "falcon_blk" with "nofalcon", which the probe
-already reads as ours when Falcon is not in use; and it spells
-non-removable "no-removable".
+The node is compatible "falcon_blk" with "nofalcon", which the esdhc
+probe already reads as ours when Falcon is not in use; and it spells
+non-removable "no-removable". The falcon_blk platform driver claimed
+the node even with Falcon unusable: it now leaves it.
 ---
- drivers/mmc/core/host.c            |  4 +++-
- drivers/mmc/host/sdhci-esdhc-imx.c | 10 ++++++++++
- 2 files changed, 13 insertions(+), 1 deletion(-)
+ arch/arm/mach-imx/falcon_storage_plat.c | 10 ++++++++++
+ drivers/mmc/core/host.c                 |  4 +++-
+ drivers/mmc/host/sdhci-esdhc-imx.c      | 10 ++++++++++
+ 3 files changed, 23 insertions(+), 1 deletion(-)
 
+diff --git a/arch/arm/mach-imx/falcon_storage_plat.c b/arch/arm/mach-imx/falcon_storage_plat.c
+index 70c7dca8..22436832 100644
+--- a/arch/arm/mach-imx/falcon_storage_plat.c
++++ b/arch/arm/mach-imx/falcon_storage_plat.c
+@@ -17,6 +17,7 @@
+ #include <linux/of_device.h>
+ #include <linux/of_irq.h>
+ #include <linux/falcon_storage.h>
++#include <asm/falcon_syscall.h>
+ 
+ #include <linux/clk.h>
+ 
+@@ -279,6 +280,15 @@ static int falcon_blk_platform_probe(struct platform_device *pdev)
+         int err;
+ 	struct pltfm_falcon_data *fln_data;
+ 
++	/*
++	 * Without a usable Falcon BIOS ("nofalcon", or none found) this host
++	 * is an ordinary uSDHC: leave it to sdhci-esdhc-imx, which takes the
++	 * node in that case, rather than claim it and have init_falcon_blk
++	 * fail later with the device still bound here.
++	 */
++	if (!can_use_falcon())
++		return -ENODEV;
++
+ 	fln_data = devm_kzalloc(&pdev->dev, sizeof(*fln_data), GFP_KERNEL);
+ 	if (!fln_data) {
+ 		err = -ENOMEM;
 diff --git a/drivers/mmc/core/host.c b/drivers/mmc/core/host.c
 index 4f81e81f..fae40fdd 100644
 --- a/drivers/mmc/core/host.c

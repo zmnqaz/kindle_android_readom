@@ -104,4 +104,7 @@ PW3 的 profile 1、2 走原来的分支，行为不变：原有宿主机测试�
    内核补丁 `0012` 让标准 `sdhci-esdhc-imx` 接管 eMMC 节点（原厂设备树给它加了 `nofalcon` 属性，驱动里已有"Falcon
    不用时由我接管"的判断，只是 compatible 写的是 `falcon_blk`、`non-removable` 拼成了 `no-removable`）。不依赖 Falcon
    之后回到 3G/1G（Jump 5 已证明能完整启动；16 位随机化，安卓 init 不用改）。**Jump 7**。
+   **Jump 7**：3G/1G 又完整启动、干净重启；但标准驱动只接了 Wi-Fi 口，eMMC 口早被 `falcon_storage_plat.c` 的
+   `falcon_blk` 平台驱动认领（probe 无条件成功，失败的是之后的 `init_falcon_blk`）。`0012` 补上：Falcon 不可用时
+   这个 probe 返回 `-ENODEV`，把节点让给 `sdhci-esdhc-imx`。**Jump 8**。
 7. 跳转之后：新内核要能自己重启（`panic=5`），日志写进 `0x9be00000`，回原厂系统读 `/proc/printkbuf`。
