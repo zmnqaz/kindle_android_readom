@@ -89,4 +89,8 @@ PW3 的 profile 1、2 走原来的分支，行为不变：原有宿主机测试�
    **Jump 4**：内核补丁 `0012` 修 `fsl_otp`；交接模块在确认放行之后、关缓存之前把 7 个 CCGR 全写成开——上电时
    ROM 和引导程序交出的就是这个状态，新内核会自己关掉不用的；打开门不会启动任何 DMA，门的状态在此之前已采样。
    这是模块唯一的一次硬件写，只在 COMMIT 路径（PROBE 不写）。
+   **Jump 4**：越过 `fsl_otp`、PMIC 电池部分，停在 0.39 s 的 `imx_thermal_init`——它经 syscon 读 OCOTP 的校准值，
+   同样不开时钟；而 `0012` 读完序列号 `clk_disable_unprepare` 把 OCOTP 门关了。原厂冷启动时 fsl_otp 从不碰这个
+   时钟，它一直开到 late_initcall 的 `clk_disable_unused`。模块既已在跳转前把门全开（等同上电），`0012` 多余且有
+   副作用：撤掉，`fsl_otp` 保持原样。**Jump 5**。
 7. 跳转之后：新内核要能自己重启（`panic=5`），日志写进 `0x9be00000`，回原厂系统读 `/proc/printkbuf`。
