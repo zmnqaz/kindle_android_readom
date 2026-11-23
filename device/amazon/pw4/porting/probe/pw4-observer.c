@@ -88,6 +88,12 @@ static void screen(void)
     DIR *d;
     struct dirent *e;
     mkdir("/mnt", 0755); mkdir("/mnt/wfm", 0755);
+    /* The eMMC is probed asynchronously: its partitions appear about 0.3 s
+     * after PID 1 starts (Jump 9: 0.89 s). Wait for the one we need. */
+    struct stat ps;
+    int waited = 0;
+    while (stat("/dev/mmcblk1p2", &ps) && waited < 150) { usleep(100000); ++waited; }
+    say("<4>PW4_OBSERVER epdc: mmcblk1p2 %s after %d ms\n", waited < 150 ? "present" : "absent", waited * 100);
     if (mount("/dev/mmcblk1p2", "/mnt/wfm", "vfat", MS_RDONLY, "") ) {
         say("<4>PW4_OBSERVER epdc: mount mmcblk1p2 failed errno=%d\n", errno); return;
     }
