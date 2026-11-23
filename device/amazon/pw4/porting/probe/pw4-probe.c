@@ -2,7 +2,7 @@
 /* First run of the handoff module on a PW4, PROBE only: runs on the stock
  * system as root, from /tmp (the user FAT is noexec).
  *
- *   pw4-probe DIR REPORT
+ *   pw4-probe DIR REPORT [jump]
  *
  * DIR holds pw3_first_kernel.ko (built --probe-only: the jump is not compiled
  * in), zImage, public-initramfs.gz and cmdline.txt. It makes the device tree
@@ -10,7 +10,12 @@
  * uploads everything, lets the module check it, runs one pm_test=core suspend
  * cycle (PWS_NATIVE_PROBE) and writes what the module saw to REPORT. Whatever
  * happens it then discards, unloads the module and puts pm_test back.
- * Writes nothing but REPORT; touches no partition. */
+ * Writes nothing but REPORT; touches no partition.
+ *
+ * With "jump", the module must be a full build (not --probe-only); after a
+ * PROBE the module calls READY, the report is put on disk and the same open
+ * store is committed: the Android kernel starts and this program does not
+ * return. Any refusal on the way ends as a plain probe does. */
 #define _GNU_SOURCE
 #include <errno.h>
 #include <fcntl.h>
@@ -95,7 +100,7 @@ static unsigned char *read_blob(const char *dir, const char *name, unsigned *byt
  * part (waveform, Wi-Fi data); here only a marker, since nothing boots. */
 static unsigned char *marker_archive(unsigned *bytes)
 {
-    static const char name[] = "pw4-probe-marker", trailer[] = "TRAILER!!!";
+    static const char name[] = "device-marker", trailer[] = "TRAILER!!!";
     unsigned char *p = calloc(1, 1024);
     unsigned at = 0;
     if (!p) stop("out of memory");
@@ -115,11 +120,12 @@ int main(int argc, char **argv)
     struct utsname u;
     char text[4096], cmdline[1100];
     unsigned kb, pb, mb, ab, ib, cb;
-    if (argc != 3) { fprintf(stderr, "usage: pw4-probe DIR REPORT\n"); return 2; }
+    int jump = argc == 4 && !strcmp(argv[3], "jump");
+    if (argc != 3 && !jump) { fprintf(stderr, "usage: pw4-probe DIR REPORT [jump]\n"); return 2; }
     report = fopen(argv[2], "w");
     if (!report) { perror(argv[2]); return 2; }
     if (getuid() || uname(&u)) stop("not root");
-    say("pw4-probe v1\nuname %s %s %s\n", u.release, u.version, u.machine);
+    say("pw4-probe v2 mode=%s\nuname %s %s %s\n", jump ? "jump" : "probe", u.release, u.version, u.machine);
     if (strcmp(u.release, dd_pw4_5_18_1_1_1.kernel_release) || strcmp(u.version, dd_pw4_5_18_1_1_1.kernel_version))
         { errno = 0; stop("not the 5.18.1.1.1 stock kernel"); }
     if (read_text("/sys/power/pm_test", text, sizeof(text))) stop("pm_test");
@@ -150,8 +156,9 @@ int main(int argc, char **argv)
 
     if (syscall(SYS_init_module, module, (size_t)mb, "")) stop("init_module");
     module_loaded = 1;
-    if (read_text("/sys/module/pw3_first_kernel/parameters/probe_only", text, sizeof(text)) || strcmp(text, "1\n"))
-        { errno = 0; stop("the module is not a probe-only build"); }
+    if (read_text("/sys/module/pw3_first_kernel/parameters/probe_only", text, sizeof(text)) ||
+        strcmp(text, jump ? "0\n" : "1\n"))
+        { errno = 0; stop(jump ? "jump needs a full module build" : "the module is not a probe-only build"); }
     unsigned major_num, minor_num;
     if (read_text("/sys/class/misc/pw3-first-kernel/dev", text, sizeof(text)) ||
         sscanf(text, "%u:%u", &major_num, &minor_num) != 2) stop("misc device");
@@ -214,6 +221,18 @@ int main(int argc, char **argv)
     /* The module's own verdict: would it let a commit through? */
     int ready = !read_text("/sys/module/pw3_first_kernel/parameters/probe_ready", text, sizeof(text)) && !strcmp(text, "1\n");
     say("RESULT %s\n", rc ? "PROBE_FAILED" : ready ? "READY (the module would allow the jump)" : "REFUSED (the module would not allow the jump)");
+    if (jump && !rc && ready) {
+        if (write_text("/sys/power/pm_test", "core")) stop("pm_test core for the jump");
+        say("JUMP: committing now; the Android kernel starts and this program does not return\n");
+        fflush(report); fsync(fileno(report)); sync(); sleep(1); sync();
+        rc = ioctl(device_fd, PWS_NATIVE_COMMIT, 0);
+        err = errno;
+        write_text("/sys/power/pm_test", saved_test);
+        say("JUMP RETURNED rc=%d errno=%d (%s): nothing was started\n", rc, err, strerror(err));
+        if (!ioctl(device_fd, PWS_NATIVE_REPORT, &n))
+            say("after commit: pm_result=%d callback_rejected=%u backend_result=%d suspend_samples=%u\n",
+                n.pm_result, n.callback_rejected, n.backend_result, n.suspend_samples);
+    }
     cleanup();
     dd_free(&tree);
     fclose(report);
