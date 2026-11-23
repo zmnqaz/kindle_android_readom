@@ -141,7 +141,15 @@ int main(int argc, char **argv)
     if (cb >= sizeof(cmdline)) { errno = 0; stop("cmdline too long"); }
     memcpy(cmdline, cmd, cb); cmdline[cb] = 0;
     if ((l = strchr(cmdline, '\n'))) *l = 0;
-    unsigned char *archive = marker_archive(&ab);
+    /* The device's part of the initramfs: a prepared archive when DIR has
+     * one (device-archive.cpio, newc), else the one-file marker. */
+    char archive_path[512];
+    struct stat ast;
+    unsigned char *archive;
+    snprintf(archive_path, sizeof(archive_path), "%s/device-archive.cpio", argv[1]);
+    if (!stat(archive_path, &ast)) archive = read_blob(argv[1], "device-archive.cpio", &ab);
+    else archive = marker_archive(&ab);
+    say("device archive %u bytes (%s)\n", ab, stat(archive_path, &ast) ? "marker" : "prepared");
     unsigned start = (pb + 3u) & ~3u;
     ib = start + ab;
     unsigned char *initramfs = calloc(1, ib);
