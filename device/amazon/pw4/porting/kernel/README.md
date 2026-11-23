@@ -91,6 +91,23 @@ make O=<out> ARCH=arm olddefconfig
 运行中加载的模块：`mxc_epdc_v2_fb`、`falcon`（专有，permanent）、`gt9xx_ts`、`configfs`、`libcomposite`、`usb_f_mass_storage`、`g_mass_storage`；Wi-Fi 关闭时 `bcmdhd` 不在。
 原厂 `.ko` 是亚马逊的二进制，只留在本地，不进仓库。
 
+## 六之二、没有串口时的日志通道（设备实测，2026-11-23）
+
+原厂内核开了 `CONFIG_LAB126_PRINTK_BUFFER`：内核日志放在固定物理地址 `0x9be00000`（256 KB，`dmesg` 里 `Printk log placed at 0x9be00000`），下次开机从 `/proc/printkbuf` 读上一次的日志；正常重启时还会 `dump_lastk_to_mmc` 存一份到 eMMC。只读脚本 `Readom Probe 4` 两次实测：
+
+| 上一次是怎么结束的 | `/proc/printkbuf` |
+|---|---|
+| 软件重启（`reboot: Restarting system`，经 imx2-wdt） | 完整保留，3604 行，从 0 秒到最后一行 |
+| 长按电源键 40 秒强制重启 | 全是乱码（约 89% 的位为 1），DRAM 掉过电，日志丢失 |
+
+结论（交接模块和安卓内核据此设计）：
+
+- 新内核也开 `CONFIG_LAB126_PRINTK_BUFFER`、用同一地址，日志写进这块内存；
+- 新内核出错时必须**自己重启**（`panic=5`、`softlockup_panic`/`hung_task_panic`，尽早喂/启用看门狗），不能停在需要长按电源键的状态，否则日志随 DRAM 一起丢；
+- 交接模块在跳转前把自己的进度也写一份到这块内存里，失败时回到原厂系统能读出卡在哪一步。
+
+Wi-Fi（同一次探测）：`/etc/sysconfig/platform_variables` 里由 `wifim` 执行 `modprobe bcmdhd iface_name=wlan0 firmware_path=/opt/brcm_4343w/wifi/firmware/fw_bcmdhd_sr.bin nvram_path=/opt/brcm_4343w/wifi/nvram/nvram_wfo.txt`（另有 `nvram_wan.txt` 一套），关闭是 `modprobe -r bcmdhd`；SDIO `02d0:a9a6`（BCM43430）挂在 `2190000.usdhc`（mmc0），电源 GPIO 47；固件 7.45.102.16，驱动 1.363.110.23。
+
 ## 七、下一步
 
 1. 设备上拷一个原厂模块回来，做第六节的 CRC 核对
