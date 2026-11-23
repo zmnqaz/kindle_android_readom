@@ -1,0 +1,47 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: pw4-port <pw4-port@localhost>
+Date: Mon, 23 Nov 2026 19:56:53 +0800
+Subject: [PATCH] binder: map each buffer page with map_kernel_range_noflush
+
+map_vm_area() on an on-stack vm_struct read its uninitialised flags and,
+with VM_NO_GUARD among them, mapped two pages and failed on the second:
+every binder_mmap failed on the first Android boot on the PW4.
+---
+ drivers/android/binder.c | 14 +++++++++-----
+ 1 file changed, 9 insertions(+), 5 deletions(-)
+
+diff --git a/drivers/android/binder.c b/drivers/android/binder.c
+index 7200dfdf..4aec8b89 100644
+--- a/drivers/android/binder.c
++++ b/drivers/android/binder.c
+@@ -589,7 +589,6 @@ static int binder_update_page_range(struct binder_proc *proc, int allocate,
+ {
+ 	void *page_addr;
+ 	unsigned long user_page_addr;
+-	struct vm_struct tmp_area;
+ 	struct page **page;
+ 	struct mm_struct *mm;
+ 
+@@ -643,10 +642,15 @@ static int binder_update_page_range(struct binder_proc *proc, int allocate,
+ 				proc->pid, page_addr);
+ 			goto err_alloc_page_failed;
+ 		}
+-		tmp_area.addr = page_addr;
+-		tmp_area.size = PAGE_SIZE + PAGE_SIZE /* guard page? */;
+-		ret = map_vm_area(&tmp_area, PAGE_KERNEL, page);
+-		if (ret) {
++		/* One page, as 4.1's own binder does: map_vm_area() on an
++		 * on-stack vm_struct read its uninitialised flags, mapped
++		 * two pages when they held VM_NO_GUARD, and failed on the
++		 * second (first Android boot on the PW4). */
++		ret = map_kernel_range_noflush((unsigned long)page_addr,
++					       PAGE_SIZE, PAGE_KERNEL, page);
++		flush_cache_vmap((unsigned long)page_addr,
++				 (unsigned long)page_addr + PAGE_SIZE);
++		if (ret != 1) {
+ 			pr_err("%d: binder_alloc_buf failed to map page at %pK in kernel\n",
+ 			       proc->pid, page_addr);
+ 			goto err_map_kernel_failed;
+-- 
+2.53.0
+
