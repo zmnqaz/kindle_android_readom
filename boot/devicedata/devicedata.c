@@ -564,9 +564,22 @@ int dd_fdt(const char *root, const struct dd_profile *profile, const char *cmdli
     }
     if (strcmp(stock, profile->stock_cmdline))
         return fail_other_device(why, "stock command line is not this model's");
-    size_t n = strlen(profile->stock_cmdline);
-    if (strncmp(cmdline, profile->stock_cmdline, n) || cmdline[n] != ' ' || strlen(cmdline) >= PW_CMDLINE_CAP)
-        return fail(why, "build command line does not extend the stock one");
+    /* The build's line extends the stock one without its console= entries:
+     * the first handoff on a PW4 (2026-11-23) hung in the 4.1 imx console
+     * write, which spins with interrupts off on USR2_TXDC, because the stock
+     * suspend had left UART1's clock gated and its source switched. Nothing on
+     * a Kindle reads that serial port; the log goes to the Lab126 buffer. */
+    char base[1024] = "", copy[1024], *keep = NULL;
+    snprintf(copy, sizeof(copy), "%s", profile->stock_cmdline);
+    for (char *t = strtok_r(copy, " ", &keep); t; t = strtok_r(NULL, " ", &keep)) {
+        if (!strncmp(t, "console=", 8)) continue;
+        if (*base) strcat(base, " ");
+        strcat(base, t);
+    }
+    size_t n = strlen(base);
+    if (strncmp(cmdline, base, n) || cmdline[n] != ' ' || strlen(cmdline) >= PW_CMDLINE_CAP ||
+        strstr(cmdline, "console="))
+        return fail(why, "build command line does not extend the stock one without a console");
     if (initrd_size == 0 || initrd_start % 4096) return fail(why, "invalid initramfs range");
     if (read_file(root, "/sys/firmware/fdt", PW_FDT_CAP - 3, &src, why)) { dd_free(&src); return -1; }
     if (append_zero(&src, (4 - src.size % 4) % 4) || reserve(out, PW_FDT_CAP)) {

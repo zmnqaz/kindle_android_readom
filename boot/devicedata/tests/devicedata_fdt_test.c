@@ -69,7 +69,7 @@ static size_t make_fdt(void) {
 }
 
 #define STOCK "console=ttymxc0,115200 consoleblank=0 uart_at_4m quiet secure_cpu=1 androidboot.secure_cpu=1 androidboot.prod=1 androidboot.unlocked_kernel=false"
-#define CMDLINE STOCK " panic=5 rdinit=/init"
+#define CMDLINE "consoleblank=0 uart_at_4m quiet secure_cpu=1 androidboot.secure_cpu=1 androidboot.prod=1 androidboot.unlocked_kernel=false panic=5 rdinit=/init"
 
 int main(void) {
     struct dd_buf out = {0};
@@ -95,6 +95,9 @@ int main(void) {
 
     memset(&why, 0, sizeof(why));
     CHECK(dd_fdt(root, &dd_pw4_5_18_1_1_1, "panic=5", 0x84000000u, 0x1000u, &out, &why) == -1 && !why.other_device);
+    /* The stock console stays out: the 4.1 console write hangs after the stock suspend. */
+    memset(&why, 0, sizeof(why));
+    CHECK(dd_fdt(root, &dd_pw4_5_18_1_1_1, STOCK " panic=5", 0x84000000u, 0x1000u, &out, &why) == -1);
     memset(&why, 0, sizeof(why));
     CHECK(dd_fdt(root, &dd_pw4_5_18_1_1_1, CMDLINE, 0x84000800u, 0x1000u, &out, &why) == -1);
     memset(&why, 0, sizeof(why));

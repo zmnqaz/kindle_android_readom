@@ -69,4 +69,13 @@ PW3 的 profile 1、2 走原来的分支，行为不变：原有宿主机测试�
    - 第三轮：同样关 Wi-Fi，期望模块给出 `READY`
    原计划：（会跑一次真实的 `pm_test=core` 挂起，先征得同意）：确认 PRRR/NMRR/MIDR、
    挂起后各门控的实际状态、USB 控制器寄存器，再据此锁定 USB 空闲判据。
-6. 跳转之后：新内核要能自己重启（`panic=5`），日志写进 `0x9be00000`，回原厂系统读 `/proc/printkbuf`。
+6. **第一次真跳转（Jump 1，2026-11-23）**：模块 READY 后提交，没有返回——交接本身在设备上成功。回原厂后
+   `/proc/printkbuf` 里是安卓内核的日志（`log_buf_len: 32768`、SELinux enforcing、L2C-310 重新开启 16 路 256 KB、
+   BD71827 PMIC 和 I2C、SDMA 固件 3.3、`Freeing initrd memory: 248K (c4000000 - c403e000)` 即物理 `0x84000000`），
+   止于 0.26 s 的 `2020000.serial: ttymxc0 ... is a IMX`：原厂此后打印 `console [ttymxc0] enabled`，我们的内核在
+   第一次写串口控制台时卡死——4.1 `imx_console_write` 关中断死等 `USR2_TXDC`，而挂起时 UART1 门是关的
+   （`ccgr5` bit 24 = 0），原厂还按蓝牙状态切换过串口时钟源。中断关着，看门狗之外什么都救不了它；几分钟后原厂
+   开着的 WDOG 复位了板子。
+   Jump 2：命令行去掉 `console=`（`dd_fdt` 规则改为"原厂那一行去掉 console= 后的前缀"）；日志环改为 256 KB
+   （`LOG_BUF_SHIFT=18`，和 PW4 原厂相同，原因同 android-core.config 的说明）；观察者另记各时钟状态。
+7. 跳转之后：新内核要能自己重启（`panic=5`），日志写进 `0x9be00000`，回原厂系统读 `/proc/printkbuf`。

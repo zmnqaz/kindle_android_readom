@@ -35,7 +35,7 @@ static void say(const char *format, ...)
 /* One file, line by line, into the log; lines matching `only` when given. */
 static void dump(const char *tag, const char *path, const char *only, int max_lines)
 {
-    char buf[16384];
+    static char buf[131072];
     int fd = open(path, O_RDONLY), lines = 0;
     if (fd < 0) { say("<4>PW4_OBSERVER %s: cannot open %s\n", tag, path); return; }
     ssize_t n = read(fd, buf, sizeof(buf) - 1);
@@ -75,6 +75,14 @@ int main(void)
     dump("fb", "/sys/class/graphics/fb0/name", NULL, 1);
     dump("mmc", "/proc/partitions", "mmcblk", 4);
     dump("power", "/sys/class/power_supply/bd71827_bat/capacity", NULL, 1);
+    /* The clocks the stock suspend left behind: the first handoff hung in the
+     * serial console, whose clock (uart, from pll3_80m or osc) was gated. */
+    mount("debugfs", "/sys/kernel/debug", "debugfs", 0, NULL);
+    dump("clk", "/sys/kernel/debug/clk/clk_summary", "uart", 12);
+    dump("clk", "/sys/kernel/debug/clk/clk_summary", "pll3", 12);
+    dump("clk", "/sys/kernel/debug/clk/clk_summary", " osc", 2);
+    dump("clk", "/sys/kernel/debug/clk/clk_summary", "epdc", 6);
+    dump("clk", "/sys/kernel/debug/clk/clk_summary", "usdhc", 6);
     say("<4>PW4_OBSERVER done; rebooting in 8 seconds\n");
     sleep(8);
     sync();
