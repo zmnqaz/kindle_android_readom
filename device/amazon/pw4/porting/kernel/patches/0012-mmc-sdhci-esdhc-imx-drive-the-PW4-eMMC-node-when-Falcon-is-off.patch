@@ -1,0 +1,53 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: pw4-port <pw4-port@localhost>
+Date: Mon, 23 Nov 2026 17:07:30 +0800
+Subject: [PATCH] mmc: let sdhci-esdhc-imx drive the PW4 eMMC node when Falcon
+ is off
+
+The node is compatible "falcon_blk" with "nofalcon", which the probe
+already reads as ours when Falcon is not in use; and it spells
+non-removable "no-removable".
+---
+ drivers/mmc/core/host.c            |  4 +++-
+ drivers/mmc/host/sdhci-esdhc-imx.c | 10 ++++++++++
+ 2 files changed, 13 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/mmc/core/host.c b/drivers/mmc/core/host.c
+index 4f81e81f..fae40fdd 100644
+--- a/drivers/mmc/core/host.c
++++ b/drivers/mmc/core/host.c
+@@ -445,7 +445,9 @@ int mmc_of_parse(struct mmc_host *host)
+ 	 */
+ 
+ 	/* Parse Card Detection */
+-	if (of_property_read_bool(np, "non-removable")) {
++	/* "no-removable": how the PW4's stock device tree spells it */
++	if (of_property_read_bool(np, "non-removable") ||
++	    of_property_read_bool(np, "no-removable")) {
+ 		host->caps |= MMC_CAP_NONREMOVABLE;
+ 		if (of_property_read_bool(np, "cd-post"))
+ 			host->caps2 |= MMC_CAP2_CD_POST;
+diff --git a/drivers/mmc/host/sdhci-esdhc-imx.c b/drivers/mmc/host/sdhci-esdhc-imx.c
+index b6a88c32..8a8fe8be 100644
+--- a/drivers/mmc/host/sdhci-esdhc-imx.c
++++ b/drivers/mmc/host/sdhci-esdhc-imx.c
+@@ -271,6 +271,16 @@ static const struct of_device_id imx_esdhc_dt_ids[] = {
+ 	{ .compatible = "fsl,imx6q-usdhc", .data = &usdhc_imx6q_data, },
+ 	{ .compatible = "fsl,imx6ull-usdhc", .data = &usdhc_imx6ull_data, },
+ 	{ .compatible = "fsl,imx7d-usdhc", .data = &usdhc_imx7d_data, },
++#ifdef CONFIG_FALCON
++	/*
++	 * The PW4's eMMC host is described for the Falcon storage BIOS only
++	 * (compatible "falcon_blk") but carries "nofalcon", which the probe
++	 * below reads as "ours when Falcon is not in use". Match it so that
++	 * with Falcon off (the "nofalcon" boot argument) this driver can take
++	 * it, as the i.MX6SLL uSDHC it is.
++	 */
++	{ .compatible = "falcon_blk", .data = &usdhc_imx7d_data, },
++#endif
+ 	{ /* sentinel */ }
+ };
+ MODULE_DEVICE_TABLE(of, imx_esdhc_dt_ids);
+-- 
+2.53.0
+

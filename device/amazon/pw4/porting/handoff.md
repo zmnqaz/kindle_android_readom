@@ -99,4 +99,9 @@ PW3 的 profile 1、2 走原来的分支，行为不变：原有宿主机测试�
    当内核虚拟地址用，只在 `PAGE_OFFSET == PHYS_OFFSET` 时成立；3G/1G 下判定没有 BIOS。**亚马逊给 PW4 用 2G/2G
    就是为此。** 决定：下一个内核也 2G/2G（和原厂一致，存储走原厂测过的 Falcon），mmap 随机化 15 位，安卓 init
    打补丁接受 15（编系统时做）。**Jump 6** 验证 Falcon 在交接后能否重新初始化，观察者另记早期 Falcon 日志和分区表。
+   **Jump 6**（2G/2G）：Falcon 这次被找到，但 `init_falcon_blk` 进去就不回来——原厂内核早已初始化过这块 BIOS
+   （向量钩子、页表、工作区都是原厂的），再初始化一次就挂。决定改为下一个内核**不用 Falcon**：命令行 `nofalcon`，
+   内核补丁 `0012` 让标准 `sdhci-esdhc-imx` 接管 eMMC 节点（原厂设备树给它加了 `nofalcon` 属性，驱动里已有"Falcon
+   不用时由我接管"的判断，只是 compatible 写的是 `falcon_blk`、`non-removable` 拼成了 `no-removable`）。不依赖 Falcon
+   之后回到 3G/1G（Jump 5 已证明能完整启动；16 位随机化，安卓 init 不用改）。**Jump 7**。
 7. 跳转之后：新内核要能自己重启（`panic=5`），日志写进 `0x9be00000`，回原厂系统读 `/proc/printkbuf`。

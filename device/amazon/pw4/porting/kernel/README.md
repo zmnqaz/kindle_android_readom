@@ -71,6 +71,8 @@ make O=<out> ARCH=arm olddefconfig
 
 补丁 `0012` 已撤回（2026-11-23）：给 `fsl_otp` 读序列号前后开关时钟，读完关门反而让随后经 syscon 读 OCOTP 的 `imx_thermal` 卡住。改由交接模块在跳转前恢复上电时的全开时钟门，驱动保持原样。
 
+补丁 `0012`（新，2026-11-23）：`sdhci-esdhc-imx` 匹配 PW4 eMMC 节点的 `falcon_blk`，mmc 核心把 `no-removable` 当 `non-removable`；配合命令行 `nofalcon`，安卓内核不碰原厂已初始化过的 Falcon BIOS，用标准驱动读写 eMMC。
+
 ## 五、第 0 阶段分类的修正
 
 逐项核对后（`../phase0.md` 第四节的表还没改，以这里为准）：
