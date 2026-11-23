@@ -81,7 +81,9 @@ def main():
     require(struct.unpack_from('<III',zimage,0x24)==(0x016f2818,0,len(zimage)),'zImage header mismatch')
     require((pw4 and 'zreladdr' not in sym) or sym.get('zreladdr')==base+0x8000,'Unexpected output base')
     # 3.0 starts the image at _stext; 4.1 at _text (head text comes first).
-    require(kernel['_text' if pw4 else '_stext']==0xc0008000,'Unexpected kernel virtual base')
+    # PW4's next kernel is 2G/2G like its stock one (Falcon needs virt == phys).
+    kbase=kernel['_text' if pw4 else '_stext']-0x8000
+    require(kbase==0xc0000000 or (pw4 and kbase==0x80000000),'Unexpected kernel virtual base')
     compressed_bytes=zimage[sym['input_data']:sym['input_data_end']]
     dec=zlib.decompressobj(31);got=dec.decompress(compressed_bytes)+dec.flush()
     require(dec.eof and not dec.unused_data and got==raw,'Actual gzip content does not match built Image')
@@ -92,7 +94,7 @@ def main():
     relocated_start=(image_end+reloc_padding)&~255
     copied_bytes=(sym['_edata']-copy_offset+31)&~31
     delta=relocated_start-(entry+copy_offset)
-    kernel_end=kernel['_end']-0xc0000000+base
+    kernel_end=kernel['_end']-kbase+base
     pgdir=(entry-16384)&~16383
     ranges=[{'name':'kernel output and BSS','start':entry,'end':kernel_end},
             {'name':'decompressor page directory','start':pgdir,'end':pgdir+16384},

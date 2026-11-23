@@ -14,6 +14,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/ioctl.h>
+#include <sys/klog.h>
 #include <sys/mount.h>
 #include <sys/reboot.h>
 #include <sys/utsname.h>
@@ -83,6 +84,22 @@ int main(void)
     dump("clk", "/sys/kernel/debug/clk/clk_summary", " osc", 2);
     dump("clk", "/sys/kernel/debug/clk/clk_summary", "epdc", 6);
     dump("clk", "/sys/kernel/debug/clk/clk_summary", "usdhc", 6);
+    /* The early boot (before the Lab126 region took over) from the ring:
+     * the Falcon storage BIOS is found or refused there. */
+    {
+        static char ring[262144];
+        int n = klogctl(3, ring, sizeof(ring) - 1), lines = 0;
+        if (n > 0) {
+            ring[n] = 0;
+            for (char *save = NULL, *l = strtok_r(ring, "\n", &save); l && lines < 40; l = strtok_r(NULL, "\n", &save))
+                if (strstr(l, "alcon") || strstr(l, "BIOS") || strstr(l, "dt: ") || strstr(l, "mmcblk") ||
+                    strstr(l, "Memory policy") || strstr(l, "Virtual kernel") || strstr(l, "lowmem")) {
+                    say("<4>PW4_OBSERVER early: %s\n", l);
+                    ++lines;
+                }
+        }
+    }
+    dump("parts", "/proc/partitions", NULL, 20);
     say("<4>PW4_OBSERVER done; rebooting in 8 seconds\n");
     sleep(8);
     sync();

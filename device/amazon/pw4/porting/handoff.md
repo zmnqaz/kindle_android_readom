@@ -93,4 +93,10 @@ PW3 的 profile 1、2 走原来的分支，行为不变：原有宿主机测试�
    同样不开时钟；而 `0012` 读完序列号 `clk_disable_unprepare` 把 OCOTP 门关了。原厂冷启动时 fsl_otp 从不碰这个
    时钟，它一直开到 late_initcall 的 `clk_disable_unused`。模块既已在跳转前把门全开（等同上电），`0012` 多余且有
    副作用：撤掉，`fsl_otp` 保持原样。**Jump 5**。
+   **Jump 5：第一次完整启动。** 安卓内核 0.56 s 进入用户空间，观察者写完日志，8.6 s 各驱动依次关闭、干净地自行重启。
+   内存 501 MB、EPDC 保留区空出、电池 99%、设备那半 initramfs 解开。15 个 `-19` 是板上没有的硬件。唯一的问题：
+   `init_falcon_blk` 返回 `-22`，eMMC 没起来。原因：`fbios.c` 把设备树里 Falcon BIOS 的物理地址（`0x9ffc0000`）
+   当内核虚拟地址用，只在 `PAGE_OFFSET == PHYS_OFFSET` 时成立；3G/1G 下判定没有 BIOS。**亚马逊给 PW4 用 2G/2G
+   就是为此。** 决定：下一个内核也 2G/2G（和原厂一致，存储走原厂测过的 Falcon），mmap 随机化 15 位，安卓 init
+   打补丁接受 15（编系统时做）。**Jump 6** 验证 Falcon 在交接后能否重新初始化，观察者另记早期 Falcon 日志和分区表。
 7. 跳转之后：新内核要能自己重启（`panic=5`），日志写进 `0x9be00000`，回原厂系统读 `/proc/printkbuf`。
