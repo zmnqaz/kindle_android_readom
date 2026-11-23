@@ -11,8 +11,8 @@ the node even with Falcon unusable: it now leaves it.
 ---
  arch/arm/mach-imx/falcon_storage_plat.c | 10 ++++++++++
  drivers/mmc/core/host.c                 |  4 +++-
- drivers/mmc/host/sdhci-esdhc-imx.c      | 10 ++++++++++
- 3 files changed, 23 insertions(+), 1 deletion(-)
+ drivers/mmc/host/sdhci-esdhc-imx.c      | 14 ++++++++++++++
+ 3 files changed, 27 insertions(+), 1 deletion(-)
 
 diff --git a/arch/arm/mach-imx/falcon_storage_plat.c b/arch/arm/mach-imx/falcon_storage_plat.c
 index 70c7dca8..22436832 100644
@@ -58,10 +58,10 @@ index 4f81e81f..fae40fdd 100644
  		if (of_property_read_bool(np, "cd-post"))
  			host->caps2 |= MMC_CAP2_CD_POST;
 diff --git a/drivers/mmc/host/sdhci-esdhc-imx.c b/drivers/mmc/host/sdhci-esdhc-imx.c
-index b6a88c32..8a8fe8be 100644
+index b6a88c32..d8c53e39 100644
 --- a/drivers/mmc/host/sdhci-esdhc-imx.c
 +++ b/drivers/mmc/host/sdhci-esdhc-imx.c
-@@ -271,6 +271,16 @@ static const struct of_device_id imx_esdhc_dt_ids[] = {
+@@ -271,6 +271,20 @@ static const struct of_device_id imx_esdhc_dt_ids[] = {
  	{ .compatible = "fsl,imx6q-usdhc", .data = &usdhc_imx6q_data, },
  	{ .compatible = "fsl,imx6ull-usdhc", .data = &usdhc_imx6ull_data, },
  	{ .compatible = "fsl,imx7d-usdhc", .data = &usdhc_imx7d_data, },
@@ -71,9 +71,13 @@ index b6a88c32..8a8fe8be 100644
 +	 * (compatible "falcon_blk") but carries "nofalcon", which the probe
 +	 * below reads as "ours when Falcon is not in use". Match it so that
 +	 * with Falcon off (the "nofalcon" boot argument) this driver can take
-+	 * it, as the i.MX6SLL uSDHC it is.
++	 * it, as the i.MX6SLL uSDHC it is -- with the i.MX6SX data, which is
++	 * what Amazon's own non-Falcon description of this board uses
++	 * (imx6sll-rex.dts: "fsl,imx6sll-usdhc", "fsl,imx6sx-usdhc"; HS200,
++	 * no HS400). With the i.MX7D data the card ran HS400 and every data
++	 * read timed out.
 +	 */
-+	{ .compatible = "falcon_blk", .data = &usdhc_imx7d_data, },
++	{ .compatible = "falcon_blk", .data = &usdhc_imx6sx_data, },
 +#endif
  	{ /* sentinel */ }
  };

@@ -99,7 +99,8 @@ int main(void)
                 }
         }
     }
-    dump("parts", "/proc/partitions", NULL, 20);
+    dump("parts", "/proc/partitions", "mmcblk", 20);
+    dump("mmc1", "/sys/kernel/debug/mmc1/ios", NULL, 12);
     say("<4>PW4_OBSERVER done; rebooting in 8 seconds\n");
     sleep(8);
     sync();

@@ -107,4 +107,10 @@ PW3 的 profile 1、2 走原来的分支，行为不变：原有宿主机测试�
    **Jump 7**：3G/1G 又完整启动、干净重启；但标准驱动只接了 Wi-Fi 口，eMMC 口早被 `falcon_storage_plat.c` 的
    `falcon_blk` 平台驱动认领（probe 无条件成功，失败的是之后的 `init_falcon_blk`）。`0012` 补上：Falcon 不可用时
    这个 probe 返回 `-ENODEV`，把节点让给 `sdhci-esdhc-imx`。**Jump 8**。
+   **Jump 8**：标准驱动接管了 eMMC——`mmc1: new HS400 MMC card`、`mmcblk1: H8G4a2 7.28 GiB`、boot0/boot1/rpmb 都识别——但每次
+   读数据都超时（`-110`）。我按 i.MX7D 映射，它声称支持 HS400。**参照答案在源码里**：`arch/arm/boot/dts/imx6sll-rex.dts`
+   是 PW4（`amzn,imx6sll-rex`）这块板的设备树源码，亚马逊不用 Falcon 时的 eMMC 写法是 `"fsl,imx6sll-usdhc",
+   "fsl,imx6sx-usdhc"`（HS200，无 HS400）、`vqmmc-supply = <&buck3_reg>`（1.8 V）、8 位、`no-removable`；设备上的
+   blob 是它套上 Falcon 版本（compatible 换成 `falcon_blk`）。`0012` 改为映射到 i.MX6SX 的数据。**Jump 9**。
+   后面移植 EPDC、触摸、Wi-Fi、PMIC 都以 `imx6sll-rex.dts` 为第一参考。
 7. 跳转之后：新内核要能自己重启（`panic=5`），日志写进 `0x9be00000`，回原厂系统读 `/proc/printkbuf`。
