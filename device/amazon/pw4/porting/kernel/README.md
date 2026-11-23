@@ -67,6 +67,8 @@ make O=<out> ARCH=arm olddefconfig
 | `0009` qtaguid ctrl | `/proc/net/xt_qtaguid/ctrl` 不再把别的 UID 的标签和 `struct sock` 地址给没有读全量权限的进程看；全局计数要读全量权限。这棵树是 seq_file 写法，按原意重做 | `0811` |
 | `0010` mmap 随机化 | 上游 `d07e22597d1d`、`e0c25d958f78`（v4.5）合成一个。`arch/Kconfig` 那块手工放在 `ARCH_HAS_ELF_RANDOMIZE` 后面：4.1 的上下文不同，模糊匹配会把它塞进 `CLONE_BACKWARDS2` 的帮助文字里。配置里设 16 位（见第三节） | `1010` |
 
+补丁 `0011`（2026-11-23 加）：Readom `1043` 的 4.1 版。4.1 的 Lab126 实现在 `log_store` 里另外往 `0x9be00000` 复制一份文本；每复制一条就 `__cpuc_flush_dcache_area` + `outer_clean_range` 写回内存，开机清空固定区后也写回一次。没有它，看门狗复位时还在缓存里的日志全丢（第一、二次真跳转的日志都止于 0.26 s）。
+
 ## 五、第 0 阶段分类的修正
 
 逐项核对后（`../phase0.md` 第四节的表还没改，以这里为准）：

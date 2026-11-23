@@ -1,0 +1,67 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: pw4-port <pw4-port@localhost>
+Date: Mon, 23 Nov 2026 16:28:39 +0800
+Subject: [PATCH] printk: write each Lab126 persistent-log copy back to DRAM
+ (Readom 1043 for 4.1)
+
+A watchdog reset loses whatever the caches still hold: the first PW4
+handoff's log ended at 0.26 s although the kernel ran for two minutes.
+---
+ kernel/printk/printk.c | 24 ++++++++++++++++++++++++
+ 1 file changed, 24 insertions(+)
+
+diff --git a/kernel/printk/printk.c b/kernel/printk/printk.c
+index 43d7d59f..79c924cd 100644
+--- a/kernel/printk/printk.c
++++ b/kernel/printk/printk.c
+@@ -452,6 +452,26 @@ static char *log_goal_first = NULL;
+ static char *log_goal_last = NULL;
+ static char *log_goal_idx = NULL;
+ static char *last_log_buffer = NULL;
++
++/*
++ * The next boot saves the fixed region as the previous boot's log
++ * (/proc/printkbuf). When the watchdog resets a hung system, text still in the
++ * CPU caches never reaches that memory: the first handoff on a PW4 lost
++ * everything after 0.26 s this way. So each copy is written back as it is
++ * made, and so is the cleared region at boot (Readom patch 1043, for 4.1).
++ */
++#ifdef CONFIG_ARM
++#include <asm/cacheflush.h>
++#include <asm/outercache.h>
++static void log_goal_write_back(char *va, unsigned int len)
++{
++	/* inner caches first, then the outer (L2) cache */
++	__cpuc_flush_dcache_area(va, len);
++	outer_clean_range(__pa(va), __pa(va) + len);
++}
++#else
++static inline void log_goal_write_back(char *va, unsigned int len) { }
++#endif
+ #endif
+ 
+ #if defined(CONFIG_LAB126)
+@@ -561,9 +581,12 @@ static int log_store(int facility, int level,
+ 			log_goal_idx = log_goal_first;
+ 		}
+ 		/* no else here */ if (msg->text_len < (log_goal_last - log_goal_idx)) {
++			char *from = log_goal_idx;
++
+ 			memcpy(log_goal_idx, log_text(msg), msg->text_len);
+ 			log_goal_idx += msg->text_len;
+ 			*log_goal_idx++ = '\n';
++			log_goal_write_back(from, log_goal_idx - from);
+ 		}
+ 	}
+ #else
+@@ -1128,6 +1151,7 @@ void __init setup_log_buf(int early)
+ 			//Now that it is saved, clear out last time's prink to prevent log framents from
+ 			//recusrively showing up in printk logs.
+ 			memset(log_goal_first, '\0', LOG_GOAL_SIZE);
++			log_goal_write_back(log_goal_first, LOG_GOAL_SIZE);
+ 		}
+ #endif
+ 		new_log_buf = memblock_virt_alloc_nopanic(new_log_buf_len,
+-- 
+2.53.0
+
