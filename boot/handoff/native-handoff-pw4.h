@@ -91,13 +91,20 @@ static int pws4_usb_idle(const struct pws_native_report *r)
     (void)r;
     return 0;   /* no controller revision pinned for the i.MX6SLL yet */
 }
+/* The PW4's DCP is not stopped the way PW3's was: the first device PROBE
+ * (2026-11-23) read CTRL 0x30c0000f -- present, context caching and switching
+ * on (bits 22-23, set by the stock mxs-dcp driver), channel interrupts on --
+ * with all channels enabled (0xff), but no activity in STAT, no colour-space
+ * conversion and every channel semaphore at zero: no descriptor queued, so
+ * nothing that would make it read or write memory. That is what "idle" is
+ * here; any queued work or activity still refuses. */
 static int pws4_dcp_idle(const struct pws_native_report *r)
 {
     unsigned int i;
     if(r->dcp_clock_gated && r->diagnostic_only)return 1;   /* CCM gate closed: not read */
-    if(!(r->dcp_ctrl&0x20000000u) || (r->dcp_ctrl&0x0f1ffe00u))return 0;
+    if(!(r->dcp_ctrl&0x20000000u) || (r->dcp_ctrl&0x0f1ffe00u&~0x00c00000u))return 0;
     if(r->dcp_ctrl&0xc0000000u)return 1;                    /* in reset or self-gated */
-    if(r->dcp_channel_enable || r->dcp_stat_activity || r->dcp_csc_enable)return 0;
+    if(r->dcp_stat_activity || r->dcp_csc_enable)return 0;
     for(i=0;i<4;i++)if(r->dcp_sema[i])return 0;
     return 1;
 }

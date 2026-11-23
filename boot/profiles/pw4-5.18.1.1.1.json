@@ -14,9 +14,9 @@
   "stock_kernel_version": "#1 SMP PREEMPT Thu May 21 05:14:34 UTC 2026",
   "midr": "0x414fc091",
   "midr_why": "Cortex-A9 r4p1, from the device's /proc/cpuinfo (implementer 0x41, variant 0x4, part 0xc09, revision 1)",
-  "prrr": "0xff0a81a8",
+  "prrr": "0x000a81a8",
   "nmrr": "0x40e040e0",
-  "prrr_nmrr_why": "the values 4.1's proc-v7-2level.S writes; a PROBE on the device reports cpu_profile_valid=0 if they differ",
+  "prrr_nmrr_why": "measured by the first device PROBE (2026-11-23): PRRR 0x000a81a8, NMRR 0x40e040e0, TTBR0 walk attributes 0x59, ACTLR 0xe (SMP bit clear): the SMP_ON_UP kernel found itself on one core and took the UP values, the same as PW3's",
   "ram": [
     [
       "0x80000000",

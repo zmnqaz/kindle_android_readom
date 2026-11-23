@@ -52,6 +52,16 @@ PW3 的 profile 1、2 走原来的分支，行为不变：原有宿主机测试�
 4. ~~QEMU~~ 已跑通（2026-11-23）：`mcimx6ul-evk` 上第一级 4.1（2G/2G、SMP_ON_UP）加载 profile 4 模块、拒绝四种坏输入、
    两次 PROBE、COMMIT，第二级安卓内核（3G/1G）拿到构建的命令行和两段 initramfs 起来。见 `qemu/README.md`。
    QEMU 的 i.MX6UL 自带挂起支持，不需要 `qemu-pm.c` 那个假的挂起提供者。
-5. **设备上的 PROBE**（会跑一次真实的 `pm_test=core` 挂起，先征得同意）：确认 PRRR/NMRR/MIDR、
+5. **设备上的 PROBE** —— 第一轮已跑（2026-11-23，试运行版模块，跳转未编入）：
+   - 通过：设备上 `dd_fdt` 生成设备树（32,664 字节）；模块 SEAL（内核、命令行、initramfs、三个原厂函数哈希、计划、
+     解压占用）和 PREPARE 全过，1707 个载荷页零碰撞；`pm_test=core` 挂起/恢复干净（Wi-Fi、Falcon 存储、触摸依次
+     挂起、恢复）；挂起回调里页表、栈、CPU 模式检查 `backend_result=0`；卸载、`pm_test` 复原
+   - 拒绝 1：PRRR 实测 `0x000a81a8`（`SMP_ON_UP` 在单核上走 UP 那套；TTBR 属性 `0x59`、ACTLR `0xe`），已改锁定值
+   - 拒绝 2：DCP `CTRL=0x30c0000f`、通道全开，但 STAT 无活动、信号量全 0（没有排队的描述符）；PW4 原厂驱动开了上下文
+     缓存（bit 22-23），按实测把"空闲"定为无任务、无活动
+   - 拒绝 3：uSDHC1 门开着——它接 Wi-Fi（`2190000.usdhc`），bcmdhd 加载时挂起中保持供电。规则不放宽，启动器先关 Wi-Fi
+   - USB 门关（拔线）；eMMC 所在 uSDHC2、EPDC、PXP、SDMA 等全部关
+   - 下一轮：关 Wi-Fi 再跑，期望 `PROBE_OK`
+   原计划：（会跑一次真实的 `pm_test=core` 挂起，先征得同意）：确认 PRRR/NMRR/MIDR、
    挂起后各门控的实际状态、USB 控制器寄存器，再据此锁定 USB 空闲判据。
 6. 跳转之后：新内核要能自己重启（`panic=5`），日志写进 `0x9be00000`，回原厂系统读 `/proc/printkbuf`。

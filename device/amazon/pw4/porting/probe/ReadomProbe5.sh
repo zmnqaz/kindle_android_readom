@@ -15,7 +15,7 @@ LOG=$SRC/probe5-shell.txt
 eips 1 1 "Readom probe 5 running (do not touch)" 2>/dev/null
 {
     date; uname -a; cat /proc/uptime
-    echo "== before"; cat /sys/power/pm_test; grep -E "MemFree|MemAvailable" /proc/meminfo
+    echo "== before"; cat /sys/power/pm_test; lsmod 2>/dev/null | grep -q bcmdhd && echo "wifi driver loaded" || echo "wifi driver not loaded"; grep -E "MemFree|MemAvailable" /proc/meminfo
     lsmod 2>/dev/null | head -20
 } >> "$LOG" 2>&1
 
