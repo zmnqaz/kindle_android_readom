@@ -36,8 +36,11 @@ PW3 的 profile 1、2 走原来的分支，行为不变：原有宿主机测试�
 
 1. **原厂函数哈希**：第二轮探测在 Kindle 上导出了这几个函数所在的内存页（`readom-probe2/mem-*.bin`），
    按上面的长度切出来算 sha256，填进 profile。不能用自己编的内核算：编译器不同，字节不同。
-2. **解压器占用**：`derive_kernel_footprint.py` 锁的是 3.0 的 `compressed/head.S`；按 4.1 的
-   `head.S` 重新核对公式（`_stext` 为 `0x80008000`），加 `--profile pw4`。
+2. ~~解压器占用~~ 已完成：`derive_kernel_footprint.py --profile pw4`。4.1 的搬移代码和越界判断与 3.0 相同，
+   差别是 `AUTO_ZRELADDR`（`r4 = (pc & 0xf8000000) + 0x8000`，zImage 放在 `base+0x8000` 时就是它本身）
+   和镜像起点符号改为 `_text`；锁定 4.1 的 `head.S`、`vmlinux.lds.S` 哈希；安卓内核改用 gzip。
+   当前安卓内核：zImage 6,953,832 字节，解压后 14,160,640 字节，占用 `0x80004000`–`0x8143d000`，
+   与 63 MiB 处的 blob、64 MiB 处的 initramfs 不重叠。
 3. **设备端生成设备树**（`boot/devicedata`）：从 `/sys/firmware/fdt` 读原厂 blob，换掉 `/chosen` 的
    bootargs 和 initrd 两项，去掉指向旧 DTB 和旧 initrd 的两条 `/memreserve/`（`0x83f077b0`、`0x9e6a5000`）。
 4. **QEMU**：profile 4 的替身内核（4.1、2G/2G、RAM 在 `0x80000000`、Cortex-A9 或 A7），`qemu-pm.c` 跟着改。

@@ -24,22 +24,46 @@ def elf_sections(p):
 
 def main():
     ap=argparse.ArgumentParser(description=__doc__);ap.add_argument('--output',type=Path,required=True)
-    ap.add_argument('--profile',choices=['pw3','vexpress'],default='pw3');a=ap.parse_args()
-    require(platform.node()=='lima-pw3' and os.geteuid()!=0,'Use project VM builder')
+    ap.add_argument('--profile',choices=['pw3','vexpress','pw4'],default='pw3')
+    # pw4 builds on a plain Linux host, not in the PW3 VM: the trees are named.
+    ap.add_argument('--source',type=Path);ap.add_argument('--build',type=Path);ap.add_argument('--tools-prefix')
+    a=ap.parse_args()
+    pw4=a.profile=='pw4'
+    if pw4:
+        require(a.source and a.build and a.tools_prefix and os.geteuid()!=0,'pw4: --source, --build and --tools-prefix')
+        out,source,prefix,export=a.build,a.source,a.tools_prefix,None
+    else:
+        require(platform.node()=='lima-pw3' and os.geteuid()!=0,'Use project VM builder')
     virtual=a.profile=='vexpress';flavor='loader-stage' if virtual else 'android-core'
-    out=Path('/home/builder/pw3-build/out-'+flavor);source=Path('/home/builder/pw3-build/linux-'+flavor)
-    export=Path('/mnt/build-share/'+flavor+'-kernel');prefix='/home/builder/toolchains/aosp-arm-gcc49/bin/arm-linux-androideabi-'
+    if not pw4:
+        out=Path('/home/builder/pw3-build/out-'+flavor);source=Path('/home/builder/pw3-build/linux-'+flavor)
+        export=Path('/mnt/build-share/'+flavor+'-kernel');prefix='/home/builder/toolchains/aosp-arm-gcc49/bin/arm-linux-androideabi-'
     base=0x60000000 if virtual else 0x80000000
-    locked={'arch/arm/boot/compressed/head.S':'7cba08a3c830058b537183f9c7dd1def7e6a6c7939e96bb5bff32091188e0a52',
-            'arch/arm/boot/compressed/vmlinux.lds.in':'ec0fec295f09aa3c12ab52d793344f275469b3d8a725423bf00233a881d82221'}
+    if pw4:
+        # 4.1.15-lab126 (Kindle_src_5.18.1.1.1). Reviewed against the formula
+        # below: the restart/relocation code and the overwrite test are the
+        # 3.0 ones; the differences are CONFIG_AUTO_ZRELADDR (selected by
+        # ARCH_MULTIPLATFORM), which computes r4 = (pc & 0xf8000000) + 0x8000,
+        # i.e. base + 0x8000 for a zImage placed there, and the appended-DTB
+        # block, which this configuration leaves out (checked below).
+        locked={'arch/arm/boot/compressed/head.S':'b6908475c95b7258f2fe2a1ea25cacdb5e54e64a256f544453c903264e4a7d14',
+                'arch/arm/boot/compressed/vmlinux.lds.S':'7b045123996d9dd56d5a88bf121a47688a5f6fa7038f5fdb6ead63ff4d38e1de'}
+    else:
+        locked={'arch/arm/boot/compressed/head.S':'7cba08a3c830058b537183f9c7dd1def7e6a6c7939e96bb5bff32091188e0a52',
+                'arch/arm/boot/compressed/vmlinux.lds.in':'ec0fec295f09aa3c12ab52d793344f275469b3d8a725423bf00233a881d82221'}
     require(all(sha(source/k)==v for k,v in locked.items()),'Decompressor source changed; formula review required')
     files={n:out/n for n in ['.config','vmlinux','arch/arm/boot/compressed/vmlinux','arch/arm/boot/zImage','arch/arm/boot/Image']}
     hashes={n:sha(p) for n,p in files.items()}
-    require(hashes['arch/arm/boot/zImage']==sha(export/'zImage') and hashes['.config']==sha(export/'kernel.config'),'Export/build mismatch')
+    if export:
+        require(hashes['arch/arm/boot/zImage']==sha(export/'zImage') and hashes['.config']==sha(export/'kernel.config'),'Export/build mismatch')
     config=files['.config'].read_text().splitlines()
-    require('CONFIG_KERNEL_GZIP=y' in config and '# CONFIG_AUTO_ZRELADDR is not set' in config and
-            '# CONFIG_THUMB2_KERNEL is not set' in config and 'CONFIG_ZBOOT_ROM_TEXT=0x0' in config and
-            'CONFIG_ZBOOT_ROM_BSS=0x0' in config and 'CONFIG_CPU_BIG_ENDIAN=y' not in config,'Unsupported decompressor configuration')
+    zrel=('CONFIG_AUTO_ZRELADDR=y' if pw4 else '# CONFIG_AUTO_ZRELADDR is not set')
+    require(not pw4 or ('# CONFIG_ARM_APPENDED_DTB is not set' in config and 'CONFIG_ARM_PATCH_PHYS_VIRT=y' in config),
+            'pw4: appended DTB must be off and the physical base patched at boot')
+    require('CONFIG_KERNEL_GZIP=y' in config and zrel in config and
+            '# CONFIG_THUMB2_KERNEL is not set' in config and
+            ('CONFIG_ZBOOT_ROM_TEXT=0x0' in config or (pw4 and 'CONFIG_ZBOOT_ROM_TEXT=0' in config)) and
+            ('CONFIG_ZBOOT_ROM_BSS=0x0' in config or (pw4 and 'CONFIG_ZBOOT_ROM_BSS=0' in config)) and 'CONFIG_CPU_BIG_ENDIAN=y' not in config,'Unsupported decompressor configuration')
     def symbols(p):
         text=subprocess.check_output([prefix+'nm','-an',str(p)],text=True);r={}
         for line in text.splitlines():
@@ -55,7 +79,9 @@ def main():
     zimage=files['arch/arm/boot/zImage'].read_bytes();raw=files['arch/arm/boot/Image'].read_bytes()
     require(sym['start']==0 and sym['_text']==0 and sym['_edata']==len(zimage),'Unsupported zImage link layout')
     require(struct.unpack_from('<III',zimage,0x24)==(0x016f2818,0,len(zimage)),'zImage header mismatch')
-    require(sym['zreladdr']==base+0x8000 and kernel['_stext']==0xc0008000,'Unexpected output base')
+    require((pw4 and 'zreladdr' not in sym) or sym.get('zreladdr')==base+0x8000,'Unexpected output base')
+    # 3.0 starts the image at _stext; 4.1 at _text (head text comes first).
+    require(kernel['_text' if pw4 else '_stext']==0xc0008000,'Unexpected kernel virtual base')
     compressed_bytes=zimage[sym['input_data']:sym['input_data_end']]
     dec=zlib.decompressobj(31);got=dec.decompress(compressed_bytes)+dec.flush()
     require(dec.eof and not dec.unused_data and got==raw,'Actual gzip content does not match built Image')
@@ -75,9 +101,12 @@ def main():
             {'name':'relocated BSS, stack and malloc','start':entry+sym['__bss_start']+delta,'end':entry+stack_end+delta+65536}]
     start=min(r['start'] for r in ranges)&~4095;end=(max(r['end'] for r in ranges)+4095)&~4095
     require(all(base+0x4000<=r['start']<r['end']<base+0x4000000 for r in ranges),'Footprint collides with tags or proposed initramfs')
+    # pw4: the device tree blob takes the MiB below the initramfs (allocation-ranges.h).
+    require(not pw4 or all(r['end']<=base+0x3f00000 for r in ranges),'Footprint collides with the device tree blob')
     require(all(sha(p)==hashes[n] for n,p in files.items()),'Build inputs changed during extraction')
     result={'schema':'pw3-kernel-footprint-v1','profile':a.profile,'input_sha256':hashes,'locked_source_sha256':locked,
-            'entry':entry,'machine_id':2272 if virtual else 4091,'atag_destination':base+0x1000,'initramfs_destination_candidate':base+0x4000000,
+            'entry':entry,'machine_id':0xffffffff if pw4 else 2272 if virtual else 4091,
+            'atag_destination' if not pw4 else 'fdt_destination':base+(0x3f00000 if pw4 else 0x1000),'initramfs_destination_candidate':base+0x4000000,
             'staging_lower_bound':base+0x8000000,'zimage_bytes':len(zimage),'inflated_image_bytes':len(raw),
             'gzip_matches_real_image':True,'ranges':ranges,'page_rounded_envelope':{'start':start,'bytes':end-start,'end':end},
             'decompressor_copy_delta':delta,'decompressor_copy_bytes':copied_bytes,
