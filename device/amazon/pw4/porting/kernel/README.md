@@ -79,17 +79,17 @@ make O=<out> ARCH=arm olddefconfig
   - `0004` lmk：这棵树的 lowmemorykiller 已经按 `oom_score_adj` 工作，多半可以去掉，待核
 - 宿主机的两个问题（不改源码）：较新的宿主 gcc 默认 `-fno-common`，`scripts/dtc` 链接时报 `yylloc` 重复定义，用 `HOSTCFLAGS=... -fcommon` 绕过；打包 `zImage` 要 `lzop`
 
-## 六、需要在设备上做的（只读）
+## 六、设备 CRC 核对（已完成，2026-11-23）
 
-核对符号 CRC，确认对着这份源码编的模块能被原厂内核接受：
+用只读脚本 `Readom Probe 3`（书库里点 `.sh` 执行，只拷文件不加载）把设备 `/lib/modules/4.1.15-lab126/` 下全部 61 个原厂模块拷回开发机，逐个读 `__versions` 段，和这边原样编出的 `Module.symvers` 比：
 
-```sh
-# 在 Kindle 上（越狱后的 shell）
-ls /lib/modules/$(uname -r)/
-# 挑一个原厂模块，例如 bcmdhd.ko 或 gt9xx_ts.ko，拷回电脑
-```
+- 3343 个符号引用，CRC **全部一致**，没有缺失的导出符号
+- 61 个模块 vermagic 全部是 `4.1.15-lab126 SMP preempt mod_unload modversions ARMv7 p2v8`，和这边一致
+- 设备 `CONFIG_MODVERSIONS=y`、`CONFIG_MODULE_SIG` 未开、`CONFIG_MODULE_FORCE_LOAD` 未开
 
-拿到 `.ko` 后在开发机上：`modprobe --dump-modversions <模块>.ko`，和这边原样编出来的 `Module.symvers` 比，CRC 全部一致才算数。
+结论：对着这份 GPL 源码 + 设备配置编出的模块（包括交接模块）能被原厂内核按版本校验接受，不需要手工填 CRC。
+运行中加载的模块：`mxc_epdc_v2_fb`、`falcon`（专有，permanent）、`gt9xx_ts`、`configfs`、`libcomposite`、`usb_f_mass_storage`、`g_mass_storage`；Wi-Fi 关闭时 `bcmdhd` 不在。
+原厂 `.ko` 是亚马逊的二进制，只留在本地，不进仓库。
 
 ## 七、下一步
 
