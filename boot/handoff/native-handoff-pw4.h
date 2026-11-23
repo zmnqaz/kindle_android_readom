@@ -272,7 +272,21 @@ static int native_core_suspend(void)
     native_report.backend_result=rc;
     if(rc){native_report.callback_rejected=1;if(!native_commit)rc=0;goto out;}
 #ifndef PWS_PROBE_ONLY
-    if(native_commit){rc=pw3_cache_backend(&native_backend);native_report.backend_result=rc;}
+    if(native_commit){
+#if PWS_PROFILE == 3
+        /* The one hardware write this module makes, and only on the way out:
+         * every CCM clock gate open, as the boot ROM and loader leave them at
+         * power-on, which is the state the next kernel's drivers assume. The
+         * stock suspend leaves many closed, and a register read of a gated
+         * peripheral stalls the bus: the third handoff hung reading OCOTP in
+         * fsl_otp_probe, the first in the UART console. Opening a gate starts
+         * no DMA -- that needs a driver to program it, and every driver is
+         * suspended -- and the gates were sampled above, before this. */
+        for(i=0;i<7;i++)writel(0xffffffffu,native_ccm+0x68+i*4);
+        __asm__ volatile("dsb":::"memory");
+#endif
+        rc=pw3_cache_backend(&native_backend);native_report.backend_result=rc;
+    }
 #endif
 out:
     preempt_enable();__asm__ volatile("msr cpsr_c,%0"::"r"(flags):"memory","cc");return rc;

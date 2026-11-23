@@ -1,0 +1,39 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: pw4-port <pw4-port@localhost>
+Date: Mon, 23 Nov 2026 16:37:38 +0800
+Subject: [PATCH] fsl_otp: enable the OCOTP clock before reading the i.MX6SLL
+ serial
+
+Every other register access in the driver enables it first. At power-on
+the gate happens to be open; after the stock suspend the PW4 handoff
+starts from, it is not, and the read stalls the bus.
+---
+ drivers/char/fsl_otp.c | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/char/fsl_otp.c b/drivers/char/fsl_otp.c
+index abc147bd..9cda9afc 100644
+--- a/drivers/char/fsl_otp.c
++++ b/drivers/char/fsl_otp.c
+@@ -582,13 +582,17 @@ static int fsl_otp_probe(struct platform_device *pdev)
+ 	mutex_init(&otp_mutex);
+ 
+ 	/* set system serial from otp */
+-	if (fsl_otp->devtype == FSL_OTP_MX6SLL) {
++	if (fsl_otp->devtype == FSL_OTP_MX6SLL && !clk_prepare_enable(otp_clk)) {
++		/* The registers need the OCOTP clock, as everywhere else in this
++		 * driver: at power-on the gate happens to be open, after a stock
++		 * suspend it is not, and a read then stalls the bus. */
+ 		fsl_otp->set_otp_timing();
+ 		ret = otp_wait_busy(0);
+ 		if (!ret) {
+ 			system_serial_low = __raw_readl(otp_base + HW_OCOTP_CUST_N(1));
+ 			system_serial_high = __raw_readl(otp_base + HW_OCOTP_CUST_N(2));
+ 		}
++		clk_disable_unprepare(otp_clk);
+ 	}
+ 
+ 	return 0;
+-- 
+2.53.0
+
