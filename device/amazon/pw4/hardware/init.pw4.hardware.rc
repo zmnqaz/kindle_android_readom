@@ -1,0 +1,18 @@
+# PW4: installed as /vendor/etc/init/init.pw3.hardware.rc (pw4.mk).
+# Touch (gt9xx-ts) and the display driver are loaded by the handoff's first
+# process (boot/handoff-init/pw4-handoff-init.c); cfg80211 is built in.
+on post-fs-data
+    chown system system /sys/class/backlight/bl/brightness
+    chmod 0660 /sys/class/backlight/bl/brightness
+    chown system system /sys/class/backlight/bl/bl_power
+    chmod 0660 /sys/class/backlight/bl/bl_power
+
+# Wi-Fi: BCM43430 on SDIO (mmc0), as the stock system loads it
+# (/etc/sysconfig/platform_variables, wifim_START_CMD_wifi). The firmware and
+# its NVRAM are the device's own, put under /firmware/bcmdhd by the device
+# side; the driver downloads them while insmod runs (dhd_download_fw_on_driverload).
+on property:vendor.pw3.wifi.modules=load
+    insmod /vendor/lib/modules/bcmdhd.ko iface_name=wlan0 firmware_path=/firmware/bcmdhd/fw_bcmdhd_sr.bin nvram_path=/firmware/bcmdhd/nvram_wfo.txt
+
+on property:vendor.pw3.wifi.modules=unload
+    rmmod bcmdhd

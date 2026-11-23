@@ -43,6 +43,7 @@
 #include <sys/wait.h>
 #include <linux/fb.h>
 #include "start-picture.h"
+#include "pw4-usb-regs.h"
 
 #ifndef KERNEL_RELEASE
 #define KERNEL_RELEASE "4.1.15-lab126-pw4-android81+"
@@ -79,6 +80,8 @@ _Static_assert(sizeof(struct update) == 80, "Lab126 4.1 update ABI");
 #define TEMP_USE_AMBIENT 0x1000
 
 static int kmsgfd = -1, statusfd = -1;
+static struct pw4_usb_map usbmap;
+static int usbmapped;
 
 static double now(void)
 {
@@ -260,6 +263,46 @@ static int load_touch(void)
 	return e == 0 ? 0 : -1;
 }
 
+static void usb_log(const char *tag)
+{
+	char line[700];
+	if (!usbmapped) return;
+	pw4_usb_format(&usbmap, 1, line, sizeof(line));
+	P("USBREGS %s %s", tag, line);
+}
+
+/* Left running under Android: one line whenever the USB clock, PLL3 or the
+ * VBUS/charger detection changes, from mappings made before Android started,
+ * and never a controller register (those are behind a clock gate that the
+ * driver turns on and off). If plugging the cable freezes the machine again,
+ * the last line before the end of the log is the state it froze in. */
+static void usb_watch(void)
+{
+	static const uint32_t watched[] = { 0x020C4080, 0x020C8010, 0x020C8120, 0x020C81C0, 0x020C81D0, 0x020C81F0, 0x020C9030 };
+	uint32_t last[sizeof(watched) / sizeof(*watched)] = { 0 };
+	if (!usbmapped || fork() != 0) return;
+	setsid();
+	if (statusfd >= 0) close(statusfd);
+	statusfd = -1;
+	double end = now() + 1800;
+	unsigned lines = 0;
+	while (now() < end && lines < 400) {
+		int changed = 0;
+		for (size_t i = 0; i < sizeof(watched) / sizeof(*watched); i++) {
+			uint32_t v = 0;
+			if (!pw4_usb_read(&usbmap, watched[i], &v) && v != last[i]) { last[i] = v; changed = 1; }
+		}
+		if (changed) {
+			char line[700];
+			pw4_usb_format(&usbmap, 0, line, sizeof(line));
+			P("USBWATCH t=%.2f %s", now(), line);
+			lines++;
+		}
+		msleep(200);
+	}
+	_exit(0);
+}
+
 /* Everything that touches hardware; runs in a child so that it is bounded in time. */
 static int work(void)
 {
@@ -284,6 +327,8 @@ int main(int argc, char **argv, char **envp)
 	memset(&u, 0, sizeof(u));
 	uname(&u);
 	P("BEGIN release=%s uptime=%.2f mounts=%d%d%d", u.release, now(), mp, ms, md);
+	usbmapped = !pw4_usb_map(&usbmap);
+	usb_log("begin");
 
 	if (!strcmp(u.release, KERNEL_RELEASE) && mp && ms && md) {
 		pid_t child = fork();
@@ -306,6 +351,8 @@ int main(int argc, char **argv, char **envp)
 	static const char *const dirs[] = FIRMWARE_DIRS;
 	for (size_t i = 0; i < sizeof(dirs) / sizeof(*dirs); i++) rmdir(dirs[i]);
 
+	usb_log("handover");
+	usb_watch();
 	P("END uptime=%.2f handing over to %s", now(), REAL_ENTRY);
 	if (statusfd >= 0) { fsync(statusfd); close(statusfd); statusfd = -1; }
 	if (kmsgfd >= 0) { close(kmsgfd); kmsgfd = -1; }

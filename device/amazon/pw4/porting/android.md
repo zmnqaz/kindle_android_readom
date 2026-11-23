@@ -62,3 +62,17 @@ preinit 改名 `.real`（同 `boot/build_entry.py`），公开 initramfs 由 `pa
 插上 USB 线后整机卡死，日志在 108 s 无任何报错地中断（Lab126 缓冲没写满也没回绕）。Wi-Fi 还在按 PW3 加载 `ath6kl_sdio`。
 
 下一步：USB（插线卡死、FunctionFS adb）、Wi-Fi bcmdhd。
+
+**PW4 硬件组件（2026-11-23 晚，未上机）**：
+- USB：4.1 内核是 ChipIdea（`ci_hdrc.0`，内建）+ configfs gadget，不是 PW3 的 ARC + android_usb。`rootdir/init.pw4.usb.rc`
+  （装成 `/init.pw3.usb.rc`）按 AOSP `init.usb.configfs.rc` 写 adb/mtp/ptp，保留 Readom 的 `pw3-ffs-check` 门；
+  `hardware/init.pw4.usb.modules.rc` 在 post-fs 加载 `configfs`、`libcomposite`、`usb_f_fs`、`usb_f_mtp`。USB 序列号暂空。
+- Wi-Fi：`hardware/init.pw4.hardware.rc` 按原厂 `platform_variables` 的参数 `insmod bcmdhd.ko`，固件和 NVRAM 由设备那半
+  放到 `/firmware/bcmdhd/`（`make-device-archive.py`）；bcmdhd 在 insmod 时以 init 的身份自己读文件，`sepolicy/pw4_hardware.te`
+  允许 init 读 `pw3_private_firmware_file`。
+- 模块由 `stage-pw4-hardware.py` 从内核编译目录放到 `vendor/amazon/pw4-hardware`（不入库），`pw4.mk` 引用。
+- 插线卡死：同一份内核代码在原厂系统上不卡，USB 相关配置完全相同，差别只能是原厂休眠留下、新内核没重设的硬件状态。
+  `pw4-handoff-init` 在交接开始和交出前各记一次 USB 相关寄存器（时钟门、PLL3、模拟 USB1、PHY1、门开时的 OTG1/USBNC，
+  `boot/handoff-init/pw4-usb-regs.h`），并留一个进程在安卓下每 0.2 s 看 VBUS/时钟/PLL3，有变化就写一行进内核日志——
+  再卡死时日志最后一行就是卡住时的状态。原厂（无线、无 USB 线）读数：CCGR6=ffffff3c（usboh3 门关）、PLL_USB1=80003040、
+  REG_3P0=00010f74、USB1_VBUS_DET_STAT=1。

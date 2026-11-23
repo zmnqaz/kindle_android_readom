@@ -1,0 +1,14 @@
+# PW4: installed as /vendor/etc/init/init.pw3.usb.modules.rc (pw4.mk).
+# The ChipIdea controller is built into the 4.1 kernel; the configfs gadget,
+# FunctionFS and the kernel's MTP/PTP function are modules of the same build
+# (vendor/amazon/pw4-hardware, staged by porting/stage-pw4-hardware.py).
+# Loaded in one action at post-fs, before the framework starts.
+on init
+    setprop sys.pw3.usb.phase none
+
+on post-fs
+    insmod /vendor/lib/modules/configfs.ko
+    insmod /vendor/lib/modules/libcomposite.ko
+    insmod /vendor/lib/modules/usb_f_fs.ko
+    insmod /vendor/lib/modules/usb_f_mtp.ko
+    setprop sys.pw3.usb.phase configfs-loaded

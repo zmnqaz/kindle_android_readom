@@ -1,0 +1,5 @@
+# PW4: bcmdhd reads its firmware and NVRAM itself (filp_open), while init's
+# insmod runs, so in init's domain. They are the device's own files, under
+# /firmware like the PW3's private assets (device/amazon/pw3/sepolicy).
+allow init pw3_private_firmware_file:dir r_dir_perms;
+allow init pw3_private_firmware_file:file r_file_perms;
