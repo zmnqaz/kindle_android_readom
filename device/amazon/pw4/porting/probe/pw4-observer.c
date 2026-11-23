@@ -14,13 +14,42 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/ioctl.h>
+#include <dirent.h>
+#include <errno.h>
+#include <stdint.h>
+#include <stdlib.h>
 #include <sys/klog.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <sys/syscall.h>
+#include <linux/fb.h>
 #include <sys/mount.h>
 #include <sys/reboot.h>
 #include <sys/utsname.h>
 #include <unistd.h>
 
 static int kmsg = -1;
+
+/* ---- Lab126 framebuffer ABI (PW4 4.1.15 include/uapi/linux/mxcfb.h) ---- */
+struct mxcfb_rect { uint32_t top, left, width, height; };
+struct mxcfb_alt_buffer_data { uint32_t phys_addr, width, height; struct mxcfb_rect alt_update_region; };
+struct mxcfb_update_data {
+    struct mxcfb_rect update_region;
+    uint32_t waveform_mode, update_mode, update_marker;
+    int temp;
+    unsigned int flags;
+    int dither_mode, quant_bit;
+    struct mxcfb_alt_buffer_data alt_buffer_data;
+    uint32_t hist_bw_waveform_mode, hist_gray_waveform_mode;
+};
+struct mxcfb_update_marker_data { uint32_t update_marker, collision_test; };
+#define MXCFB_SET_AUTO_UPDATE_MODE _IOW('F', 0x2D, uint32_t)
+#define MXCFB_SEND_UPDATE _IOW('F', 0x2E, struct mxcfb_update_data)
+#define MXCFB_WAIT_FOR_UPDATE_COMPLETE _IOWR('F', 0x2F, struct mxcfb_update_marker_data)
+#define MXCFB_SET_UPDATE_SCHEME _IOW('F', 0x32, uint32_t)
+#define WAVEFORM_MODE_GC16 0x2
+#define UPDATE_MODE_FULL 0x1
+#define TEMP_USE_AMBIENT 0x1000
 
 static void say(const char *format, ...)
 {
@@ -48,6 +77,71 @@ static void dump(const char *tag, const char *path, const char *only, int max_li
         say("<4>PW4_OBSERVER %s: %s\n", tag, l);
         ++lines;
     }
+}
+
+/* The e-ink screen, as the stock system brings it up: the panel's own
+ * waveform from the FAT on mmcblk1p2 (mounted read-only), the EPDC driver
+ * loaded with its name, then one full GC16 update of a test picture. */
+static void screen(void)
+{
+    char name[256] = "", args[300];
+    DIR *d;
+    struct dirent *e;
+    mkdir("/mnt", 0755); mkdir("/mnt/wfm", 0755);
+    if (mount("/dev/mmcblk1p2", "/mnt/wfm", "vfat", MS_RDONLY, "") ) {
+        say("<4>PW4_OBSERVER epdc: mount mmcblk1p2 failed errno=%d\n", errno); return;
+    }
+    d = opendir("/mnt/wfm/waveform_to_use");
+    while (d && (e = readdir(d)))
+        if (strstr(e->d_name, ".wrf")) { snprintf(name, sizeof(name), "%s", e->d_name); break; }
+    if (d) closedir(d);
+    say("<4>PW4_OBSERVER epdc: waveform '%s'\n", name);
+    int fd = open("/mxc_epdc_v2_fb.ko", O_RDONLY);
+    struct stat st;
+    if (fd < 0 || fstat(fd, &st)) { say("<4>PW4_OBSERVER epdc: no module\n"); return; }
+    void *ko = malloc(st.st_size);
+    if (!ko || read(fd, ko, st.st_size) != st.st_size) { say("<4>PW4_OBSERVER epdc: read module failed\n"); return; }
+    close(fd);
+    snprintf(args, sizeof(args), "waveform=%s", name);
+    long rc = syscall(SYS_init_module, ko, (unsigned long)st.st_size, args);
+    say("<4>PW4_OBSERVER epdc: init_module rc=%ld errno=%d\n", rc, rc ? errno : 0);
+    free(ko);
+    int fb = -1;
+    for (int i = 0; i < 100 && fb < 0; ++i) { fb = open("/dev/fb0", O_RDWR); if (fb < 0) usleep(100000); }
+    if (fb < 0) { say("<4>PW4_OBSERVER epdc: no /dev/fb0\n"); return; }
+    struct fb_var_screeninfo v; struct fb_fix_screeninfo f;
+    if (ioctl(fb, FBIOGET_VSCREENINFO, &v) || ioctl(fb, FBIOGET_FSCREENINFO, &f)) { say("<4>PW4_OBSERVER epdc: fb info failed\n"); return; }
+    say("<4>PW4_OBSERVER epdc: fb %s %ux%u virt %ux%u bpp %u gray %u rotate %u line %u smem %u\n", f.id,
+        v.xres, v.yres, v.xres_virtual, v.yres_virtual, v.bits_per_pixel, v.grayscale, v.rotate, f.line_length, f.smem_len);
+    uint8_t *p = mmap(NULL, f.smem_len, PROT_READ | PROT_WRITE, MAP_SHARED, fb, 0);
+    if (p == MAP_FAILED || v.bits_per_pixel != 8) { say("<4>PW4_OBSERVER epdc: mmap or bpp unsupported\n"); return; }
+    uint8_t *base = p + (size_t)v.yoffset * f.line_length;
+    /* White page, black frame, 16 gray steps, a checkerboard: plainly a test. */
+    for (uint32_t y = 0; y < v.yres; ++y) {
+        uint8_t *row = base + (size_t)y * f.line_length;
+        for (uint32_t x = 0; x < v.xres; ++x) {
+            uint8_t c = 0xff;
+            if (x < 24 || y < 24 || x >= v.xres - 24 || y >= v.yres - 24) c = 0x00;
+            else if (y > v.yres / 4 && y < v.yres / 4 + 120) c = (uint8_t)(((x - 24) * 16 / (v.xres - 48)) * 17);
+            else if (y > v.yres / 2 && y < v.yres / 2 + 400 && x > v.xres / 4 && x < v.xres * 3 / 4)
+                c = (((x / 50) + (y / 50)) & 1) ? 0x00 : 0xff;
+            row[x] = c;
+        }
+    }
+    uint32_t mode = 0;
+    ioctl(fb, MXCFB_SET_AUTO_UPDATE_MODE, &mode);
+    mode = 2; ioctl(fb, MXCFB_SET_UPDATE_SCHEME, &mode);
+    ioctl(fb, FBIOBLANK, FB_BLANK_UNBLANK);
+    struct mxcfb_update_data u;
+    memset(&u, 0, sizeof(u));
+    u.update_region.width = v.xres; u.update_region.height = v.yres;
+    u.waveform_mode = u.hist_bw_waveform_mode = u.hist_gray_waveform_mode = WAVEFORM_MODE_GC16;
+    u.update_mode = UPDATE_MODE_FULL; u.update_marker = 1; u.temp = TEMP_USE_AMBIENT;
+    int r = ioctl(fb, MXCFB_SEND_UPDATE, &u), err = r ? errno : 0;
+    struct mxcfb_update_marker_data m = { 1, 0 };
+    int w = ioctl(fb, MXCFB_WAIT_FOR_UPDATE_COMPLETE, &m);
+    say("<4>PW4_OBSERVER epdc: send_update rc=%d errno=%d wait rc=%d errno=%d\n", r, err, w, w ? errno : 0);
+    sleep(6);   /* long enough to be seen */
 }
 
 int main(void)
@@ -100,6 +194,7 @@ int main(void)
         }
     }
     dump("parts", "/proc/partitions", "mmcblk", 20);
+    screen();
     dump("mmc1", "/sys/kernel/debug/mmc1/ios", NULL, 12);
     say("<4>PW4_OBSERVER done; rebooting in 8 seconds\n");
     sleep(8);
