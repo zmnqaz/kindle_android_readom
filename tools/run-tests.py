@@ -153,6 +153,8 @@ TESTS = [
     ('adbd-functions', 'python', ['tools/kernel-hardware/tests/test_adbd.py'], False),
     ('allocation-ranges', 'c', ['-Iboot/handoff', 'boot/handoff/tests/test-allocation-ranges.c',
                                 'boot/handoff/pw3_plan.c'], False),
+    ('allocation-ranges-fdt', 'c', ['-Iboot/handoff', 'boot/handoff/tests/test-allocation-ranges-fdt.c',
+                                    'boot/handoff/pw3_plan.c'], False),
     ('device-data', 'c', ['boot/devicedata/tests/devicedata_test.c',
                           'boot/devicedata/devicedata.c', 'boot/handoff/pw3_plan.c'], False),
     ('user-log', 'c', ['boot/launcher/tests/userlog_test.c', 'boot/launcher/userlog.c'], False),

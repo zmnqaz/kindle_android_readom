@@ -1,0 +1,31 @@
+{
+  "description": "Kindle Paperwhite 4 (10th generation, i.MX6SLL, device tree) on stock firmware 5.18.1.1.1: the stock kernel the handoff module loads into, and the physical plan of the jump. DRAFT: not run on a device; the stock function hashes are read from a device before the first load",
+  "supported_zh": "Kindle Paperwhite 4（第 10 代，2018 年款），固件 5.18.1.1.1",
+  "supported_en": "Kindle Paperwhite (10th generation, 2018), firmware 5.18.1.1.1",
+  "module_profile": 3,
+  "compatible": "fsl,imx6sll",
+  "compatible_why": "a device-tree boot has no machine number (__machine_arch_type is ~0); the SoC compatible is what the stock tree's root node and the next kernel's DT_MACHINE_START both name",
+  "boot_ram_base": "0x80000000",
+  "identity_limit": "0xa0000000",
+  "identity_limit_why": "2G/2G: PAGE_OFFSET == PHYS_OFFSET == 0x80000000, so the kernel's lowmem is one to one up to the end of the 512 MiB of RAM; the private table clears only the user half below the module area (0x7f000000) and copies the rest (handoff/private-table.h)",
+  "cmdline_base": "console=ttymxc0,115200 consoleblank=0 quiet panic=5 log_pos_goal=0x9be00000",
+  "cmdline_base_why": "DRAFT. The stock command line without root=, rootwait and the secure-boot androidboot flags; panic=5 because the only log channel without a serial console is the Lab126 printk buffer at 0x9be00000, which survives a reboot the kernel does itself and not one forced with the power key (kernel/README.md section 6b)",
+  "stock_kernel_release": "4.1.15-lab126",
+  "stock_kernel_version": "#1 SMP PREEMPT Thu May 21 05:14:34 UTC 2026",
+  "midr": "0x414fc091",
+  "midr_why": "Cortex-A9 r4p1, from the device's /proc/cpuinfo (implementer 0x41, variant 0x4, part 0xc09, revision 1)",
+  "prrr": "0xff0a81a8",
+  "nmrr": "0x40e040e0",
+  "prrr_nmrr_why": "the values 4.1's proc-v7-2level.S writes; a PROBE on the device reports cpu_profile_valid=0 if they differ",
+  "ram": [["0x80000000", "0x20000000"]],
+  "forbidden": [["0x88000000", "0x18000000"]],
+  "forbidden_why": "destinations stay in the low 128 MiB; above it are the EPDC reservation (0x9b000000, 3 MiB), the printk buffer (0x9be00000) and the Falcon BIOS (0x9ffc0000-0x9fff0000), which the next kernel needs as the stock one left them",
+  "device_archive_max": 12582912,
+  "footprint_profile": "pw4",
+  "stock_functions": {
+    "pm_test_show": {"bytes": 116, "sha256": ""},
+    "l2c210_flush_all": {"bytes": 96, "sha256": ""},
+    "l2c310_disable": {"bytes": 40, "sha256": ""}
+  },
+  "stock_functions_source": "sizes: distance to the next text symbol in the device's /proc/kallsyms (80069564, 800229b8, 80021cec); hashes: to be computed from the device's own memory (probe 2 dumps), not from a rebuild, whose code differs"
+}

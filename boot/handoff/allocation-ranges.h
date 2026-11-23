@@ -2,12 +2,20 @@
 #ifndef PWS_ALLOCATION_RANGES_H
 #define PWS_ALLOCATION_RANGES_H
 #include "pw3_plan.h"
+/* Device-tree profiles (private-table.h) put the boot blob in the MiB below
+ * the initramfs; that MiB is then a fourth range nothing may be taken from. */
+#if defined(PWS_FDT_BOOT) && PWS_FDT_BOOT
+#define PWS_FDT_OFFSET (63u*1024u*1024u)
+#define PWS_RESERVED_RANGES 4
+#else
+#define PWS_RESERVED_RANGES 3
+#endif
 /* Exclude every byte the pinned decompressor or copy destinations may write.
  * Physical pages still come exclusively from the live kernel allocator. */
 static int pws_allocation_allowed(pw_u32 base,pw_u32 footprint_end,
         pw_u32 kernel_bytes,pw_u32 initrd_bytes,pw_u32 address,pw_u32 bytes)
 {
-    struct pw_range candidate={address,bytes},reserved[3];
+    struct pw_range candidate={address,bytes},reserved[PWS_RESERVED_RANGES];
     pw_u64 ram_end=(pw_u64)base+512u*1024u*1024u;
     unsigned int i;
     if((base!=0x80000000u && base!=0x60000000u) || !bytes ||
@@ -21,8 +29,11 @@ static int pws_allocation_allowed(pw_u32 base,pw_u32 footprint_end,
     reserved[0].start=base;reserved[0].size=footprint_end-base;
     reserved[1].start=base+0x8000u;reserved[1].size=(kernel_bytes+4095u)&~4095u;
     reserved[2].start=base+64u*1024u*1024u;reserved[2].size=(initrd_bytes+4095u)&~4095u;
+#if PWS_RESERVED_RANGES == 4
+    reserved[3].start=base+PWS_FDT_OFFSET;reserved[3].size=1024u*1024u;
+#endif
     if(!pw_range_valid(candidate))return 0;
-    for(i=0;i<3;i++)if(!pw_range_valid(reserved[i]) || pw_ranges_overlap(candidate,reserved[i]))return 0;
+    for(i=0;i<PWS_RESERVED_RANGES;i++)if(!pw_range_valid(reserved[i]) || pw_ranges_overlap(candidate,reserved[i]))return 0;
     return 1;
 }
 /* How many pages pws_allocation_allowed() can refuse, at most: the three
@@ -39,6 +50,10 @@ static pw_u32 pws_excluded_page_limit(pw_u32 base,pw_u32 footprint_end,
     if(footprint_end<=base || kernel_bytes>8u*1024u*1024u ||
        initrd_bytes>40u*1024u*1024u)return 0;
     return (footprint_end-base)/4096u + ((kernel_bytes+4095u)&~4095u)/4096u +
-           ((initrd_bytes+4095u)&~4095u)/4096u;
+           ((initrd_bytes+4095u)&~4095u)/4096u
+#if PWS_RESERVED_RANGES == 4
+           + 256u
+#endif
+           ;
 }
 #endif

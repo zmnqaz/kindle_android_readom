@@ -24,17 +24,23 @@
 #include "sha256.h"
 #include "pw3_plan.h"
 #include "identity-attrs.h"
+#include "private-table.h"
 #include "allocation-ranges.h"
 #include "target-lock.h"
+#if PWS_FDT_BOOT
+#include "pw4_fdt.h"
+#endif
 
 #ifndef PWS_PROFILE
 #define PWS_PROFILE 0
 #endif
-#if PWS_PROFILE < 0 || PWS_PROFILE > 2
-#error "PWS_PROFILE: 0 = insertion disabled, 1 = pinned stock, 2 = virtual test"
+#if PWS_PROFILE < 0 || PWS_PROFILE > 4
+#error "PWS_PROFILE: 0 = insertion disabled, 1 = pinned stock, 2 = virtual test, 3 = pinned PW4 stock, 4 = PW4 virtual test"
 #endif
-#if !defined(CONFIG_ARM) || defined(CONFIG_SMP) || PAGE_SHIFT != 12
-#error "Only UP ARM32 with 4 KiB pages is supported"
+/* The PW4 kernel is SMP (SMP_ON_UP) on a one-core SoC; stage_init() and the
+ * suspend callback require that one CPU is all there is. */
+#if !defined(CONFIG_ARM) || (defined(CONFIG_SMP) && !PWS_FDT_BOOT) || PAGE_SHIFT != 12
+#error "Only one-CPU ARM32 with 4 KiB pages is supported"
 #endif
 #define MAX_PAYLOAD_PAGES ((48u*1024u*1024u)/PAGE_SIZE)
 /* A source page that lies where the copy or the decompressor will write is set
@@ -56,7 +62,8 @@
  * 64 MiB, a kernel of 8 MiB and an initramfs of 40 MiB, the limits
  * allocation-ranges.h enforces), and bounds the array; begin() asks
  * pws_excluded_page_limit() for the real limit of this payload. */
-#define MAX_COLLISIONS_CEILING (((64u+8u+40u)*1024u*1024u)/PAGE_SIZE)
+/* Plus the blob MiB on the device-tree profiles (allocation-ranges.h). */
+#define MAX_COLLISIONS_CEILING (((64u+8u+40u+1u)*1024u*1024u)/PAGE_SIZE)
 #define MAX_WRITE (64u*1024u)
 #define LIST_WORDS (PAGE_SIZE/sizeof(u32))
 /* The 1 MiB sections the private page table owns. Below this the table is
@@ -71,7 +78,13 @@
  * to one, so the two numbers are one fact. Spelling it a second time is how a
  * port to a machine with another split gets a table that does not match the
  * plan it was checked against, with nothing to say so. */
+#if PWS_FDT_BOOT
+/* 2G/2G: the cleared part is the user half, below the module area; the plan's
+ * identity_limit is the end of lowmem, which the kernel maps one to one. */
+#define IDENTITY_SECTIONS PRIVATE_COPY_FROM
+#else
 #define IDENTITY_SECTIONS (TARGET_IDENTITY_LIMIT>>20)
+#endif
 struct allocation { struct page *page; unsigned int order; };
 struct slot { unsigned int bytes, written, first, pages; u8 expected[32]; };
 struct store {
@@ -99,7 +112,7 @@ module_param(allocation_failure_order,ulong,0444);
 module_param(allocation_failure_accepted,ulong,0444);
 module_param(allocation_failure_rejected,ulong,0444);
 module_param(allocation_failure_limit,ulong,0444);
-#if PWS_PROFILE == 2
+#if PWS_PROFILE == 2 || PWS_PROFILE == 4
 static int fail_alloc_after=-1;
 module_param(fail_alloc_after,int,0600);
 static int plan_fault;
@@ -146,7 +159,7 @@ static int allocate_owned(struct store *s,unsigned int order)
          * that a destination range which grew without this growing with it
          * stops here instead of looping. */
         if(s->collisions==s->collision_limit)return allocation_failure(s,order,1);
-        #if PWS_PROFILE == 2
+        #if PWS_PROFILE == 2 || PWS_PROFILE == 4
         if(fail_alloc_after==0)return allocation_failure(s,order,4);
         if(fail_alloc_after>0)--fail_alloc_after;
 #endif
@@ -181,7 +194,11 @@ static int begin(struct store *s,void __user *arg)
     if(copy_from_user(&b,arg,sizeof(b)))return -EFAULT;
     if(b.version!=PWS_VERSION || b.reserved)return -EINVAL;
     if(b.images[0].bytes<48 || b.images[0].bytes>8u*1024u*1024u ||
+#if PWS_FDT_BOOT
+       b.images[1].bytes<40 || b.images[1].bytes>PW_FDT_CAP || (b.images[1].bytes&3) ||
+#else
        b.images[1].bytes<16 || b.images[1].bytes>4096 || (b.images[1].bytes&3) ||
+#endif
        !b.images[2].bytes || b.images[2].bytes>40u*1024u*1024u)return -EINVAL;
     for(i=0;i<PWS_SLOTS;++i)pages+=DIV_ROUND_UP(b.images[i].bytes,PAGE_SIZE);
     if(pages>MAX_PAYLOAD_PAGES)return -E2BIG;
@@ -252,7 +269,12 @@ static int put(struct store *s,void __user *arg)
 /* Fixed payload destinations are excluded individually by the allocation policy. */
 static u32 destination(unsigned int slot)
 {
+#if PWS_FDT_BOOT
+    /* The blob goes in the MiB below the initramfs (PWS_FDT_OFFSET). */
+    static const u32 offset[PWS_SLOTS]={0x8000u,PWS_FDT_OFFSET,64u*1024u*1024u};
+#else
     static const u32 offset[PWS_SLOTS]={0x8000u,0x1000u,64u*1024u*1024u};
+#endif
     return (u32)PHYS_OFFSET+offset[slot];
 }
 static u8 slot_byte(struct store *s,unsigned int slot,unsigned int offset)
@@ -270,32 +292,63 @@ static int device_archive_follows(struct store *s)
     for(i=0;i<6;++i)if(slot_byte(s,2,start+i)!=(u8)"070701"[i])return 0;
     return 1;
 }
-/* The ATAGs name what the build fixed (tags, command line) and the plan: the
- * kernel, ATAGs and initramfs at their destinations, inside the RAM the tags
- * describe, clear of the boot footprint and the forbidden ranges. */
+/* The ATAGs (the device tree on PW4) name what the build fixed (tags,
+ * command line) and the plan: the kernel, boot data and initramfs at their
+ * destinations, inside the RAM they describe, clear of the boot footprint and
+ * the forbidden ranges. */
+static void fill_plan(struct store *s,struct pw_plan *plan)
+{
+    unsigned int i;
+    memset(plan,0,sizeof(*plan));
+#if PWS_FDT_BOOT
+    plan->entry=destination(0);plan->machine_id=plan->expected_machine_id=0xffffffffu;
+#else
+    plan->entry=destination(0);plan->machine_id=plan->expected_machine_id=TARGET_MACHINE;
+#endif
+    plan->boot_ram_base=PHYS_OFFSET;plan->identity_limit=TARGET_IDENTITY_LIMIT;
+    plan->ram_count=ARRAY_SIZE(target_ram);plan->forbidden_count=ARRAY_SIZE(target_forbidden);
+    plan->footprint_count=ARRAY_SIZE(target_footprint);plan->segment_count=PWS_SLOTS;
+    for(i=0;i<plan->ram_count;++i)plan->ram[i]=target_ram[i];
+    for(i=0;i<plan->forbidden_count;++i)plan->forbidden[i]=target_forbidden[i];
+    for(i=0;i<plan->footprint_count;++i)plan->footprint[i]=target_footprint[i];
+    for(i=0;i<PWS_SLOTS;++i) {
+        plan->segments[i].kind=i==0?PW_ZIMAGE:i==1?PW_ATAGS:PW_INITRAMFS;
+        plan->segments[i].destination.start=destination(i);
+        plan->segments[i].destination.size=s->slot[i].pages*PAGE_SIZE;
+        plan->segments[i].buffer_bytes=s->slot[i].bytes;
+    }
+}
+#if PWS_FDT_BOOT
+static int device_atags_valid(struct store *s)
+{
+    struct pw_plan *plan;
+    const u8 *kernel=page_address(s->allocations[s->slot[0].first].page);
+    u8 *blob;
+    unsigned int i;
+    int ok;
+    /* The blob spans separately allocated pages: check one contiguous copy
+     * of exactly the bytes the transition will lay down. */
+    plan=kmalloc(sizeof(*plan),GFP_KERNEL);
+    blob=vmalloc(s->slot[1].pages*PAGE_SIZE);
+    if(!plan || !blob){kfree(plan);vfree(blob);return 0;}
+    for(i=0;i<s->slot[1].pages;++i)
+        memcpy(blob+i*PAGE_SIZE,page_address(s->allocations[s->slot[1].first+i].page),PAGE_SIZE);
+    fill_plan(s,plan);
+    ok=pw_plan_validate_fdt(plan,blob,s->slot[1].bytes,target_cmdline,kernel,s->slot[0].bytes)==PW_VALID_DATA_ONLY;
+    vfree(blob);kfree(plan);
+    return ok;
+}
+#else
 static int device_atags_valid(struct store *s)
 {
     struct pw_plan plan;
     const u8 *atags=page_address(s->allocations[s->slot[1].first].page);
     const u8 *kernel=page_address(s->allocations[s->slot[0].first].page);
-    unsigned int i;
     if(pw_atags_check(atags,s->slot[1].bytes,target_atag_kinds,ARRAY_SIZE(target_atag_kinds),target_cmdline))return 0;
-    memset(&plan,0,sizeof(plan));
-    plan.entry=destination(0);plan.machine_id=plan.expected_machine_id=TARGET_MACHINE;
-    plan.boot_ram_base=PHYS_OFFSET;plan.identity_limit=TARGET_IDENTITY_LIMIT;
-    plan.ram_count=ARRAY_SIZE(target_ram);plan.forbidden_count=ARRAY_SIZE(target_forbidden);
-    plan.footprint_count=ARRAY_SIZE(target_footprint);plan.segment_count=PWS_SLOTS;
-    for(i=0;i<plan.ram_count;++i)plan.ram[i]=target_ram[i];
-    for(i=0;i<plan.forbidden_count;++i)plan.forbidden[i]=target_forbidden[i];
-    for(i=0;i<plan.footprint_count;++i)plan.footprint[i]=target_footprint[i];
-    for(i=0;i<PWS_SLOTS;++i) {
-        plan.segments[i].kind=i==0?PW_ZIMAGE:i==1?PW_ATAGS:PW_INITRAMFS;
-        plan.segments[i].destination.start=destination(i);
-        plan.segments[i].destination.size=s->slot[i].pages*PAGE_SIZE;
-        plan.segments[i].buffer_bytes=s->slot[i].bytes;
-    }
+    fill_plan(s,&plan);
     return pw_plan_validate(&plan,atags,s->slot[1].bytes,kernel,s->slot[0].bytes)==PW_VALID_DATA_ONLY;
 }
+#endif
 static int seal(struct store *s)
 {
     unsigned int i,j;
@@ -365,6 +418,11 @@ static int audit_plan(struct store *s)
         u32 expected=i==(owned_phys(s,s->control_first)>>20)?(i<<20|PW3_IDENTITY_SECTION):0;
         if(table[i]!=expected)return -EUCLEAN;
     }
+#if PWS_FDT_BOOT
+    /* Here the control section lies above the cleared part, in lowmem. */
+    i=owned_phys(s,s->control_first)>>20;
+    if(i<IDENTITY_SECTIONS || table[i]!=(i<<20|PW3_IDENTITY_SECTION))return -EUCLEAN;
+#endif
     for(i=0;i<PWS_SLOTS+1;++i) {
         unsigned int n=i<PWS_SLOTS?s->slot[i].pages+1:1;
         for(j=0;j<n;++j) {
@@ -408,24 +466,25 @@ static int prepare(struct store *s)
     __asm__ volatile("mrc p15,0,%0,c2,c0,0":"=r"(ttbr));
     __asm__ volatile("mrc p15,0,%0,c2,c0,2":"=r"(ttbcr));
     pa=ttbr&~16383u;
-    if(ttbcr || ((ttbr&0x3fff)!=0 && (ttbr&0x3fff)!=0x59) ||
+    if(ttbcr || !pws_ttbr_flags_ok(ttbr) ||
        pa<(u32)PHYS_OFFSET || pa>(u32)PHYS_OFFSET+512u*1024u*1024u-16384u ||
        !pfn_valid(pa>>PAGE_SHIFT) || !pfn_valid((pa+16383)>>PAGE_SHIFT)) {
         preempt_enable();rc=-EOPNOTSUPP;goto fail;
     }
     current_pgd=phys_to_virt(pa);
     for(i=0;i<IDENTITY_SECTIONS;++i)pgd[i]=0;
-    pgd[owned_phys(s,s->control_first)>>20]=(owned_phys(s,s->control_first)&0xfff00000u)|PW3_IDENTITY_SECTION;
     for(;i<4096;++i)pgd[i]=current_pgd[i];
-#if PWS_PROFILE == 2
+    /* After the copy: on PW4 the control section is inside the copied part. */
+    pgd[owned_phys(s,s->control_first)>>20]=(owned_phys(s,s->control_first)&0xfff00000u)|PW3_IDENTITY_SECTION;
+#if PWS_PROFILE == 2 || PWS_PROFILE == 4
     if(plan_fault==4)pgd[0xc00]^=1;
     if(plan_fault==5)pgd[0x600]^=4;
 #endif
     for(i=IDENTITY_SECTIONS;i<4096;++i)
-        if(pgd[i]!=current_pgd[i])break;
+        if(i!=(owned_phys(s,s->control_first)>>20) && pgd[i]!=current_pgd[i])break;
     preempt_enable();
     if(i!=4096){rc=-EUCLEAN;goto fail;}
-#if PWS_PROFILE == 2
+#if PWS_PROFILE == 2 || PWS_PROFILE == 4
     if(plan_fault==1)list_page(s,0)[1]^=PAGE_SIZE;
     if(plan_fault==2 && s->list_pages>1)list_page(s,0)[LIST_WORDS-1]^=PAGE_SIZE;
     if(plan_fault==3)list_page(s,0)[0]=4;
@@ -436,7 +495,11 @@ fail:
     discard(s);return rc;
 }
 
+#if PWS_FDT_BOOT
+#include "native-handoff-pw4.h"
+#else
 #include "native-handoff.h"
+#endif
 
 static long stage_ioctl(struct file *file,unsigned int command,unsigned long arg)
 {
@@ -526,7 +589,17 @@ static int __init stage_init(void)
      * keep a second region, not a wider profile number -- and it should find
      * that out from this line rather than from a device that stops booting.
      * docs/design/porting-to-other-models.md section 6 says what it costs. */
+#if PWS_FDT_BOOT
+    /* The 2G/2G arrangement this relies on, checked rather than assumed:
+     * lowmem one to one up to the plan's bound, the module area just below
+     * it and above the cleared half. */
+    BUILD_BUG_ON(PRIVATE_COPY_FROM<<20 != (unsigned int)MODULES_VADDR);
+    BUILD_BUG_ON(TARGET_IDENTITY_LIMIT<=(unsigned int)PAGE_OFFSET);
+    if(PHYS_OFFSET!=PAGE_OFFSET || PHYS_OFFSET!=0x80000000 ||
+       (unsigned long)high_memory<TARGET_IDENTITY_LIMIT || num_possible_cpus()!=1)return -ENOEXEC;
+#else
     BUILD_BUG_ON(TARGET_IDENTITY_LIMIT>(unsigned int)MODULES_VADDR);
+#endif
     if(!PWS_PROFILE)return -EOPNOTSUPP;
 #if PWS_PROFILE == 1
     if(strcmp(u->release,"3.0.35-lab126") ||
@@ -534,6 +607,11 @@ static int __init stage_init(void)
        strcmp(u->machine,"armv7l") || PHYS_OFFSET!=0x80000000)return -ENOEXEC;
 #elif PWS_PROFILE == 2
     if(!strstr(u->release,"-pw3-core-smoke") || PHYS_OFFSET!=0x60000000)return -ENOEXEC;
+#elif PWS_PROFILE == 3
+    if(strcmp(u->release,TARGET_UNAME_RELEASE) || strcmp(u->version,TARGET_UNAME_VERSION) ||
+       strcmp(u->machine,"armv7l"))return -ENOEXEC;
+#elif PWS_PROFILE == 4
+    if(!strstr(u->release,"-pw4-loader-smoke"))return -ENOEXEC;
 #else
     (void)u;
 #endif
