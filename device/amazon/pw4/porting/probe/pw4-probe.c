@@ -210,8 +210,10 @@ int main(int argc, char **argv)
             n.usb[i].id, n.usb[i].cap, n.usb[i].dciversion, n.usb[i].dccparams, n.usb[i].command,
             n.usb[i].status, n.usb[i].mode, n.usb[i].prime, n.usb[i].flush, n.usb[i].endpoints);
     if (!read_text("/sys/module/pw3_first_kernel/parameters/probe_raw", text, sizeof(text)))
-        say("raw midr,sctlr,ttbr0_attr,ttbcr,prrr,nmrr,dacr,cpsr,ccgr0..6,actlr = %s", text);
-    say("RESULT %s\n", !rc && !n.callback_rejected && !n.backend_result && n.cpu_profile_valid ? "PROBE_OK" : "PROBE_REFUSED_OR_FAILED");
+        say("raw midr,sctlr,ttbr0_attr,ttbcr,prrr,nmrr,dacr,cpsr,ccgr0..6,actlr,usdhc1_pres_state,usdhc1_read = %s", text);
+    /* The module's own verdict: would it let a commit through? */
+    int ready = !read_text("/sys/module/pw3_first_kernel/parameters/probe_ready", text, sizeof(text)) && !strcmp(text, "1\n");
+    say("RESULT %s\n", rc ? "PROBE_FAILED" : ready ? "READY (the module would allow the jump)" : "REFUSED (the module would not allow the jump)");
     cleanup();
     dd_free(&tree);
     fclose(report);

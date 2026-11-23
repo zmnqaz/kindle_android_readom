@@ -61,7 +61,12 @@ PW3 的 profile 1、2 走原来的分支，行为不变：原有宿主机测试�
      缓存（bit 22-23），按实测把"空闲"定为无任务、无活动
    - 拒绝 3：uSDHC1 门开着——它接 Wi-Fi（`2190000.usdhc`），bcmdhd 加载时挂起中保持供电。规则不放宽，启动器先关 Wi-Fi
    - USB 门关（拔线）；eMMC 所在 uSDHC2、EPDC、PXP、SDMA 等全部关
-   - 下一轮：关 Wi-Fi 再跑，期望 `PROBE_OK`
+   - 第二轮（关 Wi-Fi）：CPU、DCP 放行；仍有两个门开着——`usboh3`（两个 OTG 控制器 ID `0xe4a1fa05`、
+     run/stop 清零、无端点工作）和 uSDHC1（Wi-Fi 驱动已卸载，门仍开）。试运行程序当时打印的 `PROBE_OK`
+     判据比模块宽，模块自己的结论是不放行；已改为直接报告模块的 `probe_ready`
+   - 补上 PW4 的 USB 空闲判据（锁定实测修订号，要求停止、无端点工作）和 uSDHC1 空闲判据（门开时读
+     `PRES_STATE`，命令/数据线、读写传输都不活动）；QEMU 回归通过
+   - 第三轮：同样关 Wi-Fi，期望模块给出 `READY`
    原计划：（会跑一次真实的 `pm_test=core` 挂起，先征得同意）：确认 PRRR/NMRR/MIDR、
    挂起后各门控的实际状态、USB 控制器寄存器，再据此锁定 USB 空闲判据。
 6. 跳转之后：新内核要能自己重启（`panic=5`），日志写进 `0x9be00000`，回原厂系统读 `/proc/printkbuf`。

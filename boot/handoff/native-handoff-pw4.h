@@ -44,8 +44,12 @@ static int native_commit;
 /* What the last suspend callback read, raw, for pinning the profile from a
  * device PROBE: midr sctlr ttbr0 ttbcr prrr nmrr dacr cpsr ccgr0..6 actlr.
  * Registers only; no addresses of this kernel's data. */
-static unsigned int probe_raw[16];
-static int probe_raw_count=16;
+static unsigned int probe_raw[18];
+static int probe_raw_count=18;
+/* Whether the last PROBE left the store ready to commit: the module's own
+ * verdict, so a caller does not have to restate the rules to report it. */
+static int probe_ready;
+module_param(probe_ready,int,0444);
 module_param_array(probe_raw,uint,&probe_raw_count,0444);
 #ifdef PWS_PROBE_ONLY
 /* A module built to look, not to jump: the commit path is not compiled in. */
@@ -57,7 +61,7 @@ module_param_named(probe_only,*(int *)&probe_only,int,0444);
 /* 4.1 does not export pm_mutex (3.0 did); kallsyms names it. */
 static struct mutex *native_pm_mutex;
 #if PWS_PROFILE == 3
-static void __iomem *native_ccm,*native_dcp,*native_usb;
+static void __iomem *native_ccm,*native_dcp,*native_usb,*native_usdhc1;
 static ssize_t (*native_show_pm_test)(struct kobject *,struct kobj_attribute *,char *);
 static int native_mode_core(void)
 {
@@ -86,10 +90,33 @@ extern void sim_flush_cache_all(void);
  * core and the set/way walk in cache-ops.S reaches it. */
 static void native_no_outer(void){}
 #endif
+/* The i.MX6SLL's two ChipIdea OTG controllers, as the second device PROBE
+ * read them in the suspend callback (2026-11-23): ID 0xe4a1fa05, HCCPARAMS-
+ * like CAP 0x01000040, DCIVERSION 1, DCCPARAMS 0x188; USBCMD run/stop clear
+ * on both, nothing primed, flushing or enabled. Idle is that: the same
+ * revision, stopped, and no endpoint with work. The mode (device, or not yet
+ * set) is not a DMA question once the controller is stopped. */
 static int pws4_usb_idle(const struct pws_native_report *r)
 {
-    (void)r;
-    return 0;   /* no controller revision pinned for the i.MX6SLL yet */
+    unsigned int i;
+    if(r->usb_sampled!=1)return 0;
+    for(i=0;i<2;i++){
+        if(r->usb[i].id!=0xe4a1fa05u || r->usb[i].cap!=0x01000040u ||
+           r->usb[i].dciversion!=1 || r->usb[i].dccparams!=0x188u ||
+           (r->usb[i].command&1u) || r->usb[i].prime || r->usb[i].flush || r->usb[i].endpoints)return 0;
+        if((r->usb[i].mode&3u)!=0 && (r->usb[i].mode&3u)!=2)return 0;
+    }
+    return 1;
+}
+/* uSDHC1 is the Wi-Fi's SDIO host. Both device PROBEs found its CCM gate
+ * open in the suspend callback, with and without the Wi-Fi driver loaded.
+ * Its PRES_STATE (probe_raw[16]) says whether a command or data transfer is
+ * in progress -- CIHB, CDIHB, DLA, WTA, RTA -- and with none there is no
+ * ADMA either. Read only when its gate is open. */
+#define PW4_USDHC1_GATE 10
+static int pws4_usdhc1_idle(const struct pws_native_report *r)
+{
+    return r->gate[PW4_USDHC1_GATE] && probe_raw[17]==1 && !(probe_raw[16]&0x307u);
 }
 /* The PW4's DCP is not stopped the way PW3's was: the first device PROBE
  * (2026-11-23) read CTRL 0x30c0000f -- present, context caching and switching
@@ -111,7 +138,7 @@ static int pws4_dcp_idle(const struct pws_native_report *r)
 static int pws4_engine_fields_ok(const struct pws_native_report *r)
 {
     unsigned int i;
-    for(i=0;i<PWS_GATE_COUNT;i++)if(i!=9 && r->gate[i])return 0;
+    for(i=0;i<PWS_GATE_COUNT;i++)if(i!=9 && r->gate[i] && !(i==PW4_USDHC1_GATE && pws4_usdhc1_idle(r)))return 0;
     if(r->gate[9] && !pws4_usb_idle(r))return 0;
     return pws4_dcp_idle(r);
 }
@@ -187,6 +214,8 @@ static int native_sample(void)
             for(i=0;i<4;i++)native_report.dcp_sema[i]=(readl(native_dcp+0x110+i*0x40)>>16)&0xffu;
         }
     }
+    probe_raw[16]=0;probe_raw[17]=0;
+    if((ccgr[6]>>2)&3u){probe_raw[16]=readl(native_usdhc1+0x24);probe_raw[17]=1;}
     /* Both OTG controllers share the gate. Never enable a clock to look. */
     if(ccgr[6]&3u){
         native_report.usb_sampled=1;
@@ -265,6 +294,7 @@ static int native_cycle(struct store *s,int commit)
     native_report.pm_called=1;rc=pm_suspend(PM_SUSPEND_MEM);
     native_active=NULL;native_owner=NULL;native_report.pm_result=rc;native_report.returned_to_caller=1;
     if(!commit && !rc && native_report.suspend_samples==1 && native_report.resume_samples==1 && native_report.cpu_profile_valid && native_report.registers_valid && native_report.backend_check_performed && !native_report.backend_result && !native_report.callback_rejected && pws4_engine_fields_ok(&native_report))s->native_ready=1;
+    probe_ready=s->native_ready;
     return rc;
 }
 static int native_init(void)
@@ -287,12 +317,15 @@ static int native_init(void)
         }
     }
     native_ccm=ioremap(0x020c4000u,4096);native_dcp=ioremap(0x020fc000u,4096);native_usb=ioremap(0x02184000u,4096);
-    if(!native_ccm || !native_dcp || !native_usb){if(native_ccm)iounmap(native_ccm);if(native_dcp)iounmap(native_dcp);if(native_usb)iounmap(native_usb);return -ENOMEM;}
+    native_usdhc1=ioremap(0x02190000u,4096);
+    if(!native_ccm || !native_dcp || !native_usb || !native_usdhc1){
+        if(native_ccm)iounmap(native_ccm);if(native_dcp)iounmap(native_dcp);
+        if(native_usb)iounmap(native_usb);if(native_usdhc1)iounmap(native_usdhc1);return -ENOMEM;}
 #endif
     native_pm_mutex=(struct mutex *)kallsyms_lookup_name("pm_mutex");
     if(!native_pm_mutex || !mutex_trylock(native_pm_mutex)){
 #if PWS_PROFILE == 3
-        iounmap(native_ccm);iounmap(native_dcp);iounmap(native_usb);
+        iounmap(native_ccm);iounmap(native_dcp);iounmap(native_usb);iounmap(native_usdhc1);
 #endif
         return -EBUSY;
     }
@@ -302,6 +335,6 @@ static void native_exit(void)
 {
     mutex_lock(native_pm_mutex);unregister_syscore_ops(&native_ops);mutex_unlock(native_pm_mutex);
 #if PWS_PROFILE == 3
-    iounmap(native_ccm);iounmap(native_dcp);iounmap(native_usb);
+    iounmap(native_ccm);iounmap(native_dcp);iounmap(native_usb);iounmap(native_usdhc1);
 #endif
 }
