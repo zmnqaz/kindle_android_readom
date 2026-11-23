@@ -1,5 +1,5 @@
 {
-  "description": "Kindle Paperwhite 4 (10th generation, i.MX6SLL, device tree) on stock firmware 5.18.1.1.1: the stock kernel the handoff module loads into, and the physical plan of the jump. DRAFT: not run on a device; the stock function hashes are read from a device before the first load",
+  "description": "Kindle Paperwhite 4 (10th generation, i.MX6SLL, device tree) on stock firmware 5.18.1.1.1: the stock kernel the handoff module loads into, and the physical plan of the jump. DRAFT: not run on a device",
   "supported_zh": "Kindle Paperwhite 4（第 10 代，2018 年款），固件 5.18.1.1.1",
   "supported_en": "Kindle Paperwhite (10th generation, 2018), firmware 5.18.1.1.1",
   "module_profile": 3,
@@ -17,15 +17,34 @@
   "prrr": "0xff0a81a8",
   "nmrr": "0x40e040e0",
   "prrr_nmrr_why": "the values 4.1's proc-v7-2level.S writes; a PROBE on the device reports cpu_profile_valid=0 if they differ",
-  "ram": [["0x80000000", "0x20000000"]],
-  "forbidden": [["0x88000000", "0x18000000"]],
+  "ram": [
+    [
+      "0x80000000",
+      "0x20000000"
+    ]
+  ],
+  "forbidden": [
+    [
+      "0x88000000",
+      "0x18000000"
+    ]
+  ],
   "forbidden_why": "destinations stay in the low 128 MiB; above it are the EPDC reservation (0x9b000000, 3 MiB), the printk buffer (0x9be00000) and the Falcon BIOS (0x9ffc0000-0x9fff0000), which the next kernel needs as the stock one left them",
   "device_archive_max": 12582912,
   "footprint_profile": "pw4",
   "stock_functions": {
-    "pm_test_show": {"bytes": 116, "sha256": ""},
-    "l2c210_flush_all": {"bytes": 96, "sha256": ""},
-    "l2c310_disable": {"bytes": 40, "sha256": ""}
+    "pm_test_show": {
+      "bytes": 116,
+      "sha256": "3bc6feff48a2461b0bb3d4298191e6e9cdeda3dd0f682fccb1a7ae2c938b6dda"
+    },
+    "l2c210_flush_all": {
+      "bytes": 96,
+      "sha256": "803eacc7b1dd385911364c088523a48821372a9f04a50175a2a3826ab2012ffd"
+    },
+    "l2c310_disable": {
+      "bytes": 40,
+      "sha256": "b5337f06d4acbbb2581785f37189c91a4eb69b65ae87d83a7aa5f6d80ac30ef9"
+    }
   },
-  "stock_functions_source": "sizes: distance to the next text symbol in the device's /proc/kallsyms (80069564, 800229b8, 80021cec); hashes: to be computed from the device's own memory (probe 2 dumps), not from a rebuild, whose code differs"
+  "stock_functions_source": "sizes: distance to the next text symbol in the device's /proc/kallsyms (80069564, 800229b8, 80021cec); hashes: of those bytes in the device's own memory (readom-probe2 /dev/mem dumps, 2026-11-23), not of a rebuild, whose code differs. The dump's outer_cache has flush_all = 800229b8 and disable = 80021cec and no write_sec, so the L2 is driven from the secure world directly; l2c310_disable tail-calls l2c_disable (800219c4), which is not pinned"
 }

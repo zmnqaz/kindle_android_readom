@@ -15,7 +15,7 @@ PW3 的 profile 1、2 走原来的分支，行为不变：原有宿主机测试�
 | 私有页表 | 清 `[0, 0xbf0)`，抄 `[0xbf0, 4096)` | 清用户半边 `[0, 0x7f0)`，抄 `[0x7f0, 4096)`（模块区起），控制页所在段在抄过的部分里改写成 1:1 非缓存段（`private-table.h`） |
 | SMP | 内核是 UP | 内核是 SMP（`SMP_ON_UP`），挂起回调里要求 `num_online_cpus() == 1`；TTBR 走表属性接受 UP 的 `0x59` 和 SMP 的 `0x6a` |
 | L2 回调 | `flush_all` + `disable` + `inv_all` | 4.1 没有 `inv_all`：`l2c210_flush_all` + `l2c310_disable`（后者先按路清+无效再关；新内核 `l2c_enable` 开之前还会再无效一次） |
-| 原厂函数锁定 | `pm_test_show`、3 个 L2 函数的长度和哈希 | `pm_test_show`、2 个 L2 函数；长度取自设备 kallsyms（116、96、40 字节），**哈希待从设备内存取**，缺哈希时模块拒绝加载 |
+| 原厂函数锁定 | `pm_test_show`、3 个 L2 函数的长度和哈希 | `pm_test_show`、2 个 L2 函数；长度取自设备 kallsyms（116、96、40 字节），哈希取自设备内存 |
 | `pm_mutex` | 导出 | 4.1 没导出，用 `kallsyms_lookup_name` 取 |
 | DMA 主设备门控 | i.MX6SL 的 14 个 | i.MX6SLL 的 14 个（`clk-imx6sll.c`）：sdma、epdc、lcdif pix/apb、pxp、csi、ssi1-3、usboh3、usdhc1-3、spdif；DCP 只在 CCM 门开着时才读 |
 | USB 空闲判据 | 锁定了 PW3 控制器修订号 | 还没锁定，所以 USB 门必须是关的 |
@@ -34,8 +34,10 @@ PW3 的 profile 1、2 走原来的分支，行为不变：原有宿主机测试�
 
 ## 上真机之前还差的
 
-1. **原厂函数哈希**：第二轮探测在 Kindle 上导出了这几个函数所在的内存页（`readom-probe2/mem-*.bin`），
-   按上面的长度切出来算 sha256，填进 profile。不能用自己编的内核算：编译器不同，字节不同。
+1. ~~原厂函数哈希~~ 已填（2026-11-23）：从第二轮探测的 `/dev/mem` 页切出（2G/2G 下虚拟地址即物理地址），
+   反汇编核对过边界：`pm_test_show` 116 字节（含字面量池）、`l2c210_flush_all` 96 字节（`BUG_ON` 中断、按路清+无效、
+   同步）、`l2c310_disable` 40 字节（full-line-zero 检查后尾跳 `l2c_disable`）。同一份转储里 `outer_cache` 的
+   `flush_all`/`disable` 正是这两个地址，`write_sec` 为空：L2 直接由安全态写，不经 SMC。
 2. ~~解压器占用~~ 已完成：`derive_kernel_footprint.py --profile pw4`。4.1 的搬移代码和越界判断与 3.0 相同，
    差别是 `AUTO_ZRELADDR`（`r4 = (pc & 0xf8000000) + 0x8000`，zImage 放在 `base+0x8000` 时就是它本身）
    和镜像起点符号改为 `_text`；锁定 4.1 的 `head.S`、`vmlinux.lds.S` 哈希；安卓内核改用 gzip。
