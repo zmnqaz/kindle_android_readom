@@ -31,6 +31,19 @@
 #include <vector>
 
 namespace {
+// Per-model paths, spelled out whole so that the sepolicy check
+// (tools/tests/test_sepolicy_device_paths.py) sees each one.
+#ifdef PREINIT_BOARD_PW4
+const char* const kUserBlock = "/dev/block/mmcblk1p10";
+const char* const kUserBlockSize = "/sys/class/block/mmcblk1p10/size";
+const char* const kBacklightBrightness = "/sys/class/backlight/bl/brightness";
+const char* const kBacklightPower = "/sys/class/backlight/bl/bl_power";
+#else
+const char* const kUserBlock = "/dev/block/mmcblk0p4";
+const char* const kUserBlockSize = "/sys/class/block/mmcblk0p4/size";
+const char* const kBacklightBrightness = "/sys/class/backlight/max77696-bl/brightness";
+const char* const kBacklightPower = "/sys/class/backlight/max77696-bl/bl_power";
+#endif
 constexpr unsigned long kFunctionFsMagic = 0x0a647361;
 struct Mount { std::string path, flags, type, source, super_flags; };
 
@@ -182,7 +195,7 @@ bool CheckTestFileData() {
         Stat("/dev/block/dm-1", &system_node) || !S_ISBLK(system_node.st_mode) ||
         Stat("/system", &mounted) || mounted.st_dev != system_node.st_rdev ||
         Stat("/dev/block/dm-0", &mapped) || !S_ISBLK(mapped.st_mode) || Stat("/pw3-user", &fat_root) || fat_root.st_dev != mapped.st_rdev ||
-        Stat("/dev/block/" BOARD_USER_PART, &p4) || !S_ISBLK(p4.st_mode) ||
+        Stat(kUserBlock, &p4) || !S_ISBLK(p4.st_mode) ||
         maps.map[PW3_FILE_DATA].device != (uint64_t)file.st_dev ||
         maps.map[PW3_FILE_DATA].inode != (uint64_t)file.st_ino ||
         maps.map[PW3_FILE_SYSTEM].device != (uint64_t)system_file.st_dev ||
@@ -191,7 +204,7 @@ bool CheckTestFileData() {
         statvfs("/data", &fs) || (fs.f_flag & ST_RDONLY) || !fs.f_frsize ||
         fs.f_blocks < (384ULL << 20) / fs.f_frsize || fs.f_blocks > config.size / fs.f_frsize)
         return Fail("test data did not retain its verified file extent and read-only FAT mount");
-    const auto count_text = Read("/sys/class/block/" BOARD_USER_PART "/size");
+    const auto count_text = Read(kUserBlockSize);
     std::istringstream count_stream(count_text); uint64_t sectors = 0; char extra;
     bool ok = (count_stream >> sectors) && !(count_stream >> extra) && sectors > 16 && pw3_file_maps_bounds(&maps, sectors);
     int fd = Open("/dev/device-mapper", O_RDONLY | O_CLOEXEC | O_NOFOLLOW);
@@ -368,8 +381,8 @@ bool CheckInterfaces() {
         struct stat fb {};
         display = Stat("/dev/graphics/fb0", &fb)==0 && S_ISCHR(fb.st_mode) &&
             Read("/sys/class/graphics/fb0/name")=="mxc_epdc_fb" &&
-            Access("/sys/class/backlight/" BOARD_BACKLIGHT "/brightness",F_OK)==0 &&
-            Access("/sys/class/backlight/" BOARD_BACKLIGHT "/bl_power",F_OK)==0;
+            Access(kBacklightBrightness,F_OK)==0 &&
+            Access(kBacklightPower,F_OK)==0;
         if (display) {
             const auto state = CheckEpdcContract();
             if (state == EpdcState::Failed) return false;
