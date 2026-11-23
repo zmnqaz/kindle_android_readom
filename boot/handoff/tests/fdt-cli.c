@@ -2,6 +2,7 @@
 /* Host driver for tests/test_fdt.py: runs pw4_fdt.c on a blob from disk.
  *   fdt-cli parse BLOB [CMDLINE]
  *   fdt-cli plan BLOB CMDLINE FDT_DEST INITRD_DEST INITRD_BYTES FOOTPRINT_END
+ *   fdt-cli rewrite BLOB CMDLINE INITRD_START INITRD_SIZE OUT
  * Prints the result code and, for parse, what was found. */
 #include <stdio.h>
 #include <stdlib.h>
@@ -34,6 +35,18 @@ int main(int argc, char **argv)
             if (t.has_initrd) printf(" %#x+%#x", t.initrd.start, t.initrd.size);
         }
         printf("\n");
+        return 0;
+    }
+    if (!strcmp(argv[1], "rewrite") && argc == 7) {
+        static unsigned char out[PW_FDT_CAP];
+        struct pw_range rd, zone;
+        pw_u32 used = 0;
+        int rc;
+        rd.start = (unsigned int)strtoul(argv[4], 0, 0); rd.size = (unsigned int)strtoul(argv[5], 0, 0);
+        zone.start = 0x80000000u; zone.size = 0x08000000u;
+        rc = pw_fdt_rewrite(blob, (pw_u32)n, argv[3], rd, zone, out, sizeof(out), &used);
+        printf("rc=%d used=%u\n", rc, used);
+        if (!rc) { f = fopen(argv[6], "wb"); if (!f) return 2; fwrite(out, 1, used, f); fclose(f); }
         return 0;
     }
     if (!strcmp(argv[1], "plan") && argc == 8) {

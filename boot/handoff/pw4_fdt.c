@@ -44,6 +44,11 @@ static int valid_map(const struct pw_range *r, pw_u32 n, int disjoint)
     }
     return 1;
 }
+static int buffers_overlap(const void *a, pw_u32 an, const void *b, pw_u32 bn)
+{
+    pw_uptr x = (pw_uptr)a, y = (pw_uptr)b;
+    return x <= y ? y - x < an : x - y < bn;
+}
 /* NUL-terminated within [p, p + room); returns the length without the NUL,
  * or room when there is none. */
 static pw_u32 bounded_len(const pw_u8 *p, pw_u32 room)
@@ -291,5 +296,157 @@ int pw_plan_validate_fdt(const struct pw_plan *p, const pw_u8 *fdt,
             (t.has_initrd && pw_ranges_overlap(d, p->segments[initrd].destination)))
             return PW_E_OVERLAP;
     }
+    return PW_VALID_DATA_ONLY;
+}
+
+/* ---- pw_fdt_rewrite: the device's side ---------------------------------- */
+
+struct writer { pw_u8 *p; pw_u32 cap, at; int bad; };
+static void w_bytes(struct writer *w, const pw_u8 *s, pw_u32 n)
+{
+    if (w->bad || n > w->cap - w->at) { w->bad = 1; return; }
+    while (n--) w->p[w->at++] = *s++;
+}
+static void w_be32(struct writer *w, pw_u32 v)
+{
+    pw_u8 b[4];
+    b[0] = (pw_u8)(v >> 24); b[1] = (pw_u8)(v >> 16); b[2] = (pw_u8)(v >> 8); b[3] = (pw_u8)v;
+    w_bytes(w, b, 4);
+}
+static void w_pad(struct writer *w)
+{
+    static const pw_u8 z[4];
+    w_bytes(w, z, (4 - (w->at & 3)) & 3);
+}
+static void w_prop(struct writer *w, pw_u32 nameoff, const pw_u8 *value, pw_u32 len)
+{
+    w_be32(w, TOKEN_PROP); w_be32(w, len); w_be32(w, nameoff);
+    w_bytes(w, value, len); w_pad(w);
+}
+static pw_u32 text_len(const char *s)
+{
+    pw_u32 n = 0;
+    while (s[n]) ++n;
+    return n;
+}
+/* Offset of `name` as a whole string in the strings block, or ~0. */
+static pw_u32 find_string(const pw_u8 *strings, pw_u32 size, const char *name)
+{
+    pw_u32 n = text_len(name), at;
+    for (at = 0; at + n < size; ++at)
+        if ((!at || !strings[at - 1]) && !strings[at + n] && equals(strings + at, n, name))
+            return at;
+    return 0xffffffffu;
+}
+
+int pw_fdt_rewrite(const pw_u8 *src, pw_u32 src_bytes, const char *cmdline,
+                   struct pw_range initrd, struct pw_range zone,
+                   pw_u8 *dst, pw_u32 capacity, pw_u32 *used)
+{
+    static const char *const names[3] = {"bootargs", "linux,initrd-start", "linux,initrd-end"};
+    struct pw_fdt t, check;
+    struct writer w;
+    pw_u32 off_struct, off_strings, off_rsv, size_strings, size_struct, limit, pos, depth = 0;
+    pw_u32 nameoff[3], extra = 0, i, cmd_len, struct_start, strings_start, in_chosen = 0, chosen_seen = 0;
+    pw_u8 cell[8];
+    int rc;
+    if (!used) return PW_E_ARGUMENT;
+    *used = 0;
+    if (!src || !dst || !cmdline || buffers_overlap(src, src_bytes, dst, capacity) ||
+        buffers_overlap(cmdline, text_len(cmdline) + 1, dst, capacity)) return PW_E_ARGUMENT;
+    cmd_len = text_len(cmdline);
+    if (!cmd_len || cmd_len >= PW_CMDLINE_CAP) return PW_E_LENGTH;
+    if (!pw_range_valid(initrd) || !pw_range_valid(zone)) return PW_E_RANGE;
+    rc = pw_fdt_parse(src, src_bytes, 0, &t);
+    if (rc) return rc;
+    off_struct = be32(src + 8); off_strings = be32(src + 12); off_rsv = be32(src + 16);
+    size_strings = be32(src + 32); size_struct = be32(src + 36);
+    for (i = 0; i < 3; ++i) {
+        nameoff[i] = find_string(src + off_strings, size_strings, names[i]);
+        if (nameoff[i] == 0xffffffffu) { nameoff[i] = size_strings + extra; extra += text_len(names[i]) + 1; }
+    }
+    w.p = dst; w.cap = capacity; w.at = 0; w.bad = 0;
+    for (i = 0; i < 40; ++i) w_bytes(&w, (const pw_u8 *)"", 1);   /* header, filled in last */
+    /* Reservations the stock boot made for its own payload go; the rest stay. */
+    for (pos = off_rsv;; pos += 16) {
+        struct pw_range r;
+        r.start = be32(src + pos + 4); r.size = be32(src + pos + 12);
+        if (!r.start && !r.size && !be32(src + pos) && !be32(src + pos + 8)) break;
+        if ((t.has_initrd && pw_ranges_overlap(r, t.initrd)) ||
+            (r.start >= zone.start && end(r) <= end(zone))) continue;
+        w_bytes(&w, src + pos, 16);
+    }
+    for (i = 0; i < 16; ++i) w_bytes(&w, (const pw_u8 *)"", 1);
+    struct_start = w.at;
+    pos = off_struct; limit = off_struct + size_struct;
+    for (;;) {
+        pw_u32 token = be32(src + pos);
+        pos += 4;
+        if (token == TOKEN_NOP) continue;
+        if (token == TOKEN_BEGIN) {
+            const pw_u8 *name = src + pos;
+            pw_u32 n = bounded_len(name, limit - pos), padded = (n + 4) & ~3u;
+            ++depth;
+            if (depth == 2 && n == 6 && equals(name, 6, "chosen")) in_chosen = chosen_seen = 1;
+            w_be32(&w, TOKEN_BEGIN); w_bytes(&w, name, padded);
+            pos += padded;
+            continue;
+        }
+        if (token == TOKEN_PROP) {
+            pw_u32 len = be32(src + pos), off = be32(src + pos + 4), skip = 0;
+            if (in_chosen && depth == 2)
+                for (i = 0; i < 3; ++i)
+                    if (off < size_strings && !src[off_strings + off + text_len(names[i])] &&
+                        equals(src + off_strings + off, text_len(names[i]), names[i])) skip = 1;
+            if (!skip) {
+                w_be32(&w, TOKEN_PROP); w_bytes(&w, src + pos, 8 + len); w_pad(&w);
+            }
+            pos += 8 + ((len + 3) & ~3u);
+            continue;
+        }
+        if (token == TOKEN_END_NODE) {
+            if (depth == 1 && !chosen_seen) {
+                w_be32(&w, TOKEN_BEGIN); w_bytes(&w, (const pw_u8 *)"chosen\0", 8);
+                in_chosen = 1; depth = 2;
+            }
+            if (in_chosen && depth == 2) {
+                w_prop(&w, nameoff[0], (const pw_u8 *)cmdline, cmd_len + 1);
+                cell[0] = (pw_u8)(initrd.start >> 24); cell[1] = (pw_u8)(initrd.start >> 16);
+                cell[2] = (pw_u8)(initrd.start >> 8); cell[3] = (pw_u8)initrd.start;
+                w_prop(&w, nameoff[1], cell, 4);
+                cell[0] = (pw_u8)(end(initrd) >> 24); cell[1] = (pw_u8)(end(initrd) >> 16);
+                cell[2] = (pw_u8)(end(initrd) >> 8); cell[3] = (pw_u8)end(initrd);
+                w_prop(&w, nameoff[2], cell, 4);
+                in_chosen = 0;
+                if (!chosen_seen) { chosen_seen = 1; w_be32(&w, TOKEN_END_NODE); depth = 1; }
+            }
+            --depth;
+            w_be32(&w, TOKEN_END_NODE);
+            continue;
+        }
+        /* TOKEN_END: pw_fdt_parse() admitted no other token. */
+        w_be32(&w, TOKEN_END);
+        break;
+    }
+    strings_start = w.at;
+    w_bytes(&w, src + off_strings, size_strings);
+    for (i = 0; i < 3; ++i)
+        if (nameoff[i] >= size_strings) w_bytes(&w, (const pw_u8 *)names[i], text_len(names[i]) + 1);
+    w_pad(&w);
+    if (w.bad) return PW_E_CAPACITY;
+    {
+        pw_u32 total = w.at, fields[10];
+        fields[0] = PW_FDT_MAGIC; fields[1] = total; fields[2] = struct_start; fields[3] = strings_start;
+        fields[4] = 40; fields[5] = 17; fields[6] = 16; fields[7] = be32(src + 28);
+        fields[8] = size_strings + extra; fields[9] = strings_start - struct_start;
+        w.at = 0;
+        for (i = 0; i < 10; ++i) w_be32(&w, fields[i]);
+        w.at = total;
+    }
+    rc = pw_fdt_parse(dst, w.at, cmdline, &check);
+    if (rc) return rc;
+    if (!check.has_initrd || check.initrd.start != initrd.start || check.initrd.size != initrd.size)
+        return PW_E_CONTRACT;
+    *used = w.at;
     return PW_VALID_DATA_ONLY;
 }

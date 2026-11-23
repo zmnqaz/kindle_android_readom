@@ -35,4 +35,17 @@ int pw_fdt_parse(const pw_u8 *data, pw_u32 bytes, const char *cmdline,
 int pw_plan_validate_fdt(const struct pw_plan *plan, const pw_u8 *fdt,
                          pw_u32 fdt_bytes, const char *cmdline,
                          const pw_u8 *zimage, pw_u32 zimage_bytes);
+
+/* The device's side (boot/devicedata): the stock blob as the boot loader
+ * passed it, made into the one the next kernel takes. Every node and property
+ * is copied as it is, except that in /chosen bootargs becomes `cmdline` and
+ * linux,initrd-start/-end become `initrd` (the node is added when there is
+ * none), and /memreserve/ entries that name the stock boot's own payload are
+ * dropped: those meeting the stock initrd, and those inside `zone`, the RAM
+ * the handoff overwrites (the stock blob is there; 4.1 reserves the blob it
+ * boots from by itself). The source must pass pw_fdt_parse(); the output
+ * does, with this cmdline. `used` is zero on failure. */
+int pw_fdt_rewrite(const pw_u8 *src, pw_u32 src_bytes, const char *cmdline,
+                   struct pw_range initrd, struct pw_range zone,
+                   pw_u8 *dst, pw_u32 capacity, pw_u32 *used);
 #endif

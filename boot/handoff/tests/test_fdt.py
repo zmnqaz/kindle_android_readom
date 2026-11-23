@@ -88,8 +88,8 @@ def main():
     expect('command line not required', run('parse', good), 'rc=0')
 
     # The plan: kernel at +0x8000, blob at +63 MiB, initramfs at +64 MiB.
-    plan = lambda b, fdt=0x83f00000, initrd=0x84000000, size=0x100000, foot=0x81000000: run(
-        'plan', b, CMD, hex(fdt), hex(initrd), hex(size), hex(foot))
+    plan = lambda b, fdt=0x83f00000, initrd=0x84000000, size=0x100000, foot=0x81000000, cmd=CMD: run(
+        'plan', b, cmd, hex(fdt), hex(initrd), hex(size), hex(foot))
     nores = blob(tree(memreserve=False), 'nores')
     expect('plan as laid out', plan(nores), 'rc=0')
     expect('plan with a stale memreserve over nothing', plan(good), 'rc=0')
@@ -102,6 +102,29 @@ def main():
         '0x9b000000 0x00300000', '0x83f00000 0x00010000'), 'resv'), fdt=0x83f00000), 'rc=-6')
     expect('blob at the end of a section', plan(nores, fdt=0x83ff0000), 'rc=0')
     expect('blob above RAM', plan(nores, fdt=0xa0000000), 'rc=-5')
+
+    # The device side: the stock blob made into the next kernel's.
+    NEW = 'console=ttymxc0,115200 quiet panic=5'
+    out = work / 'rewritten.dtb'
+    stock_like = blob(tree(memreserve=True).replace('/memreserve/ 0x9ffc0000 0x30000;',
+        '/memreserve/ 0x83f077b0 0x8850;\n/memreserve/ 0x84000000 0x100000;\n/memreserve/ 0x9ffc0000 0x30000;'), 'stocklike')
+    expect('rewrite', run('rewrite', stock_like, NEW, 0x84000000, 0x200000, out), 'rc=0')
+    got = run('parse', out, NEW)
+    expect('rewritten: new bootargs and initrd', got if 'initrd=1 0x84000000+0x200000' not in got else 'rc=0', 'rc=0')
+    expect('rewritten: payload reservations dropped, others kept',
+           'rc=0' if ' rsv=2 0x9ffc0000+0x30000 0x9b000000+0x300000' in got else got, 'rc=0')
+    expect('rewritten: old command line gone', run('parse', out, CMD), 'rc=-9')
+    expect('rewritten: passes the plan', plan(out, size=0x200000, cmd=NEW), 'rc=0')
+    out2 = work / 'rewritten2.dtb'
+    run('rewrite', out, NEW, 0x84000000, 0x200000, out2)
+    expect('rewrite is idempotent', 'rc=0' if out.read_bytes() == out2.read_bytes() else 'differs', 'rc=0')
+    nochosen = blob(tree().replace('chosen { bootargs = "%s"; linux,initrd-start = <0x84000000>; linux,initrd-end = <0x84100000>; };' % CMD, ''), 'nochosen')
+    expect('rewrite adds a missing /chosen', run('rewrite', nochosen, NEW, 0x84000000, 0x1000, out), 'rc=0')
+    expect('  and the result parses', run('parse', out, NEW), 'rc=0')
+    expect('rewrite refuses an empty command line', run('rewrite', good, '', 0x84000000, 0x1000, out), 'rc=-2')
+    with tempfile.NamedTemporaryFile(dir=work, delete=False) as tmp:
+        tmp.write(good.read_bytes()[:100])
+    expect('rewrite refuses a broken source', run('rewrite', tmp.name, NEW, 0x84000000, 0x1000, out), 'rc=-')
 
     if a.blob:
         expect('stock blob, its own command line', run('parse', a.blob, a.cmdline or ''), 'rc=0' if a.cmdline else 'rc=')

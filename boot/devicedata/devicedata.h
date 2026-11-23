@@ -42,6 +42,7 @@ struct dd_profile {
     const char *kernel_version;  /* uname -v: the build number, date and time */
 };
 extern const struct dd_profile dd_pw3_5_16_2_1_1;
+extern const struct dd_profile dd_pw4_5_18_1_1_1;
 
 /* What the build fixes. */
 struct dd_build {
@@ -62,6 +63,10 @@ struct dd_why { char text[160]; int other_device; };
 int dd_device_matches(const char *root, const struct dd_profile *profile, struct dd_why *why);
 int dd_atags(const char *root, const struct dd_profile *profile, const char *cmdline,
              uint32_t initrd_start, uint32_t initrd_size, struct dd_buf *out, struct dd_why *why);
+/* PW4: the stock device tree with the build's /chosen (see devicedata.c).
+ * Built with -DPW_DEVICE_TREE and boot/handoff/pw4_fdt.c + pw3_plan.c. */
+int dd_fdt(const char *root, const struct dd_profile *profile, const char *cmdline,
+           uint32_t initrd_start, uint32_t initrd_size, struct dd_buf *out, struct dd_why *why);
 int dd_archive(const char *root, const struct dd_profile *profile, const struct dd_build *build,
                struct dd_buf *out, struct dd_why *why);
 

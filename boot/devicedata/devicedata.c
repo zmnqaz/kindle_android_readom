@@ -1,6 +1,9 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 #define _GNU_SOURCE
 #include "devicedata.h"
+#ifdef PW_DEVICE_TREE
+#include "../handoff/pw4_fdt.h"
+#endif
 #include <ctype.h>
 #include <dirent.h>
 #include <errno.h>
@@ -22,6 +25,18 @@ const struct dd_profile dd_pw3_5_16_2_1_1 = {
     "/opt/ar6k/target/AR6003/hw2.1.1/bin/fw-4.bin",
     "3.0.35-lab126",
     "#8 PREEMPT Tue Aug 1 12:49:59 UTC 2023",
+};
+
+/* Kindle Paperwhite 4 (i.MX6SLL, device tree). DRAFT: the user FAT mount and
+ * the Wi-Fi paths are the stock ones the probes found, see
+ * device/amazon/pw4/porting/README.md; the archive side is not written yet. */
+const struct dd_profile dd_pw4_5_18_1_1_1 = {
+    "console=ttymxc0,115200 consoleblank=0 uart_at_4m quiet secure_cpu=1 androidboot.secure_cpu=1 androidboot.prod=1 androidboot.unlocked_kernel=false",
+    "/mnt/base-us",
+    "/opt/brcm_4343w/wifi/nvram/nvram_wfo.txt",
+    "/opt/brcm_4343w/wifi/firmware/fw_bcmdhd_sr.bin",
+    "4.1.15-lab126",
+    "#1 SMP PREEMPT Thu May 21 05:14:34 UTC 2026",
 };
 
 void dd_free(struct dd_buf *b) { free(b->data); b->data = NULL; b->size = b->cap = 0; }
@@ -524,3 +539,43 @@ done:
     if (rc) dd_free(out);
     return rc;
 }
+
+#ifdef PW_DEVICE_TREE
+/* The device-tree counterpart of dd_atags (PW4): the blob the boot loader
+ * passed the stock kernel, as that kernel exports it, with /chosen made the
+ * build's (command line, initramfs range) by pw_fdt_rewrite(), which also
+ * drops the stock boot's own /memreserve/ entries. Everything else -- board
+ * description, reserved memory, the Falcon node, the IDME values -- is this
+ * device's own and is passed on as it is, never stored. */
+int dd_fdt(const char *root, const struct dd_profile *profile, const char *cmdline,
+           uint32_t initrd_start, uint32_t initrd_size, struct dd_buf *out, struct dd_why *why) {
+    char live[1024], stock[1024] = "", *save = NULL;
+    struct dd_buf src = {0};
+    struct pw_range rd = {initrd_start, initrd_size}, zone = {0x80000000u, 0x08000000u};
+    pw_u32 used = 0;
+    int rc;
+    out->size = 0;
+    if (read_text(root, "/proc/cmdline", live, sizeof(live), why)) return -1;
+    for (char *t = strtok_r(live, " ", &save); t; t = strtok_r(NULL, " ", &save)) {
+        if (!strcmp(t, "rootwait") || !strncmp(t, "root=", 5)) continue;
+        if (strlen(stock) + strlen(t) + 2 > sizeof(stock)) return fail(why, "stock command line too long");
+        if (*stock) strcat(stock, " ");
+        strcat(stock, t);
+    }
+    if (strcmp(stock, profile->stock_cmdline))
+        return fail_other_device(why, "stock command line is not this model's");
+    size_t n = strlen(profile->stock_cmdline);
+    if (strncmp(cmdline, profile->stock_cmdline, n) || cmdline[n] != ' ' || strlen(cmdline) >= PW_CMDLINE_CAP)
+        return fail(why, "build command line does not extend the stock one");
+    if (initrd_size == 0 || initrd_start % 4096) return fail(why, "invalid initramfs range");
+    if (read_file(root, "/sys/firmware/fdt", PW_FDT_CAP - 3, &src, why)) { dd_free(&src); return -1; }
+    if (append_zero(&src, (4 - src.size % 4) % 4) || reserve(out, PW_FDT_CAP)) {
+        dd_free(&src); return fail(why, "out of memory");
+    }
+    rc = pw_fdt_rewrite(src.data, (pw_u32)src.size, cmdline, rd, zone, out->data, PW_FDT_CAP, &used);
+    dd_free(&src);
+    if (rc) return fail(why, "device tree not usable (%d)", rc);
+    out->size = used;
+    return 0;
+}
+#endif

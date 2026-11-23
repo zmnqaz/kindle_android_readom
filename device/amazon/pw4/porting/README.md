@@ -1,7 +1,7 @@
 # 移植到 Kindle Paperwhite 4：上机实测
 
 这份文档记的是**这台 PW4 自己报告的事实**，来自越狱后在书库里运行的 `Readom Probe`（只读，不改系统）。
-对照的是 `readom/docs/design/porting-to-other-models.md`（下称「移植文档」）里按 PW3 写的清单。
+对照的是 `docs/design/porting-to-other-models.md`（下称「移植文档」）里按 PW3 写的清单。
 **还没有在这台机器上运行过 Readom 的任何代码**，这里只是把要改什么算清楚。
 
 - 采集时间：2026-11-23 00:21（设备时间，GMT+8），root 身份运行

@@ -41,8 +41,12 @@ PW3 的 profile 1、2 走原来的分支，行为不变：原有宿主机测试�
    和镜像起点符号改为 `_text`；锁定 4.1 的 `head.S`、`vmlinux.lds.S` 哈希；安卓内核改用 gzip。
    当前安卓内核：zImage 6,953,832 字节，解压后 14,160,640 字节，占用 `0x80004000`–`0x8143d000`，
    与 63 MiB 处的 blob、64 MiB 处的 initramfs 不重叠。
-3. **设备端生成设备树**（`boot/devicedata`）：从 `/sys/firmware/fdt` 读原厂 blob，换掉 `/chosen` 的
-   bootargs 和 initrd 两项，去掉指向旧 DTB 和旧 initrd 的两条 `/memreserve/`（`0x83f077b0`、`0x9e6a5000`）。
+3. ~~设备端生成设备树~~ 已完成：`dd_fdt()`（`boot/devicedata`，`-DPW_DEVICE_TREE` 编进去，PW3 的程序不变）
+   读 `/sys/firmware/fdt`，核对 `/proc/cmdline` 是这台机器的，再由 `pw_fdt_rewrite()`（`pw4_fdt.c`）换掉
+   `/chosen` 的 bootargs 和 initrd，去掉原厂引导给自己载荷做的 `/memreserve/`（碰到旧 initrd 的、落在交接区
+   低 128 MiB 里的，即 `0x83f077b0` 那份旧 DTB；4.1 会自己保留它启动用的 blob），其余节点一字不改。
+   用原厂设备树实测：输出只剩 EPDC 那条保留，整套计划（含真实解压占用）通过 `pw_plan_validate_fdt`。
+   测试：`device-data-fdt`、`pw4-fdt`（改写幂等、补缺的 `/chosen`、拒绝坏输入）。
 4. **QEMU**：profile 4 的替身内核（4.1、2G/2G、RAM 在 `0x80000000`、Cortex-A9 或 A7），`qemu-pm.c` 跟着改。
 5. **设备上的 PROBE**（会跑一次真实的 `pm_test=core` 挂起，先征得同意）：确认 PRRR/NMRR/MIDR、
    挂起后各门控的实际状态、USB 控制器寄存器，再据此锁定 USB 空闲判据。

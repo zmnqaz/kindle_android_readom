@@ -43,7 +43,7 @@ CXXFLAGS = ['-std=c++14', '-O1', '-g', '-Wall', '-Wextra', '-Werror', '-fexcepti
 
 # name, kind, what to run, whether it needs Linux. 'python': the script, run
 # as itself. 'c': sources compiled together and run; a source entry beginning
-# with '-I' is an include path instead. 'linux' marks a test that needs Linux
+# with '-I' is an include path instead, one with '-D' a macro. 'linux' marks a test that needs Linux
 # headers (device mapper, FIBMAP) and is skipped elsewhere.
 TESTS = [
     ('patch-series', 'python', ['tools/tests/test_patch_series.py'], False),
@@ -157,6 +157,9 @@ TESTS = [
                                     'boot/handoff/pw3_plan.c'], False),
     ('device-data', 'c', ['boot/devicedata/tests/devicedata_test.c',
                           'boot/devicedata/devicedata.c', 'boot/handoff/pw3_plan.c'], False),
+    ('device-data-fdt', 'c', ['-DPW_DEVICE_TREE', 'boot/devicedata/tests/devicedata_fdt_test.c',
+                              'boot/devicedata/devicedata.c', 'boot/handoff/pw3_plan.c',
+                              'boot/handoff/pw4_fdt.c'], False),
     ('user-log', 'c', ['boot/launcher/tests/userlog_test.c', 'boot/launcher/userlog.c'], False),
     ('report-area', 'c', ['-Idevice/amazon/pw3/report', 'boot/launcher/tests/report_test.c'], False),
     # The report PID 1 writes when it refuses to start. It is the path that only
@@ -411,6 +414,12 @@ HANDOFF_QEMU = ('handoff-in-qemu', 'boot/handoff/tests/run_qemu.py',
                 'the loader-stage kernel (tools/build-loader-stage-kernel.sh) and the '
                 'RAM-only observer, in the build VM')
 
+# The PW4 device-tree rules (boot/handoff/pw4_fdt.c): blobs are made with dtc,
+# from the system or a kernel build's scripts/dtc (READOM_DTC).
+DTC = os.environ.get('READOM_DTC') or shutil.which('dtc')
+PW4_FDT = ('pw4-fdt', 'boot/handoff/tests/test_fdt.py',
+           'dtc: on the PATH, or a kernel build\'s scripts/dtc/dtc in READOM_DTC')
+
 # The launcher and its helper on ARM under the device owner's own shell. It
 # builds the virtual profile of both itself, so what it wants is the kernel, the
 # observer, and that shell -- which is the owner's own and is not published, so
@@ -477,7 +486,8 @@ def cpp_compiler_works(cxx, work):
 
 def run_c(sources, cc, work, arguments=(), flags=None):
     includes = ['-I' + str(ROOT / s[2:]) for s in sources if s.startswith('-I')]
-    files = [str(ROOT / s) for s in sources if not s.startswith('-I')]
+    includes += [s for s in sources if s.startswith('-D')]
+    files = [str(ROOT / s) for s in sources if not s.startswith(('-I', '-D'))]
     binary = work / (Path(files[0]).stem + '.bin')
     build = subprocess.run([cc] + (flags or CFLAGS) + includes + files + ['-o', str(binary)],
                            cwd=str(ROOT), capture_output=True, text=True)
@@ -630,6 +640,10 @@ def main():
                       [FONT_AOSP[1], '--aosp-tree', str(AOSP_TREE)], False))
     else:
         elsewhere.insert(0, FONT_AOSP)
+    if DTC:
+        tests.append((PW4_FDT[0], 'python', [PW4_FDT[1], '--dtc', DTC], False))
+    else:
+        elsewhere.insert(0, PW4_FDT)
     if (LOADER_KERNEL / 'zImage').is_file() and (OBSERVER / 'initramfs.cpio.gz').is_file():
         tests.append((HANDOFF_QEMU[0], 'steps',
                       [[HANDOFF_QEMU[1], '--output', '{work}/handoff-qemu']], True))
@@ -710,7 +724,7 @@ def main():
     if args.list:
         for name, kind, what, linux in tests:
             parts = what[0] if kind == 'steps' else what
-            first = next(s for s in parts if not s.startswith('-I'))
+            first = next(s for s in parts if not s.startswith(('-I', '-D')))
             print('%-20s %-7s %s%s' % (name, kind, first, '   (Linux only)' if linux else ''))
         for name, where, needs in elsewhere:
             print('%-20s %-7s %s   (needs %s)' % (name, 'elsewhere', where, needs))

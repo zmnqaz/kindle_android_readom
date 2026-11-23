@@ -1,6 +1,13 @@
 # Harmless hits of tools/check-private-data.py: PATH-GLOB<TAB>TEXT (TEXT is part of the hit).
 # Upstream authors' addresses in imported kernel and AOSP sources are public and stay as they are.
 patches/android-core/*	@
+# The same for the PW4 port's kernel patches (an upstream commit keeps its
+# author and the file header's credits), and for drivers that print their
+# authors' addresses in the stock boot log the probes captured.
+device/amazon/pw4/porting/kernel/patches/*	@
+device/amazon/pw4/porting/data/dmesg.txt	giometti@linux.it
+device/amazon/pw4/porting/data/dmesg.txt	kaber@trash.net
+device/amazon/pw4/porting/data/dmesg.txt	pablo@netfilter.org
 patches/aosp-bionic/0002-pw3-notices-of-libdl-libm-linker.patch	@
 # Contact addresses inside public root certificates (subject emailAddress of CAs).
 patches/aosp-ca-certificates/*	@
