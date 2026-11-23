@@ -38,3 +38,14 @@
 init 重启。原因是 binder 移植（`0002`）在栈上的 `vm_struct` 上调 `map_vm_area()`，`flags` 未初始化，带 `VM_NO_GUARD` 时
 映射两页、第二页为空；内核补丁 `0013` 改为 4.1 自己 binder 的 `map_kernel_range_noflush`。
 Wi-Fi 上 SSH 写用户存储只有约 0.3 MB/s，大文件走 USB（1.5 GB 用 153 s）。
+
+**binder 修好后（Jump 11 第三轮）**：binder 不再报错，`hwservicemanager`、`servicemanager`、`vndservicemanager`、`vold`
+都起来了。init 在 `pw3-init-check`（storage 模式）处停下：它写死了 `/dev/block/mmcblk0p4`。已把它的分区名、背光
+（PW4 是 `bl`）、电源键（`bd71827-power`）、触摸（`goodix-ts`）都改为读 `preinit/Board.h`。
+
+下一步（按 PW3 的 `tools/kernel-hardware` 做 PW4 的硬件组件）：
+- `post-fs-data` 里只读挂 `mmcblk1p2` 到 `/mnt/wfm`，`insmod mxc_epdc_v2_fb.ko waveform=…`；通用 EPDC 固件
+  （原厂 `/lib/firmware/imx/epdc/epdc_ED060KC4.fw`）由设备端在启动时取，放进设备那半 initramfs；
+- 触摸 gt9xx、Wi-Fi bcmdhd 的模块和参数（`platform_variables` 里的 `firmware_path`/`nvram_path`）；
+- `pw3-init-check` 的 `CheckEpdcContract` 要 Readom 给 PW3 内核加的 `MXCFB_GET_ANDROID_INFO`：墨水屏那几个内核补丁
+  （`0400`、`0401`、`0403`、`0500`）要对着 4.1 的 `mxc_epdc_v2_fb` 重写。

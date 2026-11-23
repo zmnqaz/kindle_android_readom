@@ -4,6 +4,7 @@
 #define LOG_TAG "pw3-init-check"
 #include <android-base/properties.h>
 #include "../epdc/EpdcContract.h"
+#include "../preinit/Board.h"
 #include "../preinit/TestFileFormat.h"
 #include "../preinit/TestFileMapper.h"
 #include "../report/ReportArea.h"
@@ -181,7 +182,7 @@ bool CheckTestFileData() {
         Stat("/dev/block/dm-1", &system_node) || !S_ISBLK(system_node.st_mode) ||
         Stat("/system", &mounted) || mounted.st_dev != system_node.st_rdev ||
         Stat("/dev/block/dm-0", &mapped) || !S_ISBLK(mapped.st_mode) || Stat("/pw3-user", &fat_root) || fat_root.st_dev != mapped.st_rdev ||
-        Stat("/dev/block/mmcblk0p4", &p4) || !S_ISBLK(p4.st_mode) ||
+        Stat("/dev/block/" BOARD_USER_PART, &p4) || !S_ISBLK(p4.st_mode) ||
         maps.map[PW3_FILE_DATA].device != (uint64_t)file.st_dev ||
         maps.map[PW3_FILE_DATA].inode != (uint64_t)file.st_ino ||
         maps.map[PW3_FILE_SYSTEM].device != (uint64_t)system_file.st_dev ||
@@ -190,7 +191,7 @@ bool CheckTestFileData() {
         statvfs("/data", &fs) || (fs.f_flag & ST_RDONLY) || !fs.f_frsize ||
         fs.f_blocks < (384ULL << 20) / fs.f_frsize || fs.f_blocks > config.size / fs.f_frsize)
         return Fail("test data did not retain its verified file extent and read-only FAT mount");
-    const auto count_text = Read("/sys/class/block/mmcblk0p4/size");
+    const auto count_text = Read("/sys/class/block/" BOARD_USER_PART "/size");
     std::istringstream count_stream(count_text); uint64_t sectors = 0; char extra;
     bool ok = (count_stream >> sectors) && !(count_stream >> extra) && sectors > 16 && pw3_file_maps_bounds(&maps, sectors);
     int fd = Open("/dev/device-mapper", O_RDONLY | O_CLOEXEC | O_NOFOLLOW);
@@ -238,20 +239,20 @@ bool CheckTestFileData() {
         Read("/sys/class/block/dm-1/size") != std::to_string(maps.map[PW3_FILE_SYSTEM].sectors) ||
         Read("/sys/class/block/dm-2/size") != std::to_string(maps.map[PW3_FILE_DATA].sectors))
         return Fail("a mapped device's read-only flag or size does not match the extent receipt");
-    static const char* names[] = {"mmcblk0", "mmcblk0p1", "mmcblk0p2", "mmcblk0p3", "mmcblk0p4", "mmcblk0boot0", "mmcblk0boot1"};
+    static const char* names[] = BOARD_BLOCKS;
     DIR* dir = opendir("/sys/class/block");
     if (!dir) return Fail("cannot recheck test storage protection");
     unsigned found = 0;
     while (auto* entry = readdir(dir)) {
         const std::string name(entry->d_name);
-        if (name.compare(0, 7, "mmcblk0")) continue;
+        if (name.compare(0, BOARD_DISK_LEN, BOARD_DISK)) continue;
         ++found; bool known = false;
         for (const char* expected : names) if (name == expected) known = true;
-        const bool writable = name == "mmcblk0" || name == "mmcblk0p4";
+        const bool writable = name == BOARD_DISK || name == BOARD_USER_PART;
         if (!known || Read("/sys/class/block/" + name + "/ro") != (writable ? "0" : "1")) ok = false;
     }
     closedir(dir);
-    return ok && found == 7 ? true : Fail("test storage protected-area state changed");
+    return ok && found == BOARD_BLOCK_COUNT ? true : Fail("test storage protected-area state changed");
 }
 bool CheckStorage() {
     // One storage arrangement: /system and /data are extents of image files on
@@ -367,8 +368,8 @@ bool CheckInterfaces() {
         struct stat fb {};
         display = Stat("/dev/graphics/fb0", &fb)==0 && S_ISCHR(fb.st_mode) &&
             Read("/sys/class/graphics/fb0/name")=="mxc_epdc_fb" &&
-            Access("/sys/class/backlight/max77696-bl/brightness",F_OK)==0 &&
-            Access("/sys/class/backlight/max77696-bl/bl_power",F_OK)==0;
+            Access("/sys/class/backlight/" BOARD_BACKLIGHT "/brightness",F_OK)==0 &&
+            Access("/sys/class/backlight/" BOARD_BACKLIGHT "/bl_power",F_OK)==0;
         if (display) {
             const auto state = CheckEpdcContract();
             if (state == EpdcState::Failed) return false;
@@ -381,8 +382,8 @@ bool CheckInterfaces() {
                 const std::string event(entry->d_name);
                 if (event.compare(0,5,"event")!=0) continue;
                 const auto name=Read("/sys/class/input/"+event+"/device/name");
-                power |= name=="max77696-onkey";
-                touch |= name=="cyttsp4_mt";
+                power |= name==BOARD_POWER_KEY;
+                touch |= name==BOARD_TOUCH;
             }
             closedir(input);
         }

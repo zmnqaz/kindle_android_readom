@@ -19,6 +19,10 @@
                        "mmcblk1p6", "mmcblk1p7", "mmcblk1p8", "mmcblk1p9", "mmcblk1p10", \
                        "mmcblk1boot0", "mmcblk1boot1", "mmcblk1rpmb" }
 #define BOARD_BLOCK_COUNT 14U
+/* pw3-init-check (initcheck/InitCheck.cpp): the nodes the framework waits for. */
+#define BOARD_BACKLIGHT "bl"
+#define BOARD_POWER_KEY "bd71827-power"
+#define BOARD_TOUCH "goodix-ts"
 #else
 #define BOARD_DISK "mmcblk0"
 #define BOARD_USER_PART "mmcblk0p4"
@@ -26,6 +30,9 @@
 #define BOARD_BLOCKS { "mmcblk0", "mmcblk0p1", "mmcblk0p2", "mmcblk0p3", \
                        "mmcblk0p4", "mmcblk0boot0", "mmcblk0boot1" }
 #define BOARD_BLOCK_COUNT 7U
+#define BOARD_BACKLIGHT "max77696-bl"
+#define BOARD_POWER_KEY "max77696-onkey"
+#define BOARD_TOUCH "cyttsp4_mt"
 #endif
 #define BOARD_DISK_LEN (sizeof(BOARD_DISK) - 1)
 #endif
