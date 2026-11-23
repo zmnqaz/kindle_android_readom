@@ -49,6 +49,9 @@ ELSEWHERE = {
     'boot/handoff/tests/test-init.c':
         'PID 1 of the QEMU fixture; built and booted by boot/handoff/tests/run_qemu.py '
         'and run_client_test.py, which the suite runs as handoff-in-qemu and handoff-client.',
+    'boot/handoff/tests/test-init-pw4.c':
+        'PID 1 of both kernels of the PW4 QEMU fixture; built and booted by '
+        'boot/handoff/tests/run_qemu_pw4.py, which the suite lists as pw4-handoff-in-qemu.',
     'boot/handoff/tests/test-engine-guard.c':
         'a payload for the QEMU fixture; built by boot/handoff/tests/run_qemu.py.',
     'boot/handoff/tests/test-identity-attrs.c':

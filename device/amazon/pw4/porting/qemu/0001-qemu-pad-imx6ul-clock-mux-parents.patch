@@ -1,0 +1,62 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: pw4-port <pw4-port@localhost>
+Date: Mon, 23 Nov 2026 14:22:56 +0800
+Subject: [PATCH] qemu stand-in: pad i.MX6UL clock mux parent lists to the
+ field width
+
+---
+ arch/arm/mach-imx/clk-imx6ul.c | 20 ++++++++++----------
+ 1 file changed, 10 insertions(+), 10 deletions(-)
+
+diff --git a/arch/arm/mach-imx/clk-imx6ul.c b/arch/arm/mach-imx/clk-imx6ul.c
+index 2c01f843..b73ae0ae 100644
+--- a/arch/arm/mach-imx/clk-imx6ul.c
++++ b/arch/arm/mach-imx/clk-imx6ul.c
+@@ -43,7 +43,7 @@ static const char *axi_alt_sels[] = { "pll2_pfd2_396m", "pll3_pfd1_540m", };
+ static const char *axi_sels[] = {"periph", "axi_alt_sel", };
+ static const char *periph_pre_sels[] = { "pll2_bus", "pll2_pfd2_396m", "pll2_pfd0_352m", "pll2_198m", };
+ static const char *periph2_pre_sels[] = { "pll2_bus", "pll2_pfd2_396m", "pll2_pfd0_352m", "pll4_audio_div", };
+-static const char *periph_clk2_sels[] = { "pll3_usb_otg", "osc", "osc", };
++static const char *periph_clk2_sels[] = { "pll3_usb_otg", "osc", "osc",  "dummy", };
+ static const char *periph2_clk2_sels[] = { "pll3_usb_otg", "osc", };
+ static const char *periph_sels[] = { "periph_pre", "periph_clk2", };
+ static const char *periph2_sels[] = { "periph2_pre", "periph2_clk2", };
+@@ -52,26 +52,26 @@ static const char *bch_sels[] = { "pll2_pfd2_396m", "pll2_pfd0_352m", };
+ static const char *gpmi_sels[] = { "pll2_pfd2_396m", "pll2_pfd0_352m", };
+ static const char *eim_slow_sels[] =  { "axi", "pll3_usb_otg", "pll2_pfd2_396m", "pll3_pfd0_720m", };
+ static const char *spdif_sels[] = { "pll4_audio_div", "pll3_pfd2_508m", "pll5_video_div", "pll3_usb_otg", };
+-static const char *sai_sels[] = { "pll3_pfd2_508m", "pll5_video_div", "pll4_audio_div", };
+-static const char *lcdif_pre_sels[] = { "pll2_bus", "pll3_pfd3_454m", "pll5_video_div", "pll2_pfd0_352m", "pll2_pfd1_594m", "pll3_pfd1_540m", };
+-static const char *sim_pre_sels[] = { "pll2_bus", "pll3_usb_otg", "pll5_video_div", "pll2_pfd0_352m", "pll2_pfd2_396m", "pll3_pfd2_508m", };
+-static const char *ldb_di0_sels[] = { "pll5_video_div", "pll2_pfd0_352m", "pll2_pfd2_396m", "pll2_pfd3_594m", "pll2_pfd1_594m", "pll3_pfd3_454m", };
++static const char *sai_sels[] = { "pll3_pfd2_508m", "pll5_video_div", "pll4_audio_div",  "dummy", };
++static const char *lcdif_pre_sels[] = { "pll2_bus", "pll3_pfd3_454m", "pll5_video_div", "pll2_pfd0_352m", "pll2_pfd1_594m", "pll3_pfd1_540m",  "dummy", "dummy", };
++static const char *sim_pre_sels[] = { "pll2_bus", "pll3_usb_otg", "pll5_video_div", "pll2_pfd0_352m", "pll2_pfd2_396m", "pll3_pfd2_508m",  "dummy", "dummy", };
++static const char *ldb_di0_sels[] = { "pll5_video_div", "pll2_pfd0_352m", "pll2_pfd2_396m", "pll2_pfd3_594m", "pll2_pfd1_594m", "pll3_pfd3_454m",  "dummy", "dummy", };
+ static const char *ldb_di0_div_sels[] = { "ldb_di0_div_3_5", "ldb_di0_div_7", };
+ static const char *ldb_di1_div_sels[] = { "ldb_di1_div_3_5", "ldb_di1_div_7", };
+-static const char *qspi1_sels[] = { "pll3_usb_otg", "pll2_pfd0_352m", "pll2_pfd2_396m", "pll2_bus", "pll3_pfd3_454m", "pll3_pfd2_508m", };
++static const char *qspi1_sels[] = { "pll3_usb_otg", "pll2_pfd0_352m", "pll2_pfd2_396m", "pll2_bus", "pll3_pfd3_454m", "pll3_pfd2_508m",  "dummy", "dummy", };
+ static const char *enfc_sels[] = { "pll2_pfd0_352m", "pll2_bus", "pll3_usb_otg", "pll2_pfd2_396m", "pll3_pfd3_454m", "dummy", "dummy", "dummy", };
+ static const char *can_sels[] = { "pll3_60m", "osc", "pll3_80m", "dummy", };
+ static const char *ecspi_sels[] = { "pll3_60m", "osc", };
+ static const char *uart_sels[] = { "pll3_80m", "osc", };
+ static const char *perclk_sels[] = { "ipg", "osc", };
+-static const char *lcdif_sels[] = { "lcdif_podf", "ipp_di0", "ipp_di1", "ldb_di0", "ldb_di1", };
++static const char *lcdif_sels[] = { "lcdif_podf", "ipp_di0", "ipp_di1", "ldb_di0", "ldb_di1",  "dummy", "dummy", "dummy", };
+ static const char *csi_sels[] = { "osc", "pll2_pfd2_396m", "pll3_120m", "pll3_pfd1_540m", };
+-static const char *sim_sels[] = { "sim_podf", "ipp_di0", "ipp_di1", "ldb_di0", "ldb_di1", };
++static const char *sim_sels[] = { "sim_podf", "ipp_di0", "ipp_di1", "ldb_di0", "ldb_di1",  "dummy", "dummy", "dummy", };
+ 
+ /* epdc_pre_sels, epdc_sels, esai_sels only exists on i.MX6ULL */
+-static const char *epdc_pre_sels[] = { "pll2_bus", "pll3_usb_otg", "pll5_video_div", "pll2_pfd0_352m", "pll2_pfd2_396m", "pll3_pfd2_508m", };
++static const char *epdc_pre_sels[] = { "pll2_bus", "pll3_usb_otg", "pll5_video_div", "pll2_pfd0_352m", "pll2_pfd2_396m", "pll3_pfd2_508m",  "dummy", "dummy", };
+ static const char *esai_sels[] = { "pll4_audio_div", "pll3_pfd2_508m", "pll5_video_div", "pll3_usb_otg", };
+-static const char *epdc_sels[] = { "epdc_podf", "ipp_di0", "ipp_di1", "ldb_di0", "ldb_di1", };
++static const char *epdc_sels[] = { "epdc_podf", "ipp_di0", "ipp_di1", "ldb_di0", "ldb_di1",  "dummy", "dummy", "dummy", };
+ 
+ static struct clk *clks[IMX6UL_CLK_END];
+ static struct clk_onecell_data clk_data;
+-- 
+2.53.0
+

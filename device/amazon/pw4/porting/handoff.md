@@ -30,7 +30,7 @@ PW3 的 profile 1、2 走原来的分支，行为不变：原有宿主机测试�
 - `tests/test_fdt.py`：22 条正反用例、原厂设备树实测、3000 个损坏 blob（ASan + UBSan 下只返回错误码）
   —— 需要 dtc：`python3 boot/handoff/tests/test_fdt.py --dtc <kernel-out>/scripts/dtc/dtc`
 - `tests/test-allocation-ranges-fdt.c`（已进 `tools/run-tests.py`）：blob 那 1 MiB 不分配
-- **没有在任何机器上加载或运行过**
+- 在 QEMU 里端到端跑通（见下面第 4 条）；**没有在 Kindle 上加载过**
 
 ## 上真机之前还差的
 
@@ -47,7 +47,9 @@ PW3 的 profile 1、2 走原来的分支，行为不变：原有宿主机测试�
    低 128 MiB 里的，即 `0x83f077b0` 那份旧 DTB；4.1 会自己保留它启动用的 blob），其余节点一字不改。
    用原厂设备树实测：输出只剩 EPDC 那条保留，整套计划（含真实解压占用）通过 `pw_plan_validate_fdt`。
    测试：`device-data-fdt`、`pw4-fdt`（改写幂等、补缺的 `/chosen`、拒绝坏输入）。
-4. **QEMU**：profile 4 的替身内核（4.1、2G/2G、RAM 在 `0x80000000`、Cortex-A9 或 A7），`qemu-pm.c` 跟着改。
+4. ~~QEMU~~ 已跑通（2026-11-23）：`mcimx6ul-evk` 上第一级 4.1（2G/2G、SMP_ON_UP）加载 profile 4 模块、拒绝四种坏输入、
+   两次 PROBE、COMMIT，第二级安卓内核（3G/1G）拿到构建的命令行和两段 initramfs 起来。见 `qemu/README.md`。
+   QEMU 的 i.MX6UL 自带挂起支持，不需要 `qemu-pm.c` 那个假的挂起提供者。
 5. **设备上的 PROBE**（会跑一次真实的 `pm_test=core` 挂起，先征得同意）：确认 PRRR/NMRR/MIDR、
    挂起后各门控的实际状态、USB 控制器寄存器，再据此锁定 USB 空闲判据。
 6. 跳转之后：新内核要能自己重启（`panic=5`），日志写进 `0x9be00000`，回原厂系统读 `/proc/printkbuf`。

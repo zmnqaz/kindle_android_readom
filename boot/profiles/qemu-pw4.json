@@ -1,0 +1,17 @@
+{
+  "description": "QEMU mcimx6ul-evk stand-in for the PW4 (4.1.15, device tree, 2G/2G, SMP_ON_UP, RAM at 0x80000000): the loader-stage kernel loads the module and jumps to a QEMU build of the Android kernel; no device",
+  "module_profile": 4,
+  "compatible": "fsl,imx6ul",
+  "boot_ram_base": "0x80000000",
+  "identity_limit": "0xa0000000",
+  "identity_limit_why": "as on the PW4: PAGE_OFFSET == PHYS_OFFSET, lowmem one to one to the end of the 512 MiB",
+  "cmdline_base": "console=ttymxc0,115200 rdinit=/init panic=5 pw4_virtual_stage=second",
+  "midr": "0x410fc075",
+  "midr_why": "QEMU's Cortex-A7 r0p5",
+  "prrr": "0xff0a81a8",
+  "nmrr": "0x40e040e0",
+  "ram": [["0x80000000", "0x20000000"]],
+  "forbidden": [["0x88000000", "0x18000000"]],
+  "device_archive_max": 12582912,
+  "footprint_profile": "pw4"
+}

@@ -398,6 +398,10 @@ FFS = ('ffs-lifecycle', 'tools/kernel-hardware/tests/test_ffs_lifecycle.py',
 # What each of the others needs before it can run, in the words of whoever
 # would have to provide it.
 ELSEWHERE = [
+    # The PW4 handoff in QEMU: two kernels and docker image of its own, built as
+    # device/amazon/pw4/porting/qemu/README.md says; minutes, so run by hand.
+    ('pw4-handoff-in-qemu', 'boot/handoff/tests/run_qemu_pw4.py',
+     'the two QEMU kernels and the pw4_qemu image of device/amazon/pw4/porting/qemu/README.md'),
 ]
 
 HISTORY = ('private-data-history', 'tools/check-private-data.py',

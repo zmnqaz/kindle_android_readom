@@ -68,6 +68,11 @@ static const unsigned char gate_shift[PWS_GATE_COUNT]={6,4,10,28,30,2,18,20,22,0
 #define PW4_DCP_GATE_BANK 0
 #define PW4_DCP_GATE_SHIFT 10
 extern void sim_flush_cache_all(void);
+#if PWS_PROFILE == 4
+/* The QEMU stand-in (i.MX6UL, Cortex-A7) has no outer cache: L2 is inside the
+ * core and the set/way walk in cache-ops.S reaches it. */
+static void native_no_outer(void){}
+#endif
 static int pws4_usb_idle(const struct pws_native_report *r)
 {
     (void)r;
@@ -105,7 +110,9 @@ static int native_prepare(struct store *s)
     if(s->state!=PWS_PREPARED || !target_matches(s))return -EPERM;
     if(TARGET_FOOTPRINT_END>PHYS_OFFSET+64u*1024u*1024u)return -EUCLEAN;
     if(blob>PAGE_SIZE || param+sizeof(*p)>blob || audit_plan(s))return -EUCLEAN;
+#if PWS_PROFILE == 3
     if(!outer_cache.flush_all || !outer_cache.disable)return -EOPNOTSUPP;
+#endif
     control=page_address(s->allocations[s->control_first].page);
     memcpy(control,pw3_transition_start,blob);p=(void *)((u8 *)control+param);memset(p,0,sizeof(*p));
     p->list=owned_phys(s,s->list_first);p->entry=destination(0);p->machine=0xffffffffu;p->atags=destination(1);
@@ -117,6 +124,10 @@ static int native_prepare(struct store *s)
     native_backend.private=page_address(s->allocations[s->control_first+2].page);
     native_backend.flush_inner=sim_flush_cache_all;native_backend.flush_outer=outer_cache.flush_all;
     native_backend.disable_outer=outer_cache.disable;native_backend.invalidate_outer=NULL;
+#if PWS_PROFILE == 4
+    if(!native_backend.flush_outer)native_backend.flush_outer=native_no_outer;
+    if(!native_backend.disable_outer)native_backend.disable_outer=native_no_outer;
+#endif
     flush_icache_range((unsigned long)control,(unsigned long)control+blob);
     return 0;
 }
