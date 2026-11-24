@@ -125,3 +125,9 @@ PHY 全部走完（`pw4-trace` 共 4 ms），电脑枚举到 `configured`，能�
 软锁死检测（`softlockup_panic=1`）也没触发，像是硬件层面的冻结。卡死时 CPU 在 996 MHz（最后一次调频是升频）；
 Jump 17 卡死前刚升频；Jump 15 插线时 CPU 在 396 MHz，没卡。
 - 内核 `0019`：参数 `pw4_cpufreq_low`。Jump 20 = 跟踪 + `pw4_cpufreq_low=1`。
+
+**Jump 19 上机**：关掉 override 仍卡死。**读代码的结论（2026-11-24）**：交接在原厂 `pm_test=core` 挂起的 syscore 回调里，
+所有驱动的挂起回调都已执行、恢复回调永远不会执行，它们留下的硬件状态都带进了安卓内核。与插线有关的：
+- `bd71827_i2c_suspend_late`：进 PMIC 测试模式把 0x42 设成 0x4C（关闭关机时序），`resume_early` 才改回 0x44；
+- ChipIdea（`CONFIG_USB_REX`）挂起时打开 PHY 唤醒、关掉 PHY 3.0V（`vdd3p0`），插线由 max14656 检测后再打开。
+内核 `0020` 在 probe 时恢复 0x42，并加 `pw4_usbwatch`。Jump 21 = 0020（不带调频参数）。
