@@ -33,8 +33,12 @@ def main():
     ap.add_argument('--output', type=Path, required=True, help='directory for public-initramfs.gz and cmdline.txt')
     ap.add_argument('--cmdline-extra', action='append', default=[],
                     help='a kernel parameter for a diagnostic jump (e.g. pw4_busfreq_off), appended')
-    ap.add_argument('--default-prop', action='append', default=[],
-                    help='a line added to /default.prop for a diagnostic jump (e.g. service.adb.tcp.port=5555)')
+    ap.add_argument('--boot-prop', action='append', default=[],
+                    help='NAME=VALUE set on init for a diagnostic jump (e.g. service.adb.tcp.port=5555); '
+                         'init reads /system/etc/prop.default, not the ramdisk /default.prop')
+    ap.add_argument('--tcp-adbd', type=int, metavar='PORT',
+                    help='diagnostic: a second adbd (root) on this TCP port, started on boot and kept '
+                         'running whatever the framework does with the USB adbd')
     ap.add_argument('--adb-keys', type=Path,
                     help='a host adb public key file installed as /adb_keys (diagnostic, local only)')
     a = ap.parse_args()
@@ -64,9 +68,47 @@ def main():
                 pack.Entry('pw4-handoff', stat.S_IFDIR | 0o755),
                 pack.Entry('pw4-handoff/mxc_epdc_v2_fb.ko', stat.S_IFREG | 0o600, 0, 0, epdc),
                 pack.Entry('pw4-handoff/gt9xx-ts.ko', stat.S_IFREG | 0o600, 0, 0, touch)]
-    if a.default_prop:
-        prop = by_name['default.prop']
-        prop.data = prop.data.rstrip(b'\n') + b'\n' + '\n'.join(a.default_prop).encode() + b'\n'
+    if a.boot_prop:
+        rc = by_name['init.pw3.usb.rc']
+        lines = ['', '# Diagnostic jump: set by pack-initramfs.py --boot-prop', 'on init']
+        lines += ['    setprop %s %s' % tuple(p.split('=', 1)) for p in a.boot_prop]
+        rc.data = rc.data.rstrip(b'\n') + b'\n' + '\n'.join(lines).encode() + b'\n'
+    if a.tcp_adbd:
+        # Diagnostic only: a root adbd on TCP that the framework does not
+        # stop, the host key in /data/misc/adb, a plain shell on TCP port+445
+        # as a fallback, and the state of both written to the kernel log.
+        rc = by_name['init.pw3.usb.rc']
+        nc = a.tcp_adbd + 445
+        text = [
+            '', '# Diagnostic jump: set by pack-initramfs.py --tcp-adbd',
+            'on init',
+            '    setprop service.adb.tcp.port %d' % a.tcp_adbd,
+            '    setprop service.adb.root 1',
+            'on post-fs-data',
+            '    mkdir /data/misc/adb 02750 system shell',
+            '    copy /adb_keys /data/misc/adb/adb_keys',
+            '    chown system shell /data/misc/adb/adb_keys',
+            '    chmod 0640 /data/misc/adb/adb_keys',
+            '    restorecon_recursive /data/misc/adb',
+            'on property:sys.boot_completed=1',
+            '    start pw4tcpadbd',
+            '    start pw4ncsh',
+            '    write /dev/kmsg "pw4-diag: boot tcp=${service.adb.tcp.port} root=${service.adb.root} usb=${sys.usb.config}"',
+            'on property:init.svc.pw4tcpadbd=*',
+            '    write /dev/kmsg "pw4-diag: pw4tcpadbd=${init.svc.pw4tcpadbd} adbd=${init.svc.adbd}"',
+            'on property:init.svc.pw4ncsh=*',
+            '    write /dev/kmsg "pw4-diag: pw4ncsh=${init.svc.pw4ncsh}"',
+            'on property:sys.usb.state=*',
+            '    write /dev/kmsg "pw4-diag: usb state=${sys.usb.state} config=${sys.usb.config} adbd=${init.svc.adbd}"',
+            'service pw4tcpadbd /system/bin/adbd --root_seclabel=u:r:su:s0',
+            '    disabled',
+            '    seclabel u:r:adbd:s0',
+            'service pw4ncsh /system/bin/toybox nc -p %d -L /system/bin/sh' % nc,
+            '    disabled',
+            '    user root',
+            '    seclabel u:r:adbd:s0',
+            '']
+        rc.data = rc.data.rstrip(b'\n') + '\n'.join(text).encode()
     if a.adb_keys:
         if 'adb_keys' in by_name:
             sys.exit('the ramdisk already carries /adb_keys')
