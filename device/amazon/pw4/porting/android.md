@@ -151,3 +151,7 @@ Jump 21（`0020`，调频正常）跑过一次但日志没取就被覆盖了，�
 原因：DVS 初始化写 1.1 V，交接时 CPU 已在 996 MHz（原厂从 u-boot 的 792 MHz 起，cpufreq 必然切一次并升压），
 所以要到第一次调频才升压。这是真问题（`0024` 修），但几次冻结都发生在第一次调频之后，不是拔线冻结的原因。
 原厂里 `cpu0-arm` 是 buck2、`cpu0-soc` 是 buck1。Jump 27 = `0024`；接 PC 时 ADB 可用，改用 adb 在现场做对照。
+
+**Jump 27 上机**：`0024` 生效（`keep run selector 0x13`）。插 PC 后 230 ms、枚举中（主机 `not accepting address`）冻结，
+此时 DDR 在高频、电压正确。冻结与 USB 高速通信同时发生（枚举、通信中拔线），不只在 VBUS 跳变。
+下一个对照：Jump 28 = Jump 27 + `cpuidle.off=1`（6SLL 的 WAIT/LOW-POWER-IDLE 会门控 ARM 时钟、在 OCRAM 里让 DDR 自刷新）。
