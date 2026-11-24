@@ -155,3 +155,8 @@ Jump 21（`0020`，调频正常）跑过一次但日志没取就被覆盖了，�
 **Jump 27 上机**：`0024` 生效（`keep run selector 0x13`）。插 PC 后 230 ms、枚举中（主机 `not accepting address`）冻结，
 此时 DDR 在高频、电压正确。冻结与 USB 高速通信同时发生（枚举、通信中拔线），不只在 VBUS 跳变。
 下一个对照：Jump 28 = Jump 27 + `cpuidle.off=1`（6SLL 的 WAIT/LOW-POWER-IDLE 会门控 ARM 时钟、在 OCRAM 里让 DDR 自刷新）。
+
+**Jump 28 上机**：`cpuidle.off=1` 生效（`failed to register cpuidle driver`），插线正常、拔线仍冻结，排除 cpuidle。
+为省上机次数，一次准备两个：Jump 29 = 内存调频、CPU 调频、USB 运行时 PM、空闲低功耗全关（`pw4_busfreq_off`
+`pw4_cpufreq_hold` `pw4_usb_rpm_forbid` `pw4_cpuidle_wfi`）；不冻则用 adb 在运行中逐项打开再插拔。
+Jump 30 = 只加 `pw4_udc_nopullup`：线上无 USB 通信，冻则与通信无关。

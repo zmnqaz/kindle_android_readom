@@ -97,6 +97,8 @@ make O=<out> ARCH=arm olddefconfig
 
 补丁 `0024`（2026-11-24）：bd71827 的 DVS 初始化不再把 buck1/2 的 RUN 电压降到设备树的 1.1 V（寄存器里已有更高值时保留）。交接时 CPU 已在 996 MHz、电压 1.275 V，cpufreq 看不到频率变化，原先会在 1.1 V 下跑到第一次调频（35–90 s）。
 
+补丁 `0025`、`0026`（2026-11-24，诊断用）：运行时可写的开关 `pw4_cpuidle_wfi`（空闲只做 WFI）、`pw4_cpufreq_hold`（不调频）、`pw4_udc_nopullup`（不拉 D+），以及 `pw4_usb_rpm_forbid`（probe 时禁止 OTG1 运行时挂起，`power/control` 写 auto 可恢复）。
+
 **编译参数（2026-11-23 补）**：安卓内核要带 `KCFLAGS="-fno-pic -fno-pie"`，和 Readom 的 `tools/build-kernel.sh`、交接模块一样。AOSP 的 gcc 4.9 默认生成位置无关代码，不带这个参数时内核本身还能启动，但模块里会引用 `_GLOBAL_OFFSET_TABLE_`，加载时报 `Unknown symbol _GLOBAL_OFFSET_TABLE_`（第十次交接时 EPDC 驱动就是这样没加载上）。
 
 ## 五、第 0 阶段分类的修正
