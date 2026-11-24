@@ -1,0 +1,87 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: pw4-port <pw4-port@localhost>
+Date: Tue, 24 Nov 2026 09:46:12 +0800
+Subject: [PATCH] PW4 Android: bd71827 LEDs set from a work item
+
+power_supply LED triggers call brightness_set under a read lock, and the
+PMIC write sleeps on I2C (scheduling while atomic on every charger event).
+---
+ drivers/leds/leds-bd71827.c | 25 ++++++++++++++++++++++---
+ 1 file changed, 22 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/leds/leds-bd71827.c b/drivers/leds/leds-bd71827.c
+index 58537453..2c4f061c 100644
+--- a/drivers/leds/leds-bd71827.c
++++ b/drivers/leds/leds-bd71827.c
+@@ -12,6 +12,7 @@
+ #include <linux/leds.h>
+ #include <linux/platform_device.h>
+ #include <linux/mfd/bd71827.h>
++#include <linux/workqueue.h>
+ 
+ #define AMBER_BIT 7
+ #define GRN_BIT   6
+@@ -20,6 +21,13 @@ struct bd71827_led_data {
+ 	struct led_classdev cdev;
+ 	char *name;
+ 	int bit;
++	/*
++	 * Triggers (power_supply charging/full) call brightness_set under a
++	 * read lock, but the PMIC is behind I2C and regmap sleeps, so the
++	 * register write runs from a work item.
++	 */
++	struct work_struct work;
++	int on;
+ };
+ 
+ struct bd71827_led_data bd71827_leds[] = {
+@@ -42,9 +50,16 @@ static void bd71827_led_set(struct led_classdev *led_cdev,
+ {
+ 	struct bd71827_led_data *ldata = container_of(led_cdev,
+ 						      struct bd71827_led_data, cdev);
+-	int on = (value > 0)? 1 : 0;
++	ldata->on = (value > 0)? 1 : 0;
++	schedule_work(&ldata->work);
++}
++
++static void bd71827_led_work(struct work_struct *work)
++{
++	struct bd71827_led_data *ldata = container_of(work,
++						      struct bd71827_led_data, work);
+ 	bd71827_update_bits(bd71827_mfd, BD71827_REG_LED_CTRL,
+-			   (1 << ldata->bit), (on << ldata->bit));
++			   (1 << ldata->bit), (ldata->on << ldata->bit));
+ }
+ 
+ static int bd71827_led_remove(struct platform_device *pdev)
+@@ -53,6 +68,7 @@ static int bd71827_led_remove(struct platform_device *pdev)
+ 
+ 	for (i = 0; i < NUMS_LED; i++) {
+ 		led_classdev_unregister(&bd71827_leds[i].cdev);
++		cancel_work_sync(&bd71827_leds[i].work);
+ 	}
+ 	return 0;
+ }
+@@ -68,6 +84,7 @@ static int bd71827_led_probe(struct platform_device *pdev)
+ 	for (i = 0; i < NUMS_LED; i++) {
+ 		bd71827_leds[i].cdev.name = bd71827_leds[i].name;
+ 		bd71827_leds[i].cdev.brightness_set = bd71827_led_set;
++		INIT_WORK(&bd71827_leds[i].work, bd71827_led_work);
+ 
+ 		err = led_classdev_register(&pdev->dev, &bd71827_leds[i].cdev);
+ 		if (err < 0)
+@@ -76,8 +93,10 @@ static int bd71827_led_probe(struct platform_device *pdev)
+ 	return 0;
+ 
+ exit:
+-	while (i--)
++	while (i--) {
+ 		led_classdev_unregister(&bd71827_leds[i].cdev);
++		cancel_work_sync(&bd71827_leds[i].work);
++	}
+ 	return err;
+ }
+ 
+-- 
+2.53.0
+

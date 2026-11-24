@@ -107,3 +107,10 @@ preinit 改名 `.real`（同 `boot/build_entry.py`），公开 initramfs 由 `pa
 - 参数 `pw4_busfreq_off`：DDR 一直停在开机时的频率（原厂在进休眠前已切到高频，交接就从那里开始）。
 - Jump 15 = 跟踪；Jump 16 = 跟踪 + `pw4_busfreq_off`（同一个系统镜像，只差命令行）。15 卡、16 不卡，就是调频。
   `pack-initramfs.py --cmdline-extra` 加这种参数，`cmdline_sha256` 随之改。
+
+**Jump 15 上机（2026-11-24）**：电源键、前光正常。插 USB **没有卡死**：VBUS 唤醒 → DDR 切高频 → 时钟 → USBNC →
+PHY 全部走完（`pw4-trace` 共 4 ms），电脑枚举到 `configured`，能充电。Jump 13 的卡死这次没复现，原因待定（`0016` 先留着）。
+- Wi-Fi 仍不行：bcmdhd 的 insmod 成功，但下载固件的是 SDIO probe 的内核工作线程（`kernel` 域），SELinux 拒绝它
+  读 `/firmware`（`pw3_private_firmware_file`）。`sepolicy/pw4_hardware.te` 给 `kernel` 也放行。
+- 充电灯触发器每次充电器事件都报 `scheduling while atomic`（`bd71827_led_set` 在读锁下走 I²C）→ 内核 `0017`。
+- Jump 17 = 这两处修复（不带 `pw4_busfreq_off`）。
