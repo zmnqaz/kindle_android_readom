@@ -160,3 +160,8 @@ Jump 21（`0020`，调频正常）跑过一次但日志没取就被覆盖了，�
 为省上机次数，一次准备两个：Jump 29 = 内存调频、CPU 调频、USB 运行时 PM、空闲低功耗全关（`pw4_busfreq_off`
 `pw4_cpufreq_hold` `pw4_usb_rpm_forbid` `pw4_cpuidle_wfi`）；不冻则用 adb 在运行中逐项打开再插拔。
 Jump 30 = 只加 `pw4_udc_nopullup`：线上无 USB 通信，冻则与通信无关。
+
+**Jump 29、30 上机**：29（四项全关，开关都确认生效）插线即冻结，四项排除。30（`pw4_udc_nopullup`，日志 3 次
+`pullup refused`）插拔多次都不冻：**没有 USB 通信就不冻**，电源、PMIC、max14656 这一路排除。
+Jump 31 = 30 的内核 + Wi-Fi adb（`pack-initramfs.py --default-prop service.adb.tcp.port=5555`、`--adb-keys`
+本机公钥，只在本地打包），在不冻的状态下用 adb 运行中打开 D+ 上拉、换 USB 功能组合，逐项对照。

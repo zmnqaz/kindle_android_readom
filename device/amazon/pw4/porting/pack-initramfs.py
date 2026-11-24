@@ -33,6 +33,10 @@ def main():
     ap.add_argument('--output', type=Path, required=True, help='directory for public-initramfs.gz and cmdline.txt')
     ap.add_argument('--cmdline-extra', action='append', default=[],
                     help='a kernel parameter for a diagnostic jump (e.g. pw4_busfreq_off), appended')
+    ap.add_argument('--default-prop', action='append', default=[],
+                    help='a line added to /default.prop for a diagnostic jump (e.g. service.adb.tcp.port=5555)')
+    ap.add_argument('--adb-keys', type=Path,
+                    help='a host adb public key file installed as /adb_keys (diagnostic, local only)')
     a = ap.parse_args()
     spec = importlib.util.spec_from_file_location('pack', ROOT / 'tools/preinit-pack/pack.py')
     pack = importlib.util.module_from_spec(spec); sys.modules['pack'] = pack; spec.loader.exec_module(pack)
@@ -60,6 +64,13 @@ def main():
                 pack.Entry('pw4-handoff', stat.S_IFDIR | 0o755),
                 pack.Entry('pw4-handoff/mxc_epdc_v2_fb.ko', stat.S_IFREG | 0o600, 0, 0, epdc),
                 pack.Entry('pw4-handoff/gt9xx-ts.ko', stat.S_IFREG | 0o600, 0, 0, touch)]
+    if a.default_prop:
+        prop = by_name['default.prop']
+        prop.data = prop.data.rstrip(b'\n') + b'\n' + '\n'.join(a.default_prop).encode() + b'\n'
+    if a.adb_keys:
+        if 'adb_keys' in by_name:
+            sys.exit('the ramdisk already carries /adb_keys')
+        entries.append(pack.Entry('adb_keys', stat.S_IFREG | 0o644, 0, 0, a.adb_keys.read_bytes()))
     if any(e.name in {n for n, _, _ in pack.LOG_NODES} for e in entries):
         sys.exit('the ramdisk already carries a log node')
     entries += pack.log_nodes()
