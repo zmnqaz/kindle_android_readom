@@ -114,3 +114,9 @@ PHY 全部走完（`pw4-trace` 共 4 ms），电脑枚举到 `configured`，能�
   读 `/firmware`（`pw3_private_firmware_file`）。`sepolicy/pw4_hardware.te` 给 `kernel` 也放行。
 - 充电灯触发器每次充电器事件都报 `scheduling while atomic`（`bd71827_led_set` 在读锁下走 I²C）→ 内核 `0017`。
 - Jump 17 = 这两处修复（不带 `pw4_busfreq_off`）。
+
+**Jump 17 上机（2026-11-24）**：Wi-Fi、充电灯正常。插 USB 又卡死，约 70 s 后硬件看门狗（60 s）重启，
+没有 panic 也没有 `Restarting`。最后一行是 `busfreq high done`；Jump 15 插线时同一位置下一行是 max14656 的
+`usb_gadget_chg_det_sync`，它前面只有 `cpufreq_override(2)`：CPU 396 → 996 MHz（升压经 I²C 写 bd71827，再重设 PLL1）。
+- 内核 `0018`（诊断）：DCIN 中断、max14656 检测、override、调频每一步都打 `pw4-trace`；参数 `pw4_cpufreq_override_off`。
+- Jump 18 = 跟踪；Jump 19 = 跟踪 + `pw4_cpufreq_override_off=1`（同一个系统镜像）。

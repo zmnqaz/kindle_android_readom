@@ -1,0 +1,122 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: pw4-port <pw4-port@localhost>
+Date: Tue, 24 Nov 2026 10:20:58 +0800
+Subject: [PATCH] PW4 diagnosis: trace the charger plug path and CPU frequency
+ changes
+
+pw4-trace lines at the bd71827 DCIN interrupt, max14656 detection,
+cpufreq_override and each step of imx6q_set_target; core_param
+pw4_cpufreq_override_off turns the override into a no-op.
+---
+ drivers/cpufreq/cpufreq.c                 | 10 ++++++++++
+ drivers/cpufreq/imx6q-cpufreq.c           |  6 ++++++
+ drivers/power/bd71827-power.c             |  1 +
+ drivers/power/max14656_charger_detector.c |  1 +
+ 4 files changed, 18 insertions(+)
+
+diff --git a/drivers/cpufreq/cpufreq.c b/drivers/cpufreq/cpufreq.c
+index 11dacf25..533b32ff 100644
+--- a/drivers/cpufreq/cpufreq.c
++++ b/drivers/cpufreq/cpufreq.c
+@@ -1636,12 +1636,21 @@ unsigned int cpufreq_get(unsigned int cpu)
+ EXPORT_SYMBOL(cpufreq_get);
+ 
+ #ifdef CONFIG_CPU_FREQ_OVERRIDE_LAB126
++/* PW4 diagnosis: pw4_cpufreq_override_off=1 makes the override a no-op. */
++static bool pw4_cpufreq_override_off;
++core_param(pw4_cpufreq_override_off, pw4_cpufreq_override_off, bool, 0444);
++
+ /* Lab126: Call the driver override */
+ unsigned int cpufreq_override(unsigned int is_override)
+ {
+ 	int cpu;
+ 	struct cpufreq_policy *policy;
+ 
++	pr_info("pw4-trace: cpufreq override %u%s\n", is_override,
++		pw4_cpufreq_override_off ? " (off)" : "");
++	if (pw4_cpufreq_override_off)
++		return 0;
++
+ 	/*
+ 	   Require the "sysfs_performance_governor_lock" to lock and prevent
+ 	   user space changing the gorvernor mode to performance mode
+@@ -1659,6 +1668,7 @@ unsigned int cpufreq_override(unsigned int is_override)
+ 	}
+ 
+ 	mutex_unlock(&sysfs_performance_governor_lock);
++	pr_info("pw4-trace: cpufreq override done\n");
+ 
+ 	return 0;
+ }
+diff --git a/drivers/cpufreq/imx6q-cpufreq.c b/drivers/cpufreq/imx6q-cpufreq.c
+index 93994a26..4bd2e843 100644
+--- a/drivers/cpufreq/imx6q-cpufreq.c
++++ b/drivers/cpufreq/imx6q-cpufreq.c
+@@ -135,6 +135,8 @@ _no_power_optimization:
+ 	volt = dev_pm_opp_get_voltage(opp);
+ 	rcu_read_unlock();
+ 	volt_old = regulator_get_voltage(arm_reg);
++	pr_info("pw4-trace: cpufreq %u -> %u kHz, arm %lu -> %lu uV, soc %u\n",
++		old_freq, new_freq, volt_old, volt, imx6_soc_volt[index]);
+ 
+ 	dev_dbg(cpu_dev, "%u MHz, %ld mV --> %u MHz, %ld mV\n",
+ 		old_freq / 1000, volt_old / 1000,
+@@ -167,6 +169,7 @@ _no_power_optimization:
+ 			mutex_unlock(&set_cpufreq_lock);
+ 			return ret;
+ 		}
++		pr_info("pw4-trace: cpufreq soc up done\n");
+ 		ret = regulator_set_voltage_tol(arm_reg, volt, 0);
+ 		if (ret) {
+ 			dev_err(cpu_dev,
+@@ -174,6 +177,7 @@ _no_power_optimization:
+ 			mutex_unlock(&set_cpufreq_lock);
+ 			return ret;
+ 		}
++		pr_info("pw4-trace: cpufreq arm up done\n");
+ 	}
+ 
+ 	/*
+@@ -225,6 +229,7 @@ _no_power_optimization:
+ 			clk_set_parent(pll1_bypass, pll1_bypass_src);
+ 	}
+ 
++	pr_info("pw4-trace: cpufreq pll done\n");
+ 	/* Ensure the arm clock divider is what we expect */
+ 	ret = clk_set_rate(arm_clk, new_freq * 1000);
+ 	if (ret) {
+@@ -266,6 +271,7 @@ _no_power_optimization:
+ 	} else if (old_freq > FREQ_396_MHZ && new_freq <= FREQ_396_MHZ) {
+ 		release_bus_freq(BUS_FREQ_HIGH);
+ 	}
++	pr_info("pw4-trace: cpufreq done\n");
+ 
+ 	mutex_unlock(&set_cpufreq_lock);
+ 	return 0;
+diff --git a/drivers/power/bd71827-power.c b/drivers/power/bd71827-power.c
+index fb15c796..2446b2b4 100755
+--- a/drivers/power/bd71827-power.c
++++ b/drivers/power/bd71827-power.c
+@@ -3519,6 +3519,7 @@ static irqreturn_t bd71827_power_interrupt(int irq, void *pwrsys)
+         int reg, r;
+ 
+         reg = bd71827_reg_read(mfd, BD71827_REG_INT_STAT_03);
++        pr_info("pw4-trace: bd71827 int03 %#x\n", reg);
+         if (reg <= 0)
+                 return IRQ_NONE;
+ 
+diff --git a/drivers/power/max14656_charger_detector.c b/drivers/power/max14656_charger_detector.c
+index 639b4b16..d3fd0238 100644
+--- a/drivers/power/max14656_charger_detector.c
++++ b/drivers/power/max14656_charger_detector.c
+@@ -302,6 +302,7 @@ static void max14656_detect_worker(struct work_struct *work)
+     int ret = 0;
+ 
+     mutex_lock(&chip->work_lock);
++    pr_info("pw4-trace: max14656 detect\n");
+ 
+ #ifdef CONFIG_CPU_FREQ_OVERRIDE_LAB126
+     cpufreq_override(2);
+-- 
+2.53.0
+
