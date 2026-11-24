@@ -1,0 +1,41 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: pw4-port <pw4-port@localhost>
+Date: Tue, 24 Nov 2026 19:59:22 +0800
+Subject: [PATCH] PW4 Android: keep the stock run voltage of VDD_ARM/VDD_SOC at
+ probe
+
+The DVS init wrote 1.1 V while the CPU was already at 996 MHz from the
+stock kernel; cpufreq saw no change and left it there until the first
+transition (35-90 s). Keep a higher run voltage already in the PMIC.
+---
+ drivers/regulator/bd71827-regulator.c | 14 +++++++++++++-
+ 1 file changed, 13 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/regulator/bd71827-regulator.c b/drivers/regulator/bd71827-regulator.c
+index d2377f91..99f8fb0a 100755
+--- a/drivers/regulator/bd71827-regulator.c
++++ b/drivers/regulator/bd71827-regulator.c
+@@ -664,7 +664,19 @@ static int bd71827_buck12_dvs_init(struct bd71827_pmic *pmic)
+ 		reg_susp = BD71827_REG_BUCK1_VOLT_SUSP + i*0x2;
+ 		dev_info(pmic->dev, "Buck%d: DVS Run-Idle-Susp[%d - %d - %d].\n", i, buck_dvs->voltage[0], buck_dvs->voltage[1], buck_dvs->voltage[2]);
+ 		selector = regulator_map_voltage_iterate(pmic->rdev[i], buck_dvs->voltage[0], buck_dvs->voltage[0]);
+-		if(selector < 0) {
++		/*
++		 * PW4 Android: the kernel takes over from the stock one with the
++		 * CPU already at 996 MHz and VDD_ARM/VDD_SOC at 1.275 V. cpufreq
++		 * sees no frequency change, so lowering the run voltage here would
++		 * leave the CPU at 996 MHz on 1.1 V until the first transition.
++		 * Keep a higher run voltage.
++		 */
++		ret = bd71827_reg_read(bd71827, reg_run);
++		if (selector >= 0 && ret >= 0 && (ret & BUCK1_RUN_MASK) > selector) {
++			dev_info(pmic->dev, "Buck%d: keep run selector %#x (above %#x)\n",
++				 i, ret & BUCK1_RUN_MASK, selector);
++			selector = -1;
++		} else if(selector < 0) {
+ 			dev_err(pmic->dev, "%s(): not found selector for Run voltage [%d]\n", __func__, buck_dvs->voltage[0]);
+ 		} else {
+ 			val = (selector & BUCK1_RUN_MASK);
+-- 
+2.53.0
+
