@@ -120,3 +120,8 @@ PHY 全部走完（`pw4-trace` 共 4 ms），电脑枚举到 `configured`，能�
 `usb_gadget_chg_det_sync`，它前面只有 `cpufreq_override(2)`：CPU 396 → 996 MHz（升压经 I²C 写 bd71827，再重设 PLL1）。
 - 内核 `0018`（诊断）：DCIN 中断、max14656 检测、override、调频每一步都打 `pw4-trace`；参数 `pw4_cpufreq_override_off`。
 - Jump 18 = 跟踪；Jump 19 = 跟踪 + `pw4_cpufreq_override_off=1`（同一个系统镜像）。
+
+**Jump 18 上机（2026-11-24）**：插线一次就卡死。插线后**没有任何中断打印**（bd71827 DCIN、USB 唤醒都没有），
+软锁死检测（`softlockup_panic=1`）也没触发，像是硬件层面的冻结。卡死时 CPU 在 996 MHz（最后一次调频是升频）；
+Jump 17 卡死前刚升频；Jump 15 插线时 CPU 在 396 MHz，没卡。
+- 内核 `0019`：参数 `pw4_cpufreq_low`。Jump 20 = 跟踪 + `pw4_cpufreq_low=1`。

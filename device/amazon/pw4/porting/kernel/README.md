@@ -85,6 +85,8 @@ make O=<out> ARCH=arm olddefconfig
 
 补丁 `0018`（2026-11-24，诊断用）：插线路径的 `pw4-trace:`（bd71827 DCIN 中断、max14656 检测、`cpufreq_override`、`imx6q_set_target` 每一步），和参数 `pw4_cpufreq_override_off`。
 
+补丁 `0019`（2026-11-24，诊断用）：参数 `pw4_cpufreq_low`，CPU 固定在 396 MHz。
+
 **编译参数（2026-11-23 补）**：安卓内核要带 `KCFLAGS="-fno-pic -fno-pie"`，和 Readom 的 `tools/build-kernel.sh`、交接模块一样。AOSP 的 gcc 4.9 默认生成位置无关代码，不带这个参数时内核本身还能启动，但模块里会引用 `_GLOBAL_OFFSET_TABLE_`，加载时报 `Unknown symbol _GLOBAL_OFFSET_TABLE_`（第十次交接时 EPDC 驱动就是这样没加载上）。
 
 ## 五、第 0 阶段分类的修正

@@ -1,0 +1,50 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: pw4-port <pw4-port@localhost>
+Date: Tue, 24 Nov 2026 10:34:41 +0800
+Subject: [PATCH] PW4 diagnosis: pw4_cpufreq_low keeps the CPU at 396 MHz
+
+Test for the USB plug hang: Jumps 17 and 18 froze with the CPU at
+996 MHz, Jump 15 survived at 396 MHz.
+---
+ drivers/cpufreq/imx6q-cpufreq.c | 13 +++++++++++++
+ 1 file changed, 13 insertions(+)
+
+diff --git a/drivers/cpufreq/imx6q-cpufreq.c b/drivers/cpufreq/imx6q-cpufreq.c
+index 4bd2e843..a183d0ce 100644
+--- a/drivers/cpufreq/imx6q-cpufreq.c
++++ b/drivers/cpufreq/imx6q-cpufreq.c
+@@ -74,6 +74,10 @@ unsigned char imx6q_cpufreq_power_optimization(unsigned char enable_optimization
+ }
+ EXPORT_SYMBOL_GPL(imx6q_cpufreq_power_optimization);
+ #endif
++/* PW4 diagnosis: pw4_cpufreq_low=1 keeps the CPU at the lowest setpoint. */
++static bool pw4_cpufreq_low;
++core_param(pw4_cpufreq_low, pw4_cpufreq_low, bool, 0444);
++
+ static int imx6q_set_target(struct cpufreq_policy *policy, unsigned int index)
+ {
+ 	struct dev_pm_opp *opp;
+@@ -81,11 +85,20 @@ static int imx6q_set_target(struct cpufreq_policy *policy, unsigned int index)
+ 	unsigned int old_freq, new_freq;
+ 	int ret;
+ 
++	if (pw4_cpufreq_low)
++		index = 0;
+ 	mutex_lock(&set_cpufreq_lock);
+ 
+ 	new_freq = freq_table[index].frequency;
+ 	freq_hz = new_freq * 1000;
+ 	old_freq = policy->cur;
++	if (pw4_cpufreq_low) {
++		old_freq = clk_get_rate(arm_clk) / 1000;
++		if (old_freq == new_freq) {
++			mutex_unlock(&set_cpufreq_lock);
++			return 0;
++		}
++	}
+ 
+ 	/*
+ 	 * ON i.MX6ULL, the 24MHz setpoint is not seen by cpufreq
+-- 
+2.53.0
+
