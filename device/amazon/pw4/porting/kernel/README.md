@@ -89,6 +89,8 @@ make O=<out> ARCH=arm olddefconfig
 
 补丁 `0020`（2026-11-24）：内核是从原厂挂起的 syscore 阶段起来的，此前 `bd71827_i2c_suspend_late` 已把 PMIC 测试寄存器 0x42 设成"关闭关机时序"（0x4C），原厂的 `resume_early` 不会再跑；probe 时改回 0x44 并记下原值。另加诊断 `pw4_usbwatch`：每 1 ms 读 USB/VBUS 相关 anatop 寄存器、usboh3 时钟门和 PMIC_INT_B，变化就记一行。
 
+补丁 `0021`（2026-11-24，诊断用）：参数 `pw4_usb_runtime_pm_off`，OTG1 不进运行时 PM。
+
 **编译参数（2026-11-23 补）**：安卓内核要带 `KCFLAGS="-fno-pic -fno-pie"`，和 Readom 的 `tools/build-kernel.sh`、交接模块一样。AOSP 的 gcc 4.9 默认生成位置无关代码，不带这个参数时内核本身还能启动，但模块里会引用 `_GLOBAL_OFFSET_TABLE_`，加载时报 `Unknown symbol _GLOBAL_OFFSET_TABLE_`（第十次交接时 EPDC 驱动就是这样没加载上）。
 
 ## 五、第 0 阶段分类的修正

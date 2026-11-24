@@ -14,7 +14,7 @@ OUT=$SRC/jump21.txt
 LOG=$SRC/jump21-shell.txt
 : > "$LOG"
 
-eips 1 1 "Readom jump 14: starting Android kernel test" 2>/dev/null
+eips 1 1 "Readom Jump 21: preparing Android" 2>/dev/null
 {
     date; uname -a; cat /proc/uptime
     echo "== before"; cat /sys/power/pm_test
@@ -33,11 +33,24 @@ chmod 755 "$WORK/pw4-probe"
 sync
 echo 1 > /proc/sys/vm/drop_caches
 
-eips 1 2 "Jumping. Kindle restarts by itself in ~30 s" 2>/dev/null
 "$WORK/pw4-probe" "$WORK" "$OUT" jump >> "$LOG" 2>&1
+status=$?
+
+# A stock userspace task can delay the freezer (e.g. the library indexer
+# waiting on FUSE). Retry once only if suspend never reached the callback
+# and the probe restored pm_test and unloaded its module.
+if [ "$status" -eq 0 ] &&
+    grep -q '^RESULT PROBE_FAILED$' "$OUT" &&
+    grep -q 'pm_called=1 pm_result=-16 suspend_samples=0 resume_samples=0$' "$OUT" &&
+    grep -q '^cleanup module_unloaded=1 pm_test_restored=1 ' "$OUT"; then
+    echo "Suspend was busy before the callback; retrying once after 5 seconds." >> "$LOG"
+    sleep 5
+    "$WORK/pw4-probe" "$WORK" "$OUT" jump >> "$LOG" 2>&1
+    status=$?
+fi
 
 # Only reached when the module refused or the jump returned.
-echo "pw4-probe exit $? (no jump happened)" >> "$LOG"
+echo "pw4-probe exit $status (no jump happened)" >> "$LOG"
 cat /sys/power/pm_test >> "$LOG" 2>&1
 dmesg | tail -200 | sed -E 's/([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}/<mac>/g' > "$SRC/dmesg-after.txt" 2>&1
 rm -rf "$WORK"

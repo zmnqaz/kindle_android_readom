@@ -131,3 +131,9 @@ Jump 17 卡死前刚升频；Jump 15 插线时 CPU 在 396 MHz，没卡。
 - `bd71827_i2c_suspend_late`：进 PMIC 测试模式把 0x42 设成 0x4C（关闭关机时序），`resume_early` 才改回 0x44；
 - ChipIdea（`CONFIG_USB_REX`）挂起时打开 PHY 唤醒、关掉 PHY 3.0V（`vdd3p0`），插线由 max14656 检测后再打开。
 内核 `0020` 在 probe 时恢复 0x42，并加 `pw4_usbwatch`。Jump 21 = 0020（不带调频参数）。
+
+**Jump 22–25（2026-11-24 下午，另一个助手做的）**：都带了 `pw4_busfreq_off`。`0020` 生效（日志 `power sequence register
+was 0x4c, restore 0`，证实原厂留下了 0x4C）。插线后中断、max14656、USB 唤醒、枚举都走完（22、24），但几秒后冻结。
+**这几次的日志都有位翻转**（22/23/24 分别 28/5/11 处被改坏的字符），不带 `pw4_busfreq_off` 的 15/17/18 一处都没有：
+关掉调频后 DDR 并不在正确的高频设置上，内存出错。所以 22–25 的冻结不能算到 USB 头上，`pw4_busfreq_off` 不能再用。
+Jump 21（`0020`，调频正常）跑过一次但日志没取就被覆盖了，要重测。
