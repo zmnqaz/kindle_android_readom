@@ -1,0 +1,164 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: pw4-port <pw4-port@localhost>
+Date: Tue, 24 Nov 2026 19:45:41 +0800
+Subject: [PATCH 22/23] PW4 Android: no ChipIdea register access with the
+ clocks off
+
+A register access while the i.MX glue has gated the controller clocks
+stalls the bus. Skip it, log it and dump the caller's stack (3 times).
+---
+ drivers/usb/chipidea/ci.h          | 29 ++++++++++++++++++++++++++++-
+ drivers/usb/chipidea/ci_hdrc_imx.c | 18 +++++++++++++++++-
+ drivers/usb/chipidea/core.c        | 11 +++++++++++
+ 3 files changed, 56 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/usb/chipidea/ci.h b/drivers/usb/chipidea/ci.h
+index e28d38be..2ec2ce24 100644
+--- a/drivers/usb/chipidea/ci.h
++++ b/drivers/usb/chipidea/ci.h
+@@ -254,6 +254,8 @@ struct ci_hdrc {
+ 	bool				imx28_write_fix;
+ 	bool				supports_runtime_pm;
+ 	bool				in_lpm;
++	/* PW4: set while the i.MX glue has the controller clocks off */
++	bool			pw4_clk_off;
+ 	bool				wakeup_int;
+ 	enum ci_revision		rev;
+ 	/* register save area for suspend&resume */
+@@ -326,6 +328,19 @@ static inline void ci_role_stop(struct ci_hdrc *ci)
+ 		usb_phy_set_mode(ci->usb_phy, USB_MODE_NONE);
+ }
+ 
++/*
++ * PW4 Android: a register access while the glue has the clocks off stalls
++ * the bus and freezes the SoC with no message. Skip it and report who did it.
++ */
++void ci_pw4_gated_access(struct ci_hdrc *ci, const char *what);
++static inline bool ci_pw4_gated(struct ci_hdrc *ci, const char *what)
++{
++	if (likely(!ci->pw4_clk_off))
++		return false;
++	ci_pw4_gated_access(ci, what);
++	return true;
++}
++
+ /**
+  * hw_read_id_reg: reads from a identification register
+  * @ci: the controller
+@@ -336,6 +351,8 @@ static inline void ci_role_stop(struct ci_hdrc *ci)
+  */
+ static inline u32 hw_read_id_reg(struct ci_hdrc *ci, u32 offset, u32 mask)
+ {
++	if (ci_pw4_gated(ci, "read id"))
++		return 0;
+ 	return ioread32(ci->hw_bank.abs + offset) & mask;
+ }
+ 
+@@ -349,6 +366,8 @@ static inline u32 hw_read_id_reg(struct ci_hdrc *ci, u32 offset, u32 mask)
+ static inline void hw_write_id_reg(struct ci_hdrc *ci, u32 offset,
+ 			    u32 mask, u32 data)
+ {
++	if (ci_pw4_gated(ci, "write id"))
++		return;
+ 	if (~mask)
+ 		data = (ioread32(ci->hw_bank.abs + offset) & ~mask)
+ 			| (data & mask);
+@@ -366,6 +385,8 @@ static inline void hw_write_id_reg(struct ci_hdrc *ci, u32 offset,
+  */
+ static inline u32 hw_read(struct ci_hdrc *ci, enum ci_hw_regs reg, u32 mask)
+ {
++	if (ci_pw4_gated(ci, "read"))
++		return 0;
+ 	return ioread32(ci->hw_bank.regmap[reg]) & mask;
+ }
+ 
+@@ -399,6 +420,8 @@ static inline void __hw_write(struct ci_hdrc *ci, u32 val,
+ static inline void hw_write(struct ci_hdrc *ci, enum ci_hw_regs reg,
+ 			    u32 mask, u32 data)
+ {
++	if (ci_pw4_gated(ci, "write"))
++		return;
+ 	if (~mask)
+ 		data = (ioread32(ci->hw_bank.regmap[reg]) & ~mask)
+ 			| (data & mask);
+@@ -416,7 +439,11 @@ static inline void hw_write(struct ci_hdrc *ci, enum ci_hw_regs reg,
+ static inline u32 hw_test_and_clear(struct ci_hdrc *ci, enum ci_hw_regs reg,
+ 				    u32 mask)
+ {
+-	u32 val = ioread32(ci->hw_bank.regmap[reg]) & mask;
++	u32 val;
++
++	if (ci_pw4_gated(ci, "test and clear"))
++		return 0;
++	val = ioread32(ci->hw_bank.regmap[reg]) & mask;
+ 	__hw_write(ci, val, ci->hw_bank.regmap[reg]);
+ 	return val;
+ }
+diff --git a/drivers/usb/chipidea/ci_hdrc_imx.c b/drivers/usb/chipidea/ci_hdrc_imx.c
+index 607265c6..4ecb17c6 100644
+--- a/drivers/usb/chipidea/ci_hdrc_imx.c
++++ b/drivers/usb/chipidea/ci_hdrc_imx.c
+@@ -321,7 +321,11 @@ static void imx_disable_unprepare_clks(struct device *dev)
+ int imx_ci_hdrc_enable_clks(struct ci_hdrc *ci)
+ {
+ 	struct device *dev = ci->dev->parent;
+-	return imx_prepare_enable_clks(dev);
++	int ret = imx_prepare_enable_clks(dev);
++
++	if (!ret)
++		ci->pw4_clk_off = false;
++	return ret;
+ }
+ EXPORT_SYMBOL(imx_ci_hdrc_enable_clks);
+ #endif /* CONFIG_USB_REX */
+@@ -697,6 +701,12 @@ static int imx_controller_suspend(struct device *dev)
+ 		}
+ 	}
+ 
++	if (!IS_ERR_OR_NULL(data->ci_pdev)) {
++		struct ci_hdrc *ci = platform_get_drvdata(data->ci_pdev);
++
++		if (ci)
++			ci->pw4_clk_off = true;
++	}
+ 	imx_disable_unprepare_clks(dev);
+ 	if (test_and_clear_bit(HIGH_BUS_FREQ, &data->bitflags)) {
+ 		release_bus_freq(BUS_FREQ_HIGH);
+@@ -726,6 +736,12 @@ static int imx_controller_resume(struct device *dev)
+ 	ret = imx_prepare_enable_clks(dev);
+ 	if (ret)
+ 		return ret;
++	if (!IS_ERR_OR_NULL(data->ci_pdev)) {
++		struct ci_hdrc *ci = platform_get_drvdata(data->ci_pdev);
++
++		if (ci)
++			ci->pw4_clk_off = false;
++	}
+ 
+ 	data->in_lpm = false;
+ 
+diff --git a/drivers/usb/chipidea/core.c b/drivers/usb/chipidea/core.c
+index 55940510..60d516d7 100644
+--- a/drivers/usb/chipidea/core.c
++++ b/drivers/usb/chipidea/core.c
+@@ -547,6 +547,17 @@ int hw_wait_reg(struct ci_hdrc *ci, enum ci_hw_regs reg, u32 mask,
+ 	return 0;
+ }
+ 
++void ci_pw4_gated_access(struct ci_hdrc *ci, const char *what)
++{
++	static int reported;
++
++	pr_info("pw4-trace: usb register %s with clocks off\n", what);
++	if (reported < 3) {
++		reported++;
++		dump_stack();
++	}
++}
++
+ static irqreturn_t ci_irq(int irq, void *data)
+ {
+ 	struct ci_hdrc *ci = data;
+-- 
+2.53.0
+

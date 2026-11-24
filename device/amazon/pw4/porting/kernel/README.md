@@ -91,6 +91,10 @@ make O=<out> ARCH=arm olddefconfig
 
 补丁 `0021`（2026-11-24，诊断用）：参数 `pw4_usb_runtime_pm_off`，OTG1 不进运行时 PM。
 
+补丁 `0022`（2026-11-24）：i.MX 胶水层关掉控制器时钟期间，ChipIdea 的寄存器读写直接跳过、记一行并打印调用栈（前 3 次），免得总线挂死。
+
+补丁 `0023`（2026-11-24，诊断用）：开机 45 s 后按 i2cdump 的格式打印 bd71827 全部 256 个寄存器（`pw4-pmic:`）。
+
 **编译参数（2026-11-23 补）**：安卓内核要带 `KCFLAGS="-fno-pic -fno-pie"`，和 Readom 的 `tools/build-kernel.sh`、交接模块一样。AOSP 的 gcc 4.9 默认生成位置无关代码，不带这个参数时内核本身还能启动，但模块里会引用 `_GLOBAL_OFFSET_TABLE_`，加载时报 `Unknown symbol _GLOBAL_OFFSET_TABLE_`（第十次交接时 EPDC 驱动就是这样没加载上）。
 
 ## 五、第 0 阶段分类的修正

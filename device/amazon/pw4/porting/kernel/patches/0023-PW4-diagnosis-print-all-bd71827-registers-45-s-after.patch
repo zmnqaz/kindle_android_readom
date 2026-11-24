@@ -1,0 +1,56 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: pw4-port <pw4-port@localhost>
+Date: Tue, 24 Nov 2026 19:45:41 +0800
+Subject: [PATCH 23/23] PW4 diagnosis: print all bd71827 registers 45 s after
+ boot
+
+To compare with i2cdump on the stock system.
+---
+ drivers/mfd/bd71827.c | 24 ++++++++++++++++++++++++
+ 1 file changed, 24 insertions(+)
+
+diff --git a/drivers/mfd/bd71827.c b/drivers/mfd/bd71827.c
+index f97e38b4..7c09ae66 100755
+--- a/drivers/mfd/bd71827.c
++++ b/drivers/mfd/bd71827.c
+@@ -372,6 +372,28 @@ static void bd71827_restore_off_sequence(struct bd71827 *bd71827)
+ 		 val, ret);
+ }
+ 
++/* PW4 diagnosis: print all PMIC registers (as i2cdump does) 45 s after boot,
++ * to compare with the stock system's. */
++static struct bd71827 *pw4_pmic;
++static void pw4_pmic_dump(struct work_struct *work)
++{
++	char line[64];
++	int row, col, n;
++	unsigned int v;
++
++	for (row = 0; row < 256; row += 16) {
++		n = scnprintf(line, sizeof(line), "%02x:", row);
++		for (col = 0; col < 16; col++) {
++			if (regmap_read(pw4_pmic->regmap, row + col, &v))
++				n += scnprintf(line + n, sizeof(line) - n, " XX");
++			else
++				n += scnprintf(line + n, sizeof(line) - n, " %02x", v & 0xff);
++		}
++		pr_info("pw4-pmic: %s\n", line);
++	}
++}
++static DECLARE_DELAYED_WORK(pw4_pmic_dump_work, pw4_pmic_dump);
++
+ static int bd71827_i2c_probe(struct i2c_client *i2c,
+ 			    const struct i2c_device_id *id)
+ {
+@@ -423,6 +445,8 @@ static int bd71827_i2c_probe(struct i2c_client *i2c,
+ 	dev_info(bd71827->dev, "Device ID=0x%X\n", ret);
+ 
+ 	bd71827_restore_off_sequence(bd71827);
++	pw4_pmic = bd71827;
++	schedule_delayed_work(&pw4_pmic_dump_work, msecs_to_jiffies(45000));
+ 	bd71827_irq_init(bd71827, of_pmic_plat_data);
+ 
+ 	ret = mfd_add_devices(bd71827->dev, -1,
+-- 
+2.53.0
+
