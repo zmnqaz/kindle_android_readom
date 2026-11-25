@@ -1,0 +1,9 @@
+<!-- Merged with device/amazon/pw3/manifest.xml: DEVICE_MANIFEST_FILE may be a
+     list (build/make/target/board/Android.mk:34-46, assemble_vintf). -->
+<manifest version="1.0" type="device">
+    <hal format="hidl">
+        <name>android.hardware.bluetooth</name>
+        <transport>hwbinder</transport><version>1.0</version>
+        <interface><name>IBluetoothHci</name><instance>default</instance></interface>
+    </hal>
+</manifest>

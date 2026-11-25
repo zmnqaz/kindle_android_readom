@@ -7,12 +7,17 @@ it is still put together on the computer, from files read off the device
 (never committed):
   --device-files DIR  with  epdc_ED060KC4.fw            (stock /lib/firmware/imx/epdc)
                             firmware/bcmdhd/fw_bcmdhd_sr.bin, nvram_wfo.txt  (stock /opt/brcm_4343w/wifi)
+                            firmware/bluetooth/BCM4343A1.hcd  (optional: the chosen one of the stock
+                              /opt/brcm_4343w/bluetooth/firmware/BCM4343A1_*.hcd, renamed)
 and the two configuration files of the storage entry.
 
 Placed as: /lib/firmware/imx/epdc/epdc_ED060KC4.fw (the EPDC driver's request;
 pw4-handoff-init deletes it once the driver is up) and /firmware/bcmdhd/*
 (bcmdhd's firmware_path/nvram_path, device/amazon/pw4/hardware/init.pw4.hardware.rc;
-labeled by init.pw3-main.rc's restorecon of /firmware).
+labeled by init.pw3-main.rc's restorecon of /firmware), and
+/firmware/bluetooth/BCM4343A1.hcd (FwPatchFileName of
+device/amazon/pw4/bluetooth/bt_vendor.conf; group bluetooth is given by
+init.pw4.bluetooth.rc, the archive's entries are all root's).
 """
 import argparse
 from pathlib import Path
@@ -47,6 +52,12 @@ def main():
     if wifi.is_dir():
         files += [('firmware', D, b''), ('firmware/bcmdhd', 0o40750, b'')]
         files += [('firmware/bcmdhd/' + n, 0o100640, (wifi / n).read_bytes()) for n in ('fw_bcmdhd_sr.bin', 'nvram_wfo.txt')]
+    bt = dev / 'firmware/bluetooth/BCM4343A1.hcd'
+    if bt.is_file():
+        if not any(n == 'firmware' for n, _, _ in files):
+            files += [('firmware', D, b'')]
+        files += [('firmware/bluetooth', 0o40750, b''),
+                  ('firmware/bluetooth/BCM4343A1.hcd', 0o100640, bt.read_bytes())]
     a.output.write_bytes(newc(files))
     for name, mode, data in files:
         print('%06o %8d %s' % (mode, len(data), name))

@@ -1,0 +1,16 @@
+# PW4 Bluetooth (installed in /vendor/etc/init, imported by init.pw3-main.rc).
+# The HAL service itself comes with android.hardware.bluetooth@1.0-service.rc
+# (class hal, user bluetooth). /data/misc/bluedroid and /data/misc/bluetooth
+# are made by device/amazon/pw3/rootdir/init.pw3-main.rc:416-421.
+on post-fs-data
+    # The stock patch RAM file, put there by the device side
+    # (porting/make-device-archive.py); the HAL reads it as bluetooth.
+    chown root bluetooth /firmware/bluetooth
+    chmod 0750 /firmware/bluetooth
+    chown root bluetooth /firmware/bluetooth/BCM4343A1.hcd
+    chmod 0640 /firmware/bluetooth/BCM4343A1.hcd
+    # Fallback if ueventd's sysfs rule (vendor/ueventd.rc) does not match the
+    # real path: the built-in bt_pwr_ctrl registers before any wlan phy, so
+    # it is rfkill0.
+    chown bluetooth bluetooth /sys/class/rfkill/rfkill0/state
+    chmod 0660 /sys/class/rfkill/rfkill0/state

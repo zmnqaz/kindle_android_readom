@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- PW4: the PW3's software silence sink (device/amazon/pw3/audio/
+     audio_policy_configuration.xml) plus the Bluetooth A2DP module. With no
+     headphones connected, output goes to the silent sink as before; on A2DP
+     connection the policy engine routes media to "BT A2DP *".
+     The a2dp HAL (audio.a2dp.default) is loaded inside audioserver
+     (frameworks/av/media/libaudiohal/DevicesFactoryHalHybrid.cpp:48-51). -->
+<audioPolicyConfiguration version="1.0" xmlns:xi="http://www.w3.org/2001/XInclude">
+    <modules>
+        <module name="primary" halVersion="2.0">
+            <attachedDevices><item>Silent Output</item></attachedDevices>
+            <defaultOutputDevice>Silent Output</defaultOutputDevice>
+            <mixPorts>
+                <mixPort name="silent output" role="source" flags="AUDIO_OUTPUT_FLAG_PRIMARY">
+                    <profile name="" format="AUDIO_FORMAT_PCM_16_BIT"
+                             samplingRates="44100" channelMasks="AUDIO_CHANNEL_OUT_STEREO"/>
+                </mixPort>
+            </mixPorts>
+            <devicePorts>
+                <devicePort tagName="Silent Output" type="AUDIO_DEVICE_OUT_STUB" role="sink"/>
+            </devicePorts>
+            <routes><route type="mix" sink="Silent Output" sources="silent output"/></routes>
+        </module>
+        <xi:include href="a2dp_audio_policy_configuration.xml"/>
+    </modules>
+    <xi:include href="audio_policy_volumes.xml"/>
+    <xi:include href="default_volume_tables.xml"/>
+</audioPolicyConfiguration>

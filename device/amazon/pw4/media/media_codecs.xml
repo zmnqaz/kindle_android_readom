@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!-- PW4: software audio decoders only (the Google OMX components that
+     core_base.mk already installs). No video codecs: nothing on this
+     device plays video. -->
+<MediaCodecs>
+    <Include href="media_codecs_google_audio.xml" />
+</MediaCodecs>

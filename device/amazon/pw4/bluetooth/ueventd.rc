@@ -1,0 +1,10 @@
+# PW4 Bluetooth device nodes. Installed as /vendor/ueventd.rc, which ueventd
+# reads after /ueventd.rc and before /ueventd.${ro.hardware}.rc
+# (system/core/init/ueventd.cpp:230-242), so ueventd.pw3.rc stays the PW3's.
+# The BCM43430A1's HCI UART (UART3, serial@02034000); the HAL runs as bluetooth.
+/dev/ttymxc2              0660   bluetooth  bluetooth
+# bt_pwr_ctrl's rfkill switch (kernel bt-prep 0005): libbt-vendor writes
+# state (hardware/broadcom/libbt/src/upio.c:316-345). The top-level DT node
+# /bt_pwr_ctrl sits under soc0 like the other PW4 platform devices
+# (sepolicy/genfs_contexts); confirm with ls -l /sys/class/rfkill on the device.
+/sys/devices/soc0/bt_pwr_ctrl/rfkill/rfkill*   state   0660  bluetooth  bluetooth

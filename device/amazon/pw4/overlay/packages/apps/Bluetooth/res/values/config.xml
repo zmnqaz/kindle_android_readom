@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- PW4: A2DP source (with AVRCP target, which A2DP brings) and GATT only.
+     GATT stays: BluetoothManagerService's enable path waits for GattService
+     (frameworks/base/services/core/java/com/android/server/
+     BluetoothManagerService.java). Defaults in packages/apps/Bluetooth/res/
+     values/config.xml:16-33. No HFP: there is no PCM/I2S path to the chip. -->
+<resources>
+    <bool name="profile_supported_a2dp">true</bool>
+    <bool name="profile_supported_a2dp_sink">false</bool>
+    <bool name="profile_supported_hdp">false</bool>
+    <bool name="profile_supported_hs_hfp">false</bool>
+    <bool name="profile_supported_hfpclient">false</bool>
+    <bool name="profile_supported_hid">false</bool>
+    <bool name="profile_supported_opp">false</bool>
+    <bool name="profile_supported_pan">false</bool>
+    <bool name="profile_supported_pbap">false</bool>
+    <bool name="profile_supported_gatt">true</bool>
+    <bool name="profile_supported_map">false</bool>
+    <bool name="profile_supported_avrcp_controller">false</bool>
+    <bool name="profile_supported_sap">false</bool>
+    <bool name="profile_supported_pbapclient">false</bool>
+    <bool name="profile_supported_mapmce">false</bool>
+    <bool name="profile_supported_hidd">false</bool>
+</resources>

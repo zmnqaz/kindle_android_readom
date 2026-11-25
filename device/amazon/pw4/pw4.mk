@@ -12,6 +12,9 @@ PRODUCT_COPY_FILES += \
     device/amazon/pw4/hardware/init.pw4.hardware.rc:$(TARGET_COPY_OUT_VENDOR)/etc/init/init.pw3.hardware.rc \
     device/amazon/pw4/input/bd71827-power.kl:system/usr/keylayout/bd71827-power.kl \
     device/amazon/pw4/input/goodix-ts.idc:system/usr/idc/goodix-ts.idc
+# Bluetooth: A2DP source to headphones (bluetooth/bluetooth.mk). Before the
+# inheritance, for its audio_policy_configuration.xml and overlay to win.
+$(call inherit-product, device/amazon/pw4/bluetooth/bluetooth.mk)
 # The kernel modules of the PW4 kernel build (not in this repository; staged
 # by porting/stage-pw4-hardware.py).
 -include vendor/amazon/pw4-hardware/pw4-hardware.mk
