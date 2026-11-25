@@ -1,0 +1,145 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: pw4-port <pw4-port@localhost>
+Date: Wed, 25 Nov 2026 15:34:01 +0800
+Subject: [PATCH] PW4 Android: Wi-Fi survives aborted suspends and module
+ reloads
+
+The BCM4343 is power-cycled in suspend_late/resume_early and the SDIO card
+re-initialised on resume. A suspend aborted between the card suspend and the
+late phase skipped the power cycle and the re-init failed with -110. The
+SDIO core now tells wifi-bcm4343 when the card goes down and comes back, and
+the chip is cycled if nobody did. With the host non-removable (0023), a
+stale card with no driver bound is removed when bcmdhd powers the chip.
+---
+ arch/arm/mach-imx/wifi-bcm4343.c   | 30 ++++++++++++++++++++++++++++++
+ drivers/mmc/core/sdio.c            | 16 ++++++++++++++++
+ drivers/mmc/host/sdhci-esdhc-imx.c | 21 ++++++++++++++++++++-
+ 3 files changed, 66 insertions(+), 1 deletion(-)
+
+diff --git a/arch/arm/mach-imx/wifi-bcm4343.c b/arch/arm/mach-imx/wifi-bcm4343.c
+index 6fb2581d..1ee6a4bb 100644
+--- a/arch/arm/mach-imx/wifi-bcm4343.c
++++ b/arch/arm/mach-imx/wifi-bcm4343.c
+@@ -484,9 +484,39 @@ int brcm_wlan_power(int on)
+ #ifdef CONFIG_LAB126
+ extern void wifi_card_detect(bool on);
+ 
++/*
++ * PW4 Android: the chip is power-cycled across a system suspend (off in
++ * suspend_late, on in resume_early) and the SDIO card is re-initialised on
++ * resume. A suspend aborted after the card was suspended but before the
++ * late phase skips that power cycle, and the re-initialisation then fails
++ * (-110) with the chip still running: Wi-Fi gone until a reboot. Android
++ * aborts suspends routinely (wakeup events, alarms due in 2 s); stock
++ * turned Wi-Fi off before suspending. The SDIO core tells us when the card
++ * goes down and comes back, and we cycle the chip ourselves if nobody did.
++ */
++static bool wl_fresh;
++
++void brcm_wlan_card_suspended(void)
++{
++	wl_fresh = false;
++}
++EXPORT_SYMBOL(brcm_wlan_card_suspended);
++
++void brcm_wlan_card_resuming(void)
++{
++	if (!wl_fresh) {
++		pr_info("%s: no power cycle since the card suspended; cycling now\n", __func__);
++		brcm_wlan_power(0);
++		brcm_wlan_power(1);
++	}
++	wl_fresh = false;
++}
++EXPORT_SYMBOL(brcm_wlan_card_resuming);
++
+ int wifi_card_enable(void)
+ {
+ 	brcm_wlan_power(1);
++	wl_fresh = true;
+ 	wifi_card_detect(1);
+ 	return 0;
+ }
+diff --git a/drivers/mmc/core/sdio.c b/drivers/mmc/core/sdio.c
+index 7b6f094f..48cbe913 100644
+--- a/drivers/mmc/core/sdio.c
++++ b/drivers/mmc/core/sdio.c
+@@ -964,6 +964,14 @@ static int mmc_sdio_pre_suspend(struct mmc_host *host)
+ /*
+  * SDIO suspend.  Suspend all functions separately.
+  */
++#ifdef CONFIG_LAB126
++/* arch/arm/mach-imx/wifi-bcm4343.c: power-cycle the BCM4343 if a suspend
++ * was aborted before its late phase (see there). */
++extern void brcm_wlan_card_suspended(void);
++extern void brcm_wlan_card_resuming(void);
++#define PW4_IS_BCM(host) ((host)->card && (host)->card->cis.vendor == SDIO_VENDOR_ID_BROADCOM)
++#endif
++
+ static int mmc_sdio_suspend(struct mmc_host *host)
+ {
+ 	if (mmc_card_keep_power(host) && mmc_card_wake_sdio_irq(host)) {
+@@ -973,6 +981,10 @@ static int mmc_sdio_suspend(struct mmc_host *host)
+ 	}
+ 
+ 	if (!mmc_card_keep_power(host)) {
++#ifdef CONFIG_LAB126
++		if (PW4_IS_BCM(host))
++			brcm_wlan_card_suspended();
++#endif
+ 		mmc_power_off(host);
+ 	} else if (host->retune_period) {
+ 		mmc_retune_timer_stop(host);
+@@ -994,6 +1006,10 @@ static int mmc_sdio_resume(struct mmc_host *host)
+ 
+ 	/* Restore power if needed */
+ 	if (!mmc_card_keep_power(host)) {
++#ifdef CONFIG_LAB126
++		if (PW4_IS_BCM(host))
++			brcm_wlan_card_resuming();
++#endif
+ 		mmc_power_up(host, host->card->ocr);
+ 		/*
+ 		 * Tell runtime PM core we just powered up the card,
+diff --git a/drivers/mmc/host/sdhci-esdhc-imx.c b/drivers/mmc/host/sdhci-esdhc-imx.c
+index a2f83db5..79b53afe 100644
+--- a/drivers/mmc/host/sdhci-esdhc-imx.c
++++ b/drivers/mmc/host/sdhci-esdhc-imx.c
+@@ -22,6 +22,8 @@
+ #include <linux/mmc/host.h>
+ #include <linux/mmc/mmc.h>
+ #include <linux/mmc/sdio.h>
++#include <linux/mmc/card.h>
++#include <linux/mmc/sdio_func.h>
+ #include <linux/mmc/slot-gpio.h>
+ #include <linux/of.h>
+ #include <linux/of_device.h>
+@@ -166,7 +168,24 @@ void wifi_card_detect(bool on)
+ {
+ 	WARN_ON(!wifi_mmc_host);
+ 	if (on) {
+-		/* non-removable (below): scan again each time the chip is powered */
++		struct mmc_card *card = wifi_mmc_host->card;
++		bool bound = false;
++		int i;
++
++		/*
++		 * Non-removable (below), so no card detect will find a card the
++		 * chip's power-off made stale. When bcmdhd (re)loads and powers
++		 * the chip, a card still there with no driver bound is stale:
++		 * remove it so the scan finds the chip again. While bcmdhd is
++		 * bound (resume_early) the card is left alone.
++		 */
++		if (card) {
++			for (i = 0; i < card->sdio_funcs; i++)
++				if (card->sdio_func[i] && card->sdio_func[i]->dev.driver)
++					bound = true;
++			if (!bound)
++				mmc_sdio_force_remove(wifi_mmc_host);
++		}
+ 		wifi_mmc_host->rescan_entered = 0;
+ 		mmc_detect_change(wifi_mmc_host, 0);
+ 	} else {
+-- 
+2.53.0
+

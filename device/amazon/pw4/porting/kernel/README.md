@@ -97,6 +97,8 @@ make O=<out> ARCH=arm olddefconfig
 
 补丁 `0023`（2026-11-25）：Wi-Fi 所在的 SDIO 主机标成不可拔出。每次系统挂起尝试结束（`PM_POST_SUSPEND`）都会重新探测卡，探测可能碰上 BCM4343 正在休眠，判定卡已拔出并移除，bcmdhd 的移除流程在 `sdio_claim_host()` 里触发 `BUG()`，内核 panic（插着 USB 按电源键息屏时出现）。原厂休眠前会关 Wi-Fi，安卓不关。`wifi_card_detect()` 每次给芯片上电时重新允许扫描一次。
 
+补丁 `0024`（2026-11-25）：Wi-Fi 跨挂起中止和模块重载都能恢复。Lab126 的设计是 `suspend_late` 关 BCM4343、`resume_early` 开，恢复时重新初始化 SDIO 卡；挂起在卡已挂起、晚期阶段之前被中止（唤醒事件、2 s 内的闹钟，安卓里很常见）时芯片没有断电重启，重新初始化报 -110，Wi-Fi 直到重启都没了。现在 SDIO 核心在卡挂起和恢复时通知 `wifi-bcm4343`，没人做过断电重启就补做一次。另外 `0023` 把主机标成不可拔出后，关开 Wi-Fi 时旧卡不会被清掉；`wifi_card_detect(1)` 遇到没有驱动绑定的卡就先移除。
+
 **编译参数（2026-11-23 补）**：安卓内核要带 `KCFLAGS="-fno-pic -fno-pie"`，和 Readom 的 `tools/build-kernel.sh`、交接模块一样。AOSP 的 gcc 4.9 默认生成位置无关代码，不带这个参数时内核本身还能启动，但模块里会引用 `_GLOBAL_OFFSET_TABLE_`，加载时报 `Unknown symbol _GLOBAL_OFFSET_TABLE_`（第十次交接时 EPDC 驱动就是这样没加载上）。
 
 ## 五、第 0 阶段分类的修正
