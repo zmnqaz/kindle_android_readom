@@ -1,0 +1,48 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: pw4-port <pw4-port@localhost>
+Date: Wed, 25 Nov 2026 18:45:17 +0800
+Subject: [PATCH] Input: do not emit unneeded EV_SYN when suspending
+
+As upstream 00159f19a505: SYN_REPORT only when a key was released. The
+unconditional one reached evdev at every system suspend, took the Android
+evdev wake lock of the Goodix touch panel and aborted every autosuspend.
+---
+ drivers/input/input.c | 11 ++++++++++-
+ 1 file changed, 10 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/input/input.c b/drivers/input/input.c
+index cc357f15..74f918f2 100644
+--- a/drivers/input/input.c
++++ b/drivers/input/input.c
+@@ -672,8 +672,15 @@ EXPORT_SYMBOL(input_close_device);
+  * Simulate keyup events for all keys that are marked as pressed.
+  * The function must be called with dev->event_lock held.
+  */
++/*
++ * PW4 Android (as upstream 00159f19a505, "Input: do not emit unneeded EV_SYN
++ * when suspending"): report SYN_REPORT only when a key was released. The
++ * unconditional one reached evdev at every system suspend, took the Android
++ * evdev wake lock of the touch panel ("event2") and aborted the suspend.
++ */
+ static void input_dev_release_keys(struct input_dev *dev)
+ {
++	bool need_sync = false;
+ 	int code;
+ 
+ 	if (is_event_supported(EV_KEY, dev->evbit, EV_MAX)) {
+@@ -681,9 +688,11 @@ static void input_dev_release_keys(struct input_dev *dev)
+ 			if (is_event_supported(code, dev->keybit, KEY_MAX) &&
+ 			    __test_and_clear_bit(code, dev->key)) {
+ 				input_pass_event(dev, EV_KEY, code, 0);
++				need_sync = true;
+ 			}
+ 		}
+-		input_pass_event(dev, EV_SYN, SYN_REPORT, 1);
++		if (need_sync)
++			input_pass_event(dev, EV_SYN, SYN_REPORT, 1);
+ 	}
+ }
+ 
+-- 
+2.53.0
+

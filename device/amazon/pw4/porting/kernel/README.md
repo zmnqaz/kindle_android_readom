@@ -103,6 +103,8 @@ make O=<out> ARCH=arm olddefconfig
 
 补丁 `0026`（2026-11-25）：`mmc_rescan` 每条退出路径都释放 `mmc_delayed_work` 唤醒锁。调度检测工作时拿锁，原来两处提前返回（扫描被禁用、不可拔出的主机已扫过）不释放，要等下一次完整扫描。`0023` 把 Wi-Fi 主机标成不可拔出后，唤醒后的检测走这条路，锁一直挂着挡住自动挂起（一次 414 s）。
 
+补丁 `0027`（2026-11-25）：挂起时不再发多余的 `EV_SYN`（同上游 `00159f19a505`）。4.1 的 `input_dev_release_keys()` 不管有没有按键松开都发 `SYN_REPORT`，系统每次挂起都送到 evdev，占住安卓给触摸屏开的 evdev 唤醒锁（`event2`），自动挂起每次都被中止（Jump 41：27 次全失败）。
+
 **编译参数（2026-11-23 补）**：安卓内核要带 `KCFLAGS="-fno-pic -fno-pie"`，和 Readom 的 `tools/build-kernel.sh`、交接模块一样。AOSP 的 gcc 4.9 默认生成位置无关代码，不带这个参数时内核本身还能启动，但模块里会引用 `_GLOBAL_OFFSET_TABLE_`，加载时报 `Unknown symbol _GLOBAL_OFFSET_TABLE_`（第十次交接时 EPDC 驱动就是这样没加载上）。
 
 ## 五、第 0 阶段分类的修正
