@@ -158,6 +158,9 @@ preinit 改名 `.real`（同 `boot/build_entry.py`），公开 initramfs 由 `pa
 - **原厂长时间运行后跳转被拒**：原厂连续运行十几小时、用过 U 盘模式后，`pm_test=core` 挂起时很多时钟门没关
   （`gates_clear=0`，`ccgr4=ffffffff`），模块拒绝跳转（`RESULT REFUSED`）。重启原厂后再点就能跳，哪个驱动
   没关时钟没有查。
+- **插着 USB 按电源键息屏会 panic**（Jump 36，2026-11-25）：息屏时安卓请求挂起，被固件缓存重新请求 EPDC 固件
+  （`Wakeup pending, aborting suspend`）中止；中止后的卡探测把 Wi-Fi 芯片当成拔出，bcmdhd 移除时 `BUG()`
+  在 `sdio_claim_host`。内核 `0023`（Jump 37）。挂起本身仍会被固件缓存中止，所以现在息屏不省电，见休眠计划。
 - 未做：蓝牙、休眠（挂起/唤醒）、`pw3-fg-state`。
 - **PW4 没有带上 PW3 的 `system.prop`**（2026-11-25 发现并补上）：构建只取设备自己目录下的 `system.prop`，PW4 目录
   里没有，于是 `dalvik.vm.extra-opts=-Xnorelocate` 和 `dalvik.vm.dex2oat-flags=--no-watch-dog ...` 都没生效：ART 用的是

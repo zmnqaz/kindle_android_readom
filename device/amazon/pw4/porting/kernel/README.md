@@ -95,6 +95,8 @@ make O=<out> ARCH=arm olddefconfig
 
 补丁 `0022`（2026-11-25，**USB 插拔卡死的修复**）：交接发生在原厂挂起流程中，`serial_imx_suspend()` 已置位 `UCR3_AWAKEN`，之后不会有 resume。USB 插拔时 RXD 上的边沿触发异步唤醒中断，端口未打开、时钟关闭时（安卓命令行没有 `console=`）`imx_int()` 清不掉，形成中断风暴（约 2 万次/秒），单核被占满。probe 时屏蔽该端口的全部中断源。Jump 35 实测插拔 5 个来回、7 次 VBUS 接入，UART1 中断计数为 0。
 
+补丁 `0023`（2026-11-25）：Wi-Fi 所在的 SDIO 主机标成不可拔出。每次系统挂起尝试结束（`PM_POST_SUSPEND`）都会重新探测卡，探测可能碰上 BCM4343 正在休眠，判定卡已拔出并移除，bcmdhd 的移除流程在 `sdio_claim_host()` 里触发 `BUG()`，内核 panic（插着 USB 按电源键息屏时出现）。原厂休眠前会关 Wi-Fi，安卓不关。`wifi_card_detect()` 每次给芯片上电时重新允许扫描一次。
+
 **编译参数（2026-11-23 补）**：安卓内核要带 `KCFLAGS="-fno-pic -fno-pie"`，和 Readom 的 `tools/build-kernel.sh`、交接模块一样。AOSP 的 gcc 4.9 默认生成位置无关代码，不带这个参数时内核本身还能启动，但模块里会引用 `_GLOBAL_OFFSET_TABLE_`，加载时报 `Unknown symbol _GLOBAL_OFFSET_TABLE_`（第十次交接时 EPDC 驱动就是这样没加载上）。
 
 ## 五、第 0 阶段分类的修正
