@@ -1,0 +1,60 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: pw4-port <pw4-port@localhost>
+Date: Wed, 25 Nov 2026 12:49:19 +0800
+Subject: [PATCH] PW4 Android: mask the UART interrupts the stock suspend left
+ enabled
+
+The handoff starts inside a stock suspend: serial_imx_suspend() has set
+UCR3_AWAKEN and no resume follows. An RXD edge at USB plug/unplug raised
+the async wake interrupt, which the closed, unclocked port cannot clear:
+an interrupt storm that froze the SoC. Mask the port's interrupts at probe.
+---
+ drivers/tty/serial/imx.c | 32 ++++++++++++++++++++++++++++++++
+ 1 file changed, 32 insertions(+)
+
+diff --git a/drivers/tty/serial/imx.c b/drivers/tty/serial/imx.c
+index 16457db5..8da27670 100644
+--- a/drivers/tty/serial/imx.c
++++ b/drivers/tty/serial/imx.c
+@@ -2068,6 +2068,38 @@ static int serial_imx_probe(struct platform_device *pdev)
+ 	}
+ 	sport->port.uartclk = clk_get_rate(sport->clk_per);
+ 
++	/*
++	 * PW4 Android: the handoff leaves the stock kernel in the middle of a
++	 * suspend, where serial_imx_suspend() has set UCR3_AWAKEN and nothing
++	 * will run serial_imx_resume(). An edge on RXD (USB plug/unplug) then
++	 * raises the async wake interrupt, which imx_int() cannot clear with
++	 * the port closed and its clocks off: an interrupt storm that stops
++	 * the single core. Mask every interrupt source of the port here, as a
++	 * port that was never suspended would have them.
++	 */
++	if (!clk_prepare_enable(sport->clk_ipg)) {
++		unsigned int val;
++
++		val = readl(sport->port.membase + UCR3);
++		if (val & UCR3_AWAKEN)
++			dev_info(&pdev->dev, "pw4: async wake was left enabled (UCR3 %#x)\n", val);
++		val &= ~(UCR3_AWAKEN | UCR3_AIRINTEN | UCR3_RXDSEN | UCR3_DTREN |
++			 UCR3_PARERREN | UCR3_FRAERREN);
++		writel(val, sport->port.membase + UCR3);
++		val = readl(sport->port.membase + UCR1);
++		val &= ~(UCR1_ADEN | UCR1_TRDYEN | UCR1_IDEN | UCR1_RRDYEN |
++			 UCR1_TXMPTYEN | UCR1_RTSDEN);
++		writel(val, sport->port.membase + UCR1);
++		val = readl(sport->port.membase + UCR2);
++		val &= ~(UCR2_RTSEN | UCR2_ATEN);
++		writel(val, sport->port.membase + UCR2);
++		val = readl(sport->port.membase + UCR4);
++		val &= ~(UCR4_ENIRI | UCR4_WKEN | UCR4_TCEN | UCR4_BKEN | UCR4_OREN | UCR4_DREN);
++		writel(val, sport->port.membase + UCR4);
++		writel(USR1_AWAKE, sport->port.membase + USR1);
++		clk_disable_unprepare(sport->clk_ipg);
++	}
++
+ 	/*
+ 	 * Allocate the IRQ(s) i.MX1 has three interrupts whereas later
+ 	 * chips only have one interrupt.
+-- 
+2.53.0
+

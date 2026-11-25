@@ -180,3 +180,14 @@ Jump 31 = 30 的内核 + Wi-Fi adb（`pack-initramfs.py --default-prop service.a
   0x00482012, USBPHY1 from ldo3).
 - Jump 34 adds an EPIT2 lockup detector at top GIC priority to tell an
   interrupt storm from a bus hang.
+
+### Jump 34 (2026-11-25): the plug freeze is a UART1 interrupt storm
+
+The lockup detector caught it at the first plug: `pw4-lockup: irq 18 hw 26
+(2020000.serial) +12633` every 0.5 s, jiffies stopped. The handoff starts
+inside a stock suspend, where `serial_imx_suspend()` set `UCR3_AWAKEN`; no
+resume ever clears it. An RXD edge when the USB cable moves raises the async
+wake interrupt, and with the port closed and its clocks off (the Android
+command line has no `console=`, stock has `console=ttymxc0`) `imx_int()` cannot
+clear it. Not USB, PHY, power or Wi-Fi. Kernel patch 0029 masks the port's
+interrupts at probe (Jump 35).

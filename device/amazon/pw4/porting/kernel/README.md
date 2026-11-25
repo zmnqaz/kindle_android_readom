@@ -103,6 +103,8 @@ make O=<out> ARCH=arm olddefconfig
 
 补丁 `0028`（2026-11-25，诊断用）：EPIT2 每 0.5 秒以 GIC 最高优先级中断一次，jiffies 停住时打印 `pw4-lockup:` 计数增长最快的中断和被打断处的寄存器，用来区分中断风暴和总线挂死；usbwatch 不再读时钟关闭时的 USB PHY 寄存器。
 
+补丁 `0029`（2026-11-25，**USB 插拔卡死的修复**）：交接发生在原厂挂起流程中，`serial_imx_suspend()` 已置位 `UCR3_AWAKEN`，之后不会有 resume。USB 插拔时 RXD 上的边沿触发异步唤醒中断，端口未打开、时钟关闭时 `imx_int()` 清不掉，形成中断风暴（约 2 万次/秒），单核被占满。probe 时屏蔽该端口的全部中断源。
+
 **编译参数（2026-11-23 补）**：安卓内核要带 `KCFLAGS="-fno-pic -fno-pie"`，和 Readom 的 `tools/build-kernel.sh`、交接模块一样。AOSP 的 gcc 4.9 默认生成位置无关代码，不带这个参数时内核本身还能启动，但模块里会引用 `_GLOBAL_OFFSET_TABLE_`，加载时报 `Unknown symbol _GLOBAL_OFFSET_TABLE_`（第十次交接时 EPDC 驱动就是这样没加载上）。
 
 ## 五、第 0 阶段分类的修正
