@@ -164,7 +164,12 @@ preinit 改名 `.real`（同 `boot/build_entry.py`），公开 initramfs 由 `pa
 - **休眠（进行中，2026-11-25）**：Jump 38 关掉固件回退（`CONFIG_FW_LOADER_USER_HELPER_FALLBACK`），挂起不再被中止。
   `pm_test` 五级都返回 0、UART1 中断仍为 0；看门狗 `WCR=0x773d`（`WDZST` 已置位）。随后发现：挂起中止会让 Wi-Fi
   失效（内核 `0024`）；eMMC 恢复后出现 CRC 错误和超时，Jump 39 上 `/data` 日志中止、变只读（`data.img` 在电脑上
-  `e2fsck` 修复，无文件丢失），内核 `0025`。唤醒后 bcmdhd 重建网络接口，wificond 按设计中止重启，能否自己恢复待测。
+  `e2fsck` 修复，无文件丢失），内核 `0025`。唤醒后 bcmdhd 重建网络接口，wificond 按设计中止并重启，之后
+  WifiStateMachine 把 Wi-Fi 留在关闭状态，所以 PW4 改成息屏即关 Wi-Fi（wifi 补丁 `0005`，`ro.pw3.wifi_idle_ms=0`）。
+  自动挂起起初每次都被中止：`mmc_rescan` 提前返回时漏放唤醒锁（内核 `0026`），输入核心在挂起时无条件发
+  `SYN_REPORT`、占住触摸屏的 evdev 唤醒锁（内核 `0027`）；息屏时电源 HAL 写 `/proc/touch` 锁住触摸。
+  **Jump 42（2026-11-25）：按电源键息屏后进入深度休眠（`Turn off M/F mix!`），安卓定时闹钟能经 SNVS RTC 唤醒、
+  0.1 s 内重新睡下，电源键唤醒，Wi-Fi 重连、触摸解锁，`/data` 无错误。** 待做：整夜耗电、插 USB 时的休眠。
   **测试 Jump 之前先在电脑上备份 `data.img`。**
 - 未做：蓝牙、`pw3-fg-state`。
 - **PW4 没有带上 PW3 的 `system.prop`**（2026-11-25 发现并补上）：构建只取设备自己目录下的 `system.prop`，PW4 目录
