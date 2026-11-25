@@ -1,0 +1,41 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: pw4-port <pw4-port@localhost>
+Date: Wed, 25 Nov 2026 17:46:09 +0800
+Subject: [PATCH] PW4 Android: mmc_rescan drops its wake lock on every exit
+
+Scheduling the detect work takes the mmc_delayed_work wake lock; the two
+early returns of mmc_rescan (rescan disabled, non-removable host already
+scanned) left it held until the next full rescan. With the non-removable
+Wi-Fi host (0023) that blocked autosuspend after a resume, once for 414 s.
+---
+ drivers/mmc/core/core.c | 10 ++++++++--
+ 1 file changed, 8 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/mmc/core/core.c b/drivers/mmc/core/core.c
+index 3eb8d657..2983842b 100644
+--- a/drivers/mmc/core/core.c
++++ b/drivers/mmc/core/core.c
+@@ -2584,12 +2584,18 @@ void mmc_rescan(struct work_struct *work)
+ 		host->trigger_card_event = false;
+ 	}
+ 
++	/*
++	 * PW4: both early exits used to return without dropping the
++	 * mmc_delayed_work wake lock that scheduling this work took, which
++	 * then blocked autosuspend until the next full rescan (once 414 s
++	 * after a resume, with the non-removable Wi-Fi host).
++	 */
+ 	if (host->rescan_disable)
+-		return;
++		goto out;
+ 
+ 	/* If there is a non-removable card registered, only scan once */
+ 	if ((host->caps & MMC_CAP_NONREMOVABLE) && host->rescan_entered)
+-		return;
++		goto out;
+ 	host->rescan_entered = 1;
+ 
+ 	mmc_bus_get(host);
+-- 
+2.53.0
+

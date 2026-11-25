@@ -101,6 +101,8 @@ make O=<out> ARCH=arm olddefconfig
 
 补丁 `0025`（2026-11-25）：eMMC 跨挂起保持唤醒，跑 High Speed。原厂从没用 MMC 核心挂起过这块 eMMC（由 Falcon 管）；恢复时重新初始化（CMD5 睡眠、断电、HS200 初始化和调谐）之后出现 CRC 错误和数据超时，有一次让 `/data` 的 ext4 日志中止、文件系统变只读（Jump 39）。现在 eMMC 不进 HS200（不需要调谐），挂起时不睡眠、不重新初始化（控制器恢复时重设参数，`SDHCI_QUIRK2_HOST_OFF_CARD_ON`），`bd71827-power` 在挂起态保持 BUCK5（eMMC VCC）。
 
+补丁 `0026`（2026-11-25）：`mmc_rescan` 每条退出路径都释放 `mmc_delayed_work` 唤醒锁。调度检测工作时拿锁，原来两处提前返回（扫描被禁用、不可拔出的主机已扫过）不释放，要等下一次完整扫描。`0023` 把 Wi-Fi 主机标成不可拔出后，唤醒后的检测走这条路，锁一直挂着挡住自动挂起（一次 414 s）。
+
 **编译参数（2026-11-23 补）**：安卓内核要带 `KCFLAGS="-fno-pic -fno-pie"`，和 Readom 的 `tools/build-kernel.sh`、交接模块一样。AOSP 的 gcc 4.9 默认生成位置无关代码，不带这个参数时内核本身还能启动，但模块里会引用 `_GLOBAL_OFFSET_TABLE_`，加载时报 `Unknown symbol _GLOBAL_OFFSET_TABLE_`（第十次交接时 EPDC 驱动就是这样没加载上）。
 
 ## 五、第 0 阶段分类的修正

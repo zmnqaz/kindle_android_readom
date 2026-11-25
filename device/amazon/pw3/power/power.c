@@ -34,6 +34,21 @@ static void interactive(struct power_module *module, int on) {
         if (written != 2) ALOGE("Frontlight blanking failed: %d", written < 0 ? errno : EIO);
         close(fd);
     }
+#ifdef PREINIT_BOARD_PW4
+    /* The Goodix touch panel keeps scanning with the screen off, and every
+     * touch is an input wakeup that aborts the next suspend. Stock locks it
+     * (the chip sleeps, its interrupt is ignored) through /proc/touch. */
+    fd = open("/proc/touch", O_WRONLY|O_CLOEXEC);
+    if (fd < 0) ALOGE("Cannot open touch lock: %d", errno);
+    else {
+        const char* lock = on ? "unlock" : "lock";
+        const size_t len = strlen(lock);
+        ssize_t written;
+        do { written = write(fd, lock, len); } while (written < 0 && errno == EINTR);
+        if (written != (ssize_t)len) ALOGE("Touch lock failed: %d", written < 0 ? errno : EIO);
+        close(fd);
+    }
+#endif
     /* With HWC enabled, its serialized blank/post path owns EPDC power.
      * setInteractive is not the display's power state and may arrive before
      * or after HWC's callback. Keep legacy framebuffer control without HWC. */

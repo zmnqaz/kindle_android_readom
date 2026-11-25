@@ -6,3 +6,6 @@ genfscon sysfs /devices/soc0/soc/2100000.aips-bus/21a0000.i2c/i2c-0/0-0063/lm369
 # BD71827 PMIC: battery and charger for healthd.
 genfscon sysfs /devices/soc0/soc/2100000.aips-bus/21a0000.i2c/i2c-0/0-004b/bd71827-power/power_supply/bd71827_bat u:object_r:sysfs_batteryinfo:s0
 genfscon sysfs /devices/soc0/soc/2100000.aips-bus/21a0000.i2c/i2c-0/0-004b/bd71827-power/power_supply/bd71827_ac u:object_r:sysfs_batteryinfo:s0
+# Goodix touch lock (gt9xx /proc/touch): the power HAL writes lock/unlock at
+# screen off/on so that touches do not abort autosuspend.
+genfscon proc /touch u:object_r:pw4_proc_touch:s0

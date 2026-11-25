@@ -7,3 +7,7 @@ allow init pw3_private_firmware_file:dir r_dir_perms;
 allow init pw3_private_firmware_file:file r_file_perms;
 allow kernel pw3_private_firmware_file:dir r_dir_perms;
 allow kernel pw3_private_firmware_file:file r_file_perms;
+
+# The power HAL locks the Goodix touch panel at screen off (/proc/touch).
+type pw4_proc_touch, fs_type;
+allow hal_power pw4_proc_touch:file w_file_perms;

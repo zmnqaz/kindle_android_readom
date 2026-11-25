@@ -23,3 +23,8 @@ PRODUCT_DEVICE := pw4
 PRODUCT_BRAND := PW4LocalPort
 PRODUCT_MODEL := Kindle Paperwhite 4 development port
 PRODUCT_MANUFACTURER := Amazon
+
+# Wi-Fi off at screen off (frameworks/opt/net/wifi patch 0005): bcmdhd is
+# power-cycled across a suspend and returns as a new wiphy, which wificond does
+# not survive. Off before autosuspend, on at screen on, as the stock Kindle.
+PRODUCT_PROPERTY_OVERRIDES += ro.pw3.wifi_idle_ms=0

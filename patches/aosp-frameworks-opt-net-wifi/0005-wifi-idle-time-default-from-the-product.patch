@@ -1,0 +1,36 @@
+From: PW3 Android port
+Subject: [PW4] Wi-Fi: the idle time's default can come from the product
+
+ro.pw3.wifi_idle_ms, when set, replaces DEFAULT_IDLE_MS (one minute) as the
+default of Settings.Global.WIFI_IDLE_MS; a value the user set still wins. The
+PW4 sets 0: its bcmdhd power-cycles the chip across a system suspend and the
+interface returns as a new wiphy, which wificond does not survive ("Driver is
+in a bad state, restarting wificond"; WifiStateMachine then leaves Wi-Fi off).
+With 0 the driver is unloaded at screen off, before autosuspend, and loaded at
+screen on, as the stock Kindle does. The PW3 sets nothing and is unchanged.
+
+--- a/service/java/com/android/server/wifi/WifiController.java
++++ b/service/java/com/android/server/wifi/WifiController.java
+@@ -35,6 +35,7 @@
+ import android.os.Looper;
+ import android.os.Message;
+ import android.os.SystemClock;
++import android.os.SystemProperties;
+ import android.os.WorkSource;
+ import android.provider.Settings;
+ import android.util.Slog;
+@@ -247,8 +248,12 @@
+     }
+ 
+     private void readWifiIdleTime() {
+-        mIdleMillis = mFacade.getLongSetting(mContext,
+-                Settings.Global.WIFI_IDLE_MS, DEFAULT_IDLE_MS);
++        // PW4: the product may set its own default (ro.pw3.wifi_idle_ms). Its
++        // bcmdhd is power-cycled across a suspend and comes back as a new
++        // wiphy, which wificond does not survive ("Driver is in a bad state"),
++        // so Wi-Fi has to be off before the system suspends: 0 there.
++        mIdleMillis = mFacade.getLongSetting(mContext, Settings.Global.WIFI_IDLE_MS,
++                SystemProperties.getLong("ro.pw3.wifi_idle_ms", DEFAULT_IDLE_MS));
+     }
+ 
+     private void readWifiSleepPolicy() {
