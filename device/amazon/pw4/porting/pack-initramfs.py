@@ -36,9 +36,9 @@ def main():
     ap.add_argument('--boot-prop', action='append', default=[],
                     help='NAME=VALUE set on init for a diagnostic jump (e.g. service.adb.tcp.port=5555); '
                          'init reads /system/etc/prop.default, not the ramdisk /default.prop')
-    ap.add_argument('--tcp-adbd', type=int, metavar='PORT',
-                    help='diagnostic: a second adbd (root) on this TCP port, started on boot and kept '
-                         'running whatever the framework does with the USB adbd')
+    ap.add_argument('--tcp-shell', type=int, metavar='PORT',
+                    help='diagnostic: a root shell on this TCP port once booted (toybox nc under su); '
+                         'Readom adbd is USB only (PW3_USB_ONLY_ADBD)')
     ap.add_argument('--adb-keys', type=Path,
                     help='a host adb public key file installed as /adb_keys (diagnostic, local only)')
     a = ap.parse_args()
@@ -73,40 +73,26 @@ def main():
         lines = ['', '# Diagnostic jump: set by pack-initramfs.py --boot-prop', 'on init']
         lines += ['    setprop %s %s' % tuple(p.split('=', 1)) for p in a.boot_prop]
         rc.data = rc.data.rstrip(b'\n') + b'\n' + '\n'.join(lines).encode() + b'\n'
-    if a.tcp_adbd:
-        # Diagnostic only: a root adbd on TCP that the framework does not
-        # stop, the host key in /data/misc/adb, a plain shell on TCP port+445
-        # as a fallback, and the state of both written to the kernel log.
+    if a.tcp_shell:
+        # Diagnostic only: Readom's adbd has no TCP transport, so a plain root
+        # shell on TCP. init may enter the shell domain (shell_exec), and shell
+        # may run su, whose userdebug domain is permissive. The state goes to
+        # the kernel log.
         rc = by_name['init.pw3.usb.rc']
-        nc = a.tcp_adbd + 445
         text = [
-            '', '# Diagnostic jump: set by pack-initramfs.py --tcp-adbd',
-            'on init',
-            '    setprop service.adb.tcp.port %d' % a.tcp_adbd,
-            '    setprop service.adb.root 1',
-            'on post-fs-data',
-            '    mkdir /data/misc/adb 02750 system shell',
-            '    copy /adb_keys /data/misc/adb/adb_keys',
-            '    chown system shell /data/misc/adb/adb_keys',
-            '    chmod 0640 /data/misc/adb/adb_keys',
-            '    restorecon_recursive /data/misc/adb',
+            '', '# Diagnostic jump: set by pack-initramfs.py --tcp-shell',
             'on property:sys.boot_completed=1',
-            '    start pw4tcpadbd',
-            '    start pw4ncsh',
-            '    write /dev/kmsg "pw4-diag: boot tcp=${service.adb.tcp.port} root=${service.adb.root} usb=${sys.usb.config}"',
-            'on property:init.svc.pw4tcpadbd=*',
-            '    write /dev/kmsg "pw4-diag: pw4tcpadbd=${init.svc.pw4tcpadbd} adbd=${init.svc.adbd}"',
-            'on property:init.svc.pw4ncsh=*',
-            '    write /dev/kmsg "pw4-diag: pw4ncsh=${init.svc.pw4ncsh}"',
+            '    start pw4tcpsh',
+            '    write /dev/kmsg "pw4-diag: boot usb=${sys.usb.config}"',
+            'on property:init.svc.pw4tcpsh=*',
+            '    write /dev/kmsg "pw4-diag: pw4tcpsh=${init.svc.pw4tcpsh}"',
             'on property:sys.usb.state=*',
-            '    write /dev/kmsg "pw4-diag: usb state=${sys.usb.state} config=${sys.usb.config} adbd=${init.svc.adbd}"',
-            'service pw4tcpadbd /system/bin/adbd --root_seclabel=u:r:su:s0',
+            '    write /dev/kmsg "pw4-diag: usb state=${sys.usb.state} adbd=${init.svc.adbd}"',
+            'service pw4tcpsh /system/bin/sh -c "exec /system/xbin/su 0 /system/bin/toybox nc -p %d -L /system/bin/sh"' % a.tcp_shell,
             '    disabled',
-            '    seclabel u:r:adbd:s0',
-            'service pw4ncsh /system/bin/toybox nc -p %d -L /system/bin/sh' % nc,
-            '    disabled',
-            '    user root',
-            '    seclabel u:r:adbd:s0',
+            '    user shell',
+            '    group shell inet',
+            '    seclabel u:r:shell:s0',
             '']
         rc.data = rc.data.rstrip(b'\n') + '\n'.join(text).encode()
     if a.adb_keys:
