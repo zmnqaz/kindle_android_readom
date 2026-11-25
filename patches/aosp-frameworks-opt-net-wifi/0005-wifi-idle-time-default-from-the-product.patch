@@ -9,6 +9,8 @@ in a bad state, restarting wificond"; WifiStateMachine then leaves Wi-Fi off).
 With 0 the driver is unloaded at screen off, before autosuspend, and loaded at
 screen on, as the stock Kindle does. The PW3 sets nothing and is unchanged.
 
+Not run on the device yet when this patch was written.
+
 --- a/service/java/com/android/server/wifi/WifiController.java
 +++ b/service/java/com/android/server/wifi/WifiController.java
 @@ -35,6 +35,7 @@
