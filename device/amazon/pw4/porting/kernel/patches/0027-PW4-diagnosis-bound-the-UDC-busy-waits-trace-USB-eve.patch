@@ -1,0 +1,311 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: pw4-port <pw4-port@localhost>
+Date: Wed, 25 Nov 2026 11:28:54 +0800
+Subject: [PATCH] PW4 diagnosis: bound the UDC busy waits, trace USB events
+
+The udc busy waits run with interrupts off, where jiffies stand still on
+one core: bound them by count and log which one is stuck. Log udc
+interrupts other than transfer completion, VBUS session and disconnect
+steps, and watch the OTG1 controller and PHY registers every millisecond.
+---
+ drivers/misc/pw4_usbwatch.c | 37 +++++++++++---
+ drivers/usb/chipidea/core.c |  1 +
+ drivers/usb/chipidea/udc.c  | 97 +++++++++++++++++++++++++++++--------
+ 3 files changed, 109 insertions(+), 26 deletions(-)
+
+diff --git a/drivers/misc/pw4_usbwatch.c b/drivers/misc/pw4_usbwatch.c
+index ec29b03f..76b9820a 100644
+--- a/drivers/misc/pw4_usbwatch.c
++++ b/drivers/misc/pw4_usbwatch.c
+@@ -4,8 +4,9 @@
+  * cable goes in, before any interrupt handler prints; the Lab126 log keeps
+  * every line, so the last ones show what the hardware did first.
+  *
+- * Only always-clocked registers are read: CCM, anatop and the GPIO4 pad state
+- * of the PMIC interrupt line (PMIC_INT_B, GPIO4_IO24).
++ * CCM, anatop, the USB PHY and the GPIO4 pad state of the PMIC interrupt line
++ * (PMIC_INT_B, GPIO4_IO24) are always clocked; the OTG1 controller registers
++ * are read only while its clock gate (usboh3) is on.
+  */
+ #include <linux/hrtimer.h>
+ #include <linux/init.h>
+@@ -20,10 +21,12 @@ core_param(pw4_usbwatch, pw4_usbwatch, bool, 0444);
+ #define CCM_BASE	0x020C4000
+ #define ANATOP_BASE	0x020C8000
+ #define GPIO4_BASE	0x020A8000
++#define USB_BASE	0x02184000
++#define USBPHY1_BASE	0x020C9000
+ 
+ struct watch_reg {
+ 	const char *name;
+-	int base;	/* 0 CCM, 1 anatop, 2 GPIO4 */
++	int base;	/* 0 CCM, 1 anatop, 2 GPIO4, 3 OTG1 (gated), 4 USBPHY1 */
+ 	u32 off;
+ 	u32 mask;
+ };
+@@ -38,12 +41,25 @@ static const struct watch_reg regs[] = {
+ 	{ "CHRG_DET_STAT", 1, 0x1d0, 0xffffffff },
+ 	{ "USB1_MISC", 1, 0x1f0, 0xffffffff },
+ 	{ "PMIC_INT_B", 2, 0x08, 1u << 24 },		/* GPIO4 PSR */
++	{ "USBCMD", 3, 0x140, ~0x6000u },		/* not SUTW/ATDTW */
++	{ "USBSTS", 3, 0x144, 0x1144 },			/* PCI URI SLI HCH */
++	{ "USBINTR", 3, 0x148, ~0u },
++	{ "PORTSC", 3, 0x184, ~0xc00u },		/* not the line state */
++	{ "OTGSC", 3, 0x1a4, 0x005f1f00 },		/* not the 1 ms timer */
++	{ "PHY_PWD", 4, 0x00, ~0u },
++	{ "PHY_CTRL", 4, 0x30, ~0u },
++	{ "PHY_STATUS", 4, 0x40, ~0u },
+ };
+ 
+-static void __iomem *bases[3];
++static void __iomem *bases[5];
+ static u32 last[ARRAY_SIZE(regs)];
+ static struct hrtimer timer;
+ 
++static bool usb_clocked(void)
++{
++	return (readl_relaxed(bases[0] + 0x80) & 0x3) == 0x3;	/* CCGR6 CG0 */
++}
++
+ static u32 read_reg(int i)
+ {
+ 	return readl_relaxed(bases[regs[i].base] + regs[i].off) & regs[i].mask;
+@@ -52,9 +68,14 @@ static u32 read_reg(int i)
+ static enum hrtimer_restart watch(struct hrtimer *t)
+ {
+ 	int i;
++	bool usb = usb_clocked();
+ 
+ 	for (i = 0; i < ARRAY_SIZE(regs); i++) {
+-		u32 v = read_reg(i);
++		u32 v;
++
++		if (regs[i].base == 3 && !usb)
++			continue;
++		v = read_reg(i);
+ 
+ 		if (v != last[i]) {
+ 			pr_info("pw4-trace: usbwatch %s %08x -> %08x\n",
+@@ -75,9 +96,13 @@ static int __init pw4_usbwatch_init(void)
+ 	bases[0] = ioremap(CCM_BASE, 0x1000);
+ 	bases[1] = ioremap(ANATOP_BASE, 0x1000);
+ 	bases[2] = ioremap(GPIO4_BASE, 0x1000);
+-	if (!bases[0] || !bases[1] || !bases[2])
++	bases[3] = ioremap(USB_BASE, 0x1000);
++	bases[4] = ioremap(USBPHY1_BASE, 0x1000);
++	if (!bases[0] || !bases[1] || !bases[2] || !bases[3] || !bases[4])
+ 		return -ENOMEM;
+ 	for (i = 0; i < ARRAY_SIZE(regs); i++) {
++		if (regs[i].base == 3 && !usb_clocked())
++			continue;
+ 		last[i] = read_reg(i);
+ 		pr_info("pw4-trace: usbwatch %s %08x\n", regs[i].name, last[i]);
+ 	}
+diff --git a/drivers/usb/chipidea/core.c b/drivers/usb/chipidea/core.c
+index 60d516d7..57a05053 100644
+--- a/drivers/usb/chipidea/core.c
++++ b/drivers/usb/chipidea/core.c
+@@ -598,6 +598,7 @@ static irqreturn_t ci_irq(int irq, void *data)
+ 	 * and disconnection events.
+ 	 */
+ 	if (ci->is_otg && (otgsc & OTGSC_BSVIE) && (otgsc & OTGSC_BSVIS)) {
++		pr_info("pw4-trace: usb bsv irq otgsc %08x\n", otgsc);
+ 		ci->vbus_glitch_check_event = true;
+ 		/* Clear BSV irq */
+ 		hw_write_otgsc(ci, OTGSC_BSVIS, OTGSC_BSVIS);
+diff --git a/drivers/usb/chipidea/udc.c b/drivers/usb/chipidea/udc.c
+index 10b5fc10..bcd9d910 100644
+--- a/drivers/usb/chipidea/udc.c
++++ b/drivers/usb/chipidea/udc.c
+@@ -92,6 +92,21 @@ static int hw_device_state(struct ci_hdrc *ci, u32 dma)
+ 	return 0;
+ }
+ 
++/*
++ * PW4 diagnosis: the busy waits below run with the controller lock held and
++ * interrupts off; on the single core jiffies stand still there, so a
++ * register that never clears hangs the SoC silently. Bound them by count and
++ * say which one was stuck.
++ */
++#define PW4_SPIN_MAX 2000000
++static void pw4_stuck(struct ci_hdrc *ci, const char *what, int bit)
++{
++	pr_err("pw4-trace: udc stuck in %s bit %d: cmd %08x sts %08x portsc %08x prime %08x flush %08x stat %08x\n",
++	       what, bit, hw_read(ci, OP_USBCMD, ~0), hw_read(ci, OP_USBSTS, ~0),
++	       hw_read(ci, OP_PORTSC, ~0), hw_read(ci, OP_ENDPTPRIME, ~0),
++	       hw_read(ci, OP_ENDPTFLUSH, ~0), hw_read(ci, OP_ENDPTSTAT, ~0));
++}
++
+ /**
+  * hw_ep_flush: flush endpoint fifo (execute without interruption)
+  * @num: endpoint number
+@@ -104,7 +119,7 @@ static int hw_ep_flush(struct ci_hdrc *ci, int num, int dir)
+ 	int n = hw_ep_bit(num, dir);
+ #ifdef CONFIG_LAB126
+ 	int loopn;
+-	unsigned int time_msec = jiffies_to_msecs(jiffies);
++	int outer = 0;
+ #endif
+ 
+ 	do {
+@@ -115,9 +130,9 @@ static int hw_ep_flush(struct ci_hdrc *ci, int num, int dir)
+ 			cpu_relax();
+ 		}
+ 
+-		// Don't loop forever - causes wdg
+-		if ((jiffies_to_msecs(jiffies) - time_msec) > 200) {
+-			printk(KERN_ERR "%s:%d Infinite Loop\n", __FUNCTION__, __LINE__);
++		// Don't loop forever - causes wdg (by count: no jiffies with irqs off)
++		if (++outer > PW4_SPIN_MAX / 1000) {
++			pw4_stuck(ci, "ep_flush", n);
+ 			return 0;
+ 		}
+ #else
+@@ -210,8 +225,17 @@ static int hw_ep_prime(struct ci_hdrc *ci, int num, int dir, int is_ctrl)
+ 
+ 	hw_write(ci, OP_ENDPTPRIME, ~0, BIT(n));
+ 
+-	while (hw_read(ci, OP_ENDPTPRIME, BIT(n)))
+-		cpu_relax();
++	{
++		int spin = 0;
++
++		while (hw_read(ci, OP_ENDPTPRIME, BIT(n))) {
++			cpu_relax();
++			if (++spin > PW4_SPIN_MAX) {
++				pw4_stuck(ci, "ep_prime", n);
++				break;
++			}
++		}
++	}
+ 	if (is_ctrl && dir == RX && hw_read(ci, OP_ENDPTSETUPSTAT, BIT(num)))
+ 		return -EAGAIN;
+ 
+@@ -231,7 +255,7 @@ static int hw_ep_prime(struct ci_hdrc *ci, int num, int dir, int is_ctrl)
+ static int hw_ep_set_halt(struct ci_hdrc *ci, int num, int dir, int value)
+ {
+ #ifdef CONFIG_LAB126
+-	unsigned int time_msec = jiffies_to_msecs(jiffies);
++	int spin = 0;
+ #endif
+ 
+ 	if (value != 0 && value != 1)
+@@ -247,9 +271,9 @@ static int hw_ep_set_halt(struct ci_hdrc *ci, int num, int dir, int value)
+ 			  value ? mask_xs : mask_xr);
+ 
+ #ifdef CONFIG_LAB126
+-		// Don't loop forever - causes wdg
+-		if ((jiffies_to_msecs(jiffies) - time_msec) > 200) {
+-			printk(KERN_ERR "%s:%d Infinite Loop\n", __FUNCTION__, __LINE__);
++		// Don't loop forever - causes wdg (by count: no jiffies with irqs off)
++		if (++spin > PW4_SPIN_MAX) {
++			pw4_stuck(ci, "ep_set_halt", num);
+ 			return -EINVAL;
+ 		}
+ #endif
+@@ -351,8 +375,17 @@ static int hw_usb_reset(struct ci_hdrc *ci)
+ 	hw_write(ci, OP_ENDPTCOMPLETE,  0,  0);
+ 
+ 	/* wait until all bits cleared */
+-	while (hw_read(ci, OP_ENDPTPRIME, ~0))
+-		udelay(10);             /* not RTOS friendly */
++	{
++		int spin = 0;
++
++		while (hw_read(ci, OP_ENDPTPRIME, ~0)) {
++			udelay(10);             /* not RTOS friendly */
++			if (++spin > 20000) {
++				pw4_stuck(ci, "usb_reset prime", -1);
++				break;
++			}
++		}
++	}
+ 
+ 	/* reset all endpoints ? */
+ 
+@@ -513,10 +546,18 @@ static int _hardware_enqueue(struct ci_hw_ep *hwep, struct ci_hw_req *hwreq)
+ 		wmb();
+ 		if (hw_read(ci, OP_ENDPTPRIME, BIT(n)))
+ 			goto done;
+-		do {
+-			hw_write(ci, OP_USBCMD, USBCMD_ATDTW, USBCMD_ATDTW);
+-			tmp_stat = hw_read(ci, OP_ENDPTSTAT, BIT(n));
+-		} while (!hw_read(ci, OP_USBCMD, USBCMD_ATDTW));
++		{
++			int spin = 0;
++
++			do {
++				hw_write(ci, OP_USBCMD, USBCMD_ATDTW, USBCMD_ATDTW);
++				tmp_stat = hw_read(ci, OP_ENDPTSTAT, BIT(n));
++				if (++spin > PW4_SPIN_MAX) {
++					pw4_stuck(ci, "atdtw", n);
++					break;
++				}
++			} while (!hw_read(ci, OP_USBCMD, USBCMD_ATDTW));
++		}
+ 		hw_write(ci, OP_USBCMD, USBCMD_ATDTW, 0);
+ 		if (tmp_stat)
+ 			goto done;
+@@ -1108,10 +1149,18 @@ __acquires(ci->lock)
+ 	_ep_nuke(ci->ep0in);
+ 
+ 	/* read_setup_packet */
+-	do {
+-		hw_test_and_set_setup_guard(ci);
+-		memcpy(&req, &hwep->qh.ptr->setup, sizeof(req));
+-	} while (!hw_test_and_clear_setup_guard(ci));
++	{
++		int spin = 0;
++
++		do {
++			hw_test_and_set_setup_guard(ci);
++			memcpy(&req, &hwep->qh.ptr->setup, sizeof(req));
++			if (++spin > PW4_SPIN_MAX) {
++				pw4_stuck(ci, "setup_guard", 0);
++				break;
++			}
++		} while (!hw_test_and_clear_setup_guard(ci));
++	}
+ 
+ 	type = req.bRequestType;
+ 
+@@ -1617,6 +1666,7 @@ static int ci_udc_vbus_session(struct usb_gadget *_gadget, int is_active)
+ 	unsigned long flags;
+ 	int gadget_ready = 0;
+ 
++	pr_info("pw4-trace: udc vbus_session %d\n", is_active);
+ 	spin_lock_irqsave(&ci->lock, flags);
+ 	ci->vbus_active = is_active;
+ 	if (ci->driver)
+@@ -1917,6 +1967,9 @@ static irqreturn_t udc_irq(struct ci_hdrc *ci)
+ 		}
+ 	}
+ 	intr = hw_test_and_clear_intr_active(ci);
++	if (intr & ~USBi_UI)
++		pr_info("pw4-trace: udc irq %#x portsc %08x\n", intr,
++			hw_read(ci, OP_PORTSC, ~0));
+ 
+ 	if (intr) {
+ 		/* order defines priority - do NOT change it */
+@@ -2085,14 +2138,18 @@ void ci_hdrc_gadget_connect(struct usb_gadget *gadget, int is_active)
+ 		usb_gadget_set_state(gadget, USB_STATE_POWERED);
+ 		usb_udc_vbus_handler(gadget, true);
+ 	} else {
++		pr_info("pw4-trace: udc gadget disconnect begin\n");
+ 		usb_udc_vbus_handler(gadget, false);
++		pr_info("pw4-trace: udc gadget pulled down\n");
+ 		if (ci->driver)
+ 			ci->driver->disconnect(gadget);
++		pr_info("pw4-trace: udc function disconnect done\n");
+ 		hw_device_state(ci, 0);
+ 		if (ci->platdata->notify_event)
+ 			ci->platdata->notify_event(ci,
+ 			CI_HDRC_CONTROLLER_STOPPED_EVENT);
+ 		_gadget_stop_activity(gadget);
++		pr_info("pw4-trace: udc stop activity done\n");
+ 		pm_runtime_put_sync(&gadget->dev);
+ 		usb_gadget_set_state(gadget, USB_STATE_NOTATTACHED);
+ 	}
+-- 
+2.53.0
+

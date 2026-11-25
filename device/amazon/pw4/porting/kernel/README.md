@@ -99,6 +99,8 @@ make O=<out> ARCH=arm olddefconfig
 
 补丁 `0025`、`0026`（2026-11-24，诊断用）：运行时可写的开关 `pw4_cpuidle_wfi`（空闲只做 WFI）、`pw4_cpufreq_hold`（不调频）、`pw4_udc_nopullup`（不拉 D+），以及 `pw4_usb_rpm_forbid`（probe 时禁止 OTG1 运行时挂起，`power/control` 写 auto 可恢复）。
 
+补丁 `0027`（2026-11-25，诊断用）：UDC 里关中断执行的忙等改为按次数设上限（单核关中断时 jiffies 不走，Lab126 原有的 200 ms 保护不生效），卡住时打印 `pw4-trace: udc stuck in ...`；记录除传输完成外的 UDC 中断、VBUS 会话和断开各步；usbwatch 增加 OTG1 控制器（时钟开时）和 USBPHY1 寄存器。
+
 **编译参数（2026-11-23 补）**：安卓内核要带 `KCFLAGS="-fno-pic -fno-pie"`，和 Readom 的 `tools/build-kernel.sh`、交接模块一样。AOSP 的 gcc 4.9 默认生成位置无关代码，不带这个参数时内核本身还能启动，但模块里会引用 `_GLOBAL_OFFSET_TABLE_`，加载时报 `Unknown symbol _GLOBAL_OFFSET_TABLE_`（第十次交接时 EPDC 驱动就是这样没加载上）。
 
 ## 五、第 0 阶段分类的修正
