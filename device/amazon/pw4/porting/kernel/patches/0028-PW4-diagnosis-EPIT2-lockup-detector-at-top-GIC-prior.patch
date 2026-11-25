@@ -1,0 +1,185 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: pw4-port <pw4-port@localhost>
+Date: Wed, 25 Nov 2026 12:32:15 +0800
+Subject: [PATCH] PW4 diagnosis: EPIT2 lockup detector at top GIC priority
+
+Every 0.5 s check that jiffies advance; when they stop, log the interrupts
+that counted fastest and the interrupted registers, to tell an interrupt
+storm from a bus hang. usbwatch no longer reads the gated USB PHY.
+---
+ drivers/misc/Makefile       |   1 +
+ drivers/misc/pw4_lockup.c   | 127 ++++++++++++++++++++++++++++++++++++
+ drivers/misc/pw4_usbwatch.c |   7 +-
+ 3 files changed, 131 insertions(+), 4 deletions(-)
+ create mode 100644 drivers/misc/pw4_lockup.c
+
+diff --git a/drivers/misc/Makefile b/drivers/misc/Makefile
+index 9d073cb8..7faa723a 100644
+--- a/drivers/misc/Makefile
++++ b/drivers/misc/Makefile
+@@ -64,3 +64,4 @@ obj-$(CONFIG_FRONTLIGHT)	+= frontlight.o
+ obj-$(CONFIG_IDME)		+= idme.o
+ obj-$(CONFIG_UID_CPUTIME) += uid_cputime.o
+ obj-y				+= pw4_usbwatch.o
++obj-y				+= pw4_lockup.o
+diff --git a/drivers/misc/pw4_lockup.c b/drivers/misc/pw4_lockup.c
+new file mode 100644
+index 00000000..eb9abf62
+--- /dev/null
++++ b/drivers/misc/pw4_lockup.c
+@@ -0,0 +1,127 @@
++/*
++ * PW4 diagnosis: tell a bus hang from an interrupt storm in the USB plug
++ * freeze. EPIT2 (32 kHz) interrupts every 0.5 s at the highest GIC priority,
++ * so it still gets in when another interrupt keeps the CPU busy. When jiffies
++ * stop for a second it logs the interrupts that counted fastest and the
++ * interrupted registers (pw4-lockup: ...). Nothing logged after a freeze
++ * means the CPU itself (or the bus) stopped.
++ */
++#include <linux/clk.h>
++#include <linux/clk-provider.h>
++#include <linux/init.h>
++#include <linux/interrupt.h>
++#include <linux/io.h>
++#include <linux/irq.h>
++#include <linux/irqdesc.h>
++#include <linux/jiffies.h>
++#include <linux/kernel.h>
++#include <linux/kernel_stat.h>
++#include <linux/moduleparam.h>
++#include <linux/of.h>
++#include <linux/of_address.h>
++#include <linux/of_irq.h>
++#include <linux/slab.h>
++#include <asm/irq_regs.h>
++#include <dt-bindings/clock/imx6sll-clock.h>
++
++static bool pw4_lockup = true;
++core_param(pw4_lockup, pw4_lockup, bool, 0444);
++
++#define EPIT_CR		0x00
++#define EPIT_SR		0x04
++#define EPIT_LR		0x08
++#define EPIT_CMPR	0x0c
++#define GICD_BASE	0x00a01000
++#define GICD_IPRIORITYR	0x400
++
++static void __iomem *epit;
++static unsigned int *prev;
++static unsigned long last_jiffies;
++static int stalled, reports;
++
++static irqreturn_t pw4_lockup_tick(int irq, void *dev)
++{
++	unsigned long j = jiffies;
++	int i;
++
++	writel_relaxed(1, epit + EPIT_SR);
++	if (j != last_jiffies) {
++		last_jiffies = j;
++		stalled = 0;
++	} else {
++		stalled++;
++	}
++	if (stalled >= 2 && reports < 6) {
++		reports++;
++		pr_emerg("pw4-lockup: jiffies stuck at %lu for %d ticks\n", j, stalled);
++		for (i = 0; i < nr_irqs; i++) {
++			struct irq_desc *desc = irq_to_desc(i);
++			unsigned int c = kstat_irqs_cpu(i, 0);
++
++			if (desc && c - prev[i] > 50)
++				pr_emerg("pw4-lockup: irq %d hw %lu (%s) +%u\n", i,
++					 desc->irq_data.hwirq,
++					 desc->action ? desc->action->name : "-",
++					 c - prev[i]);
++		}
++		if (get_irq_regs())
++			show_regs(get_irq_regs());
++	}
++	for (i = 0; i < nr_irqs; i++)
++		prev[i] = kstat_irqs_cpu(i, 0);
++	return IRQ_HANDLED;
++}
++
++static int __init pw4_lockup_init(void)
++{
++	struct device_node *np = NULL, *ccm;
++	struct of_phandle_args clkspec;
++	struct resource res;
++	void __iomem *gicd;
++	struct clk *clk;
++	int irq, ret, hw = 57 + 32;
++
++	if (!pw4_lockup)
++		return 0;
++	while ((np = of_find_node_by_name(np, "epit")))
++		if (!of_address_to_resource(np, 0, &res) && res.start == 0x020d4000)
++			break;
++	ccm = of_find_compatible_node(NULL, NULL, "fsl,imx6sll-ccm");
++	if (!np || !ccm) {
++		pr_err("pw4-lockup: no epit2 or ccm node\n");
++		return -ENODEV;
++	}
++	clkspec.np = ccm;
++	clkspec.args_count = 1;
++	clkspec.args[0] = IMX6SLL_CLK_EPIT2;
++	clk = of_clk_get_from_provider(&clkspec);
++	if (IS_ERR(clk) || clk_prepare_enable(clk)) {
++		pr_err("pw4-lockup: no epit2 clock\n");
++		return -ENODEV;
++	}
++	prev = kcalloc(nr_irqs, sizeof(*prev), GFP_KERNEL);
++	epit = of_iomap(np, 0);
++	irq = irq_of_parse_and_map(np, 0);
++	gicd = ioremap(GICD_BASE, 0x1000);
++	if (!prev || !epit || !irq || !gicd)
++		return -ENOMEM;
++	writel_relaxed(1 << 16, epit + EPIT_CR);		/* software reset */
++	while (readl_relaxed(epit + EPIT_CR) & (1 << 16))
++		cpu_relax();
++	/* low frequency reference (32 kHz), runs in WAIT, reload, compare irq */
++	writel_relaxed((3 << 24) | (1 << 19) | (1 << 17) | (1 << 3) | (1 << 1),
++		       epit + EPIT_CR);
++	writel_relaxed(16384, epit + EPIT_LR);
++	writel_relaxed(0, epit + EPIT_CMPR);
++	writel_relaxed(1, epit + EPIT_SR);
++	ret = request_irq(irq, pw4_lockup_tick, IRQF_NO_SUSPEND, "pw4-lockup", NULL);
++	if (ret)
++		return ret;
++	writeb_relaxed(0x00, gicd + GICD_IPRIORITYR + hw);	/* above all others */
++	last_jiffies = jiffies;
++	writel_relaxed(readl_relaxed(epit + EPIT_CR) | (1 << 2) | 1, epit + EPIT_CR);
++	pr_info("pw4-lockup: EPIT2 irq %d, GIC %d priority %#x\n", irq, hw,
++		readb_relaxed(gicd + GICD_IPRIORITYR + hw));
++	return 0;
++}
++late_initcall(pw4_lockup_init);
+diff --git a/drivers/misc/pw4_usbwatch.c b/drivers/misc/pw4_usbwatch.c
+index 76b9820a..4903bc22 100644
+--- a/drivers/misc/pw4_usbwatch.c
++++ b/drivers/misc/pw4_usbwatch.c
+@@ -4,7 +4,7 @@
+  * cable goes in, before any interrupt handler prints; the Lab126 log keeps
+  * every line, so the last ones show what the hardware did first.
+  *
+- * CCM, anatop, the USB PHY and the GPIO4 pad state of the PMIC interrupt line
++ * CCM, anatop and the GPIO4 pad state of the PMIC interrupt line
+  * (PMIC_INT_B, GPIO4_IO24) are always clocked; the OTG1 controller registers
+  * are read only while its clock gate (usboh3) is on.
+  */
+@@ -46,9 +46,8 @@ static const struct watch_reg regs[] = {
+ 	{ "USBINTR", 3, 0x148, ~0u },
+ 	{ "PORTSC", 3, 0x184, ~0xc00u },		/* not the line state */
+ 	{ "OTGSC", 3, 0x1a4, 0x005f1f00 },		/* not the 1 ms timer */
+-	{ "PHY_PWD", 4, 0x00, ~0u },
+-	{ "PHY_CTRL", 4, 0x30, ~0u },
+-	{ "PHY_STATUS", 4, 0x40, ~0u },
++	/* not the USBPHY1 registers: read while the PHY is gated they return
++	 * bus garbage */
+ };
+ 
+ static void __iomem *bases[5];
+-- 
+2.53.0
+

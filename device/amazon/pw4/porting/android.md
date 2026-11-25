@@ -165,3 +165,18 @@ Jump 30 = 只加 `pw4_udc_nopullup`：线上无 USB 通信，冻则与通信无�
 `pullup refused`）插拔多次都不冻：**没有 USB 通信就不冻**，电源、PMIC、max14656 这一路排除。
 Jump 31 = 30 的内核 + Wi-Fi adb（`pack-initramfs.py --default-prop service.adb.tcp.port=5555`、`--adb-keys`
 本机公钥，只在本地打包），在不冻的状态下用 adb 运行中打开 D+ 上拉、换 USB 功能组合，逐项对照。
+
+### Jump 32–34 (2026-11-25): Wi-Fi root shell, the unplug freeze is not a busy wait
+
+- Readom's adbd is USB only (`PW3_USB_ONLY_ADBD`), so TCP adb never listens. The
+  diagnostic shell is `toybox nc` under `su` (init → shell domain → su).
+- With the gadget connected over the shell: HS enumeration and 30 MB adb push/pull
+  are fine; a soft disconnect followed by unplugging is fine; unplugging while
+  connected froze (Jump 32, 33), and once with Wi-Fi off (one other unplug with
+  Wi-Fi off did not). Plugging in with the pull-up refused also froze once.
+- Jump 33 bounded every UDC busy wait: no `udc stuck`, and the 1 ms watcher
+  logged nothing after the cable moved — no PMIC VBUS interrupt, no UDC
+  interrupt. Power, regulator and clock state match stock (PMU_REG_CORE
+  0x00482012, USBPHY1 from ldo3).
+- Jump 34 adds an EPIT2 lockup detector at top GIC priority to tell an
+  interrupt storm from a bus hang.
