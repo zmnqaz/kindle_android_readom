@@ -1,36 +1,38 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: pw4-port <pw4-port@localhost>
-Date: Wed, 25 Nov 2026 12:32:15 +0800
-Subject: [PATCH] PW4 diagnosis: EPIT2 lockup detector at top GIC priority
+Date: Wed, 25 Nov 2026 13:20:59 +0800
+Subject: [PATCH 21/22] PW4 diagnosis: EPIT2 lockup detector, off unless
+ pw4_lockup=1
 
-Every 0.5 s check that jiffies advance; when they stop, log the interrupts
-that counted fastest and the interrupted registers, to tell an interrupt
-storm from a bus hang. usbwatch no longer reads the gated USB PHY.
+EPIT2 interrupts every 0.5 s at the highest GIC priority; when jiffies stop
+it logs the interrupts that counted fastest and the interrupted registers.
+It tells an interrupt storm from a bus hang when the device freezes without
+a log line (it found the UART wake interrupt storm).
 ---
- drivers/misc/Makefile       |   1 +
- drivers/misc/pw4_lockup.c   | 127 ++++++++++++++++++++++++++++++++++++
- drivers/misc/pw4_usbwatch.c |   7 +-
- 3 files changed, 131 insertions(+), 4 deletions(-)
+ drivers/misc/Makefile     |   1 +
+ drivers/misc/pw4_lockup.c | 128 ++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 129 insertions(+)
  create mode 100644 drivers/misc/pw4_lockup.c
 
 diff --git a/drivers/misc/Makefile b/drivers/misc/Makefile
-index 9d073cb8..7faa723a 100644
+index 0f6d219c..6e4564a6 100644
 --- a/drivers/misc/Makefile
 +++ b/drivers/misc/Makefile
-@@ -64,3 +64,4 @@ obj-$(CONFIG_FRONTLIGHT)	+= frontlight.o
+@@ -63,3 +63,4 @@ obj-$(CONFIG_CXL_BASE)		+= cxl/
+ obj-$(CONFIG_FRONTLIGHT)	+= frontlight.o
  obj-$(CONFIG_IDME)		+= idme.o
  obj-$(CONFIG_UID_CPUTIME) += uid_cputime.o
- obj-y				+= pw4_usbwatch.o
 +obj-y				+= pw4_lockup.o
 diff --git a/drivers/misc/pw4_lockup.c b/drivers/misc/pw4_lockup.c
 new file mode 100644
-index 00000000..eb9abf62
+index 00000000..9a8498c1
 --- /dev/null
 +++ b/drivers/misc/pw4_lockup.c
-@@ -0,0 +1,127 @@
+@@ -0,0 +1,128 @@
 +/*
-+ * PW4 diagnosis: tell a bus hang from an interrupt storm in the USB plug
-+ * freeze. EPIT2 (32 kHz) interrupts every 0.5 s at the highest GIC priority,
++ * PW4 diagnosis, off unless booted with pw4_lockup=1: tell a bus hang from an
++ * interrupt storm when the device freezes without a log line (this found the
++ * UART wake interrupt storm behind the USB plug freeze). EPIT2 (32 kHz) interrupts every 0.5 s at the highest GIC priority,
 + * so it still gets in when another interrupt keeps the CPU busy. When jiffies
 + * stop for a second it logs the interrupts that counted fastest and the
 + * interrupted registers (pw4-lockup: ...). Nothing logged after a freeze
@@ -54,7 +56,7 @@ index 00000000..eb9abf62
 +#include <asm/irq_regs.h>
 +#include <dt-bindings/clock/imx6sll-clock.h>
 +
-+static bool pw4_lockup = true;
++static bool pw4_lockup;
 +core_param(pw4_lockup, pw4_lockup, bool, 0444);
 +
 +#define EPIT_CR		0x00
@@ -155,31 +157,6 @@ index 00000000..eb9abf62
 +	return 0;
 +}
 +late_initcall(pw4_lockup_init);
-diff --git a/drivers/misc/pw4_usbwatch.c b/drivers/misc/pw4_usbwatch.c
-index 76b9820a..4903bc22 100644
---- a/drivers/misc/pw4_usbwatch.c
-+++ b/drivers/misc/pw4_usbwatch.c
-@@ -4,7 +4,7 @@
-  * cable goes in, before any interrupt handler prints; the Lab126 log keeps
-  * every line, so the last ones show what the hardware did first.
-  *
-- * CCM, anatop, the USB PHY and the GPIO4 pad state of the PMIC interrupt line
-+ * CCM, anatop and the GPIO4 pad state of the PMIC interrupt line
-  * (PMIC_INT_B, GPIO4_IO24) are always clocked; the OTG1 controller registers
-  * are read only while its clock gate (usboh3) is on.
-  */
-@@ -46,9 +46,8 @@ static const struct watch_reg regs[] = {
- 	{ "USBINTR", 3, 0x148, ~0u },
- 	{ "PORTSC", 3, 0x184, ~0xc00u },		/* not the line state */
- 	{ "OTGSC", 3, 0x1a4, 0x005f1f00 },		/* not the 1 ms timer */
--	{ "PHY_PWD", 4, 0x00, ~0u },
--	{ "PHY_CTRL", 4, 0x30, ~0u },
--	{ "PHY_STATUS", 4, 0x40, ~0u },
-+	/* not the USBPHY1 registers: read while the PHY is gated they return
-+	 * bus garbage */
- };
- 
- static void __iomem *bases[5];
 -- 
 2.53.0
 

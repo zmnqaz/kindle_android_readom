@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: pw4-port <pw4-port@localhost>
-Date: Tue, 24 Nov 2026 09:46:12 +0800
-Subject: [PATCH] PW4 Android: bd71827 LEDs set from a work item
+Date: Wed, 25 Nov 2026 13:20:58 +0800
+Subject: [PATCH 16/22] PW4 Android: bd71827 LEDs set from a work item
 
 power_supply LED triggers call brightness_set under a read lock, and the
 PMIC write sleeps on I2C (scheduling while atomic on every charger event).

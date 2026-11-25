@@ -1,0 +1,64 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: pw4-port <pw4-port@localhost>
+Date: Wed, 25 Nov 2026 13:20:58 +0800
+Subject: [PATCH 17/22] PW4 Android: restore the PMIC off sequence left by the
+ stock suspend
+
+The kernel starts from the syscore stage of a stock suspend, after
+bd71827_i2c_suspend_late() set test register 0x42 to 'no power-off
+sequence' (0x4C); the stock resume_early never runs. Put 0x44 back at
+probe and log the value found.
+---
+ drivers/mfd/bd71827.c | 29 +++++++++++++++++++++++++++++
+ 1 file changed, 29 insertions(+)
+
+diff --git a/drivers/mfd/bd71827.c b/drivers/mfd/bd71827.c
+index 03038bff..f97e38b4 100755
+--- a/drivers/mfd/bd71827.c
++++ b/drivers/mfd/bd71827.c
+@@ -344,6 +344,34 @@ struct bd71827_board *bd71827_parse_dt(struct i2c_client *client,
+  *  @retval 0 probe success
+  *  @retval negative error number
+  */
++/*
++ * PW4 Android: the kernel starts from inside a stock suspend (syscore stage),
++ * after bd71827_i2c_suspend_late() put the PMIC's power-off sequence into its
++ * suspend setting; the stock resume_early that undoes it never runs. Restore
++ * the normal setting here, as resume_early would.
++ */
++static void bd71827_restore_off_sequence(struct bd71827 *bd71827)
++{
++	struct i2c_client *client = bd71827->i2c_client;
++	u8 val = 0;
++	int ret;
++
++	i2c_lock_adapter(client->adapter);
++	ret = bd71827_enter_test_mode(client);
++	if (!ret) {
++		ret = bd71827_read_i2c_reg(client, BD71827_TEST_REG_POWER_SEQ_REG, &val);
++		if (!ret && val != BD71827_TEST_REG_ENABLE_OFF_SEQUENCE)
++			ret = bd71827_write_i2c_reg(client, BD71827_TEST_REG_POWER_SEQ_REG,
++						    BD71827_TEST_REG_ENABLE_OFF_SEQUENCE);
++		bd71827_exit_test_mode(client);
++	}
++	i2c_unlock_adapter(client->adapter);
++	if (!ret)
++		udelay(2000);
++	dev_info(bd71827->dev, "pw4: power sequence register was %#x, restore %d\n",
++		 val, ret);
++}
++
+ static int bd71827_i2c_probe(struct i2c_client *i2c,
+ 			    const struct i2c_device_id *id)
+ {
+@@ -394,6 +422,7 @@ static int bd71827_i2c_probe(struct i2c_client *i2c,
+ 	}
+ 	dev_info(bd71827->dev, "Device ID=0x%X\n", ret);
+ 
++	bd71827_restore_off_sequence(bd71827);
+ 	bd71827_irq_init(bd71827, of_pmic_plat_data);
+ 
+ 	ret = mfd_add_devices(bd71827->dev, -1,
+-- 
+2.53.0
+

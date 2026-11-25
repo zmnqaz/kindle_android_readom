@@ -79,33 +79,21 @@ make O=<out> ARCH=arm olddefconfig
 
 补丁 `0015`（2026-11-23）：`0200`/`0202` 的 PW4 版。前光是 `lm3695`（`ti-lmu-backlight`，`/sys/class/backlight/bl`，0–2047），原驱动不看 `bl_power`；开 `LAB126_ANDROID_BACKLIGHT_BLANKING` 后 `bl_power` 不是 unblank 或帧缓冲 blank 时输出 0，请求的亮度保留，power HAL 灭屏就靠它。`bd71827` 的电压/电流/电量本来就是 µV/µA/µAh、充电器 `online` 就是 DCIN 检测，只有温度是整度（原厂读出 20），开 `LAB126_ANDROID_POWER_SUPPLY_ABI` 后按 0.1 °C 报。
 
-补丁 `0016`（2026-11-24，诊断用，查清后撤回或改成修复）：USB 唤醒与 DDR 调频的 `pw4-trace:` 日志，和参数 `pw4_busfreq_off`（`core_param`）。见 `../android.md`「插 USB 卡死的分析」。
+补丁 `0016`–`0022` 是从原厂挂起中途交接带来的问题的修复，2026-11-25 整理过一次：排查 USB 插拔卡死时加的打印、开关和寄存器监视（原 `0016`–`0030` 里的诊断部分）已全部去掉，只留下面这些。排查过程见 `../android.md`。
 
-补丁 `0017`（2026-11-24）：`leds-bd71827` 的寄存器写改到工作队列里。power_supply 的充电/充满触发器在读锁下调用 `brightness_set`，原来直接走 I²C，每次充电器事件都报 `scheduling while atomic`（Jump 15 日志）。
+补丁 `0016`（2026-11-24）：`leds-bd71827` 的寄存器写改到工作队列里。power_supply 的充电/充满触发器在读锁下调用 `brightness_set`，原来直接走 I²C，每次充电器事件都报 `scheduling while atomic`（Jump 15 日志）。
 
-补丁 `0018`（2026-11-24，诊断用）：插线路径的 `pw4-trace:`（bd71827 DCIN 中断、max14656 检测、`cpufreq_override`、`imx6q_set_target` 每一步），和参数 `pw4_cpufreq_override_off`。
+补丁 `0017`（2026-11-24）：内核是从原厂挂起的 syscore 阶段起来的，此前 `bd71827_i2c_suspend_late` 已把 PMIC 测试寄存器 0x42 设成"关闭关机时序"（0x4C），原厂的 `resume_early` 不会再跑；probe 时改回 0x44 并记下原值。
 
-补丁 `0019`（2026-11-24，诊断用）：参数 `pw4_cpufreq_low`，CPU 固定在 396 MHz。
+补丁 `0018`（2026-11-24）：i.MX 胶水层关掉控制器时钟期间，ChipIdea 的寄存器读写直接跳过、记一行并打印调用栈（前 3 次），免得总线挂死。
 
-补丁 `0020`（2026-11-24）：内核是从原厂挂起的 syscore 阶段起来的，此前 `bd71827_i2c_suspend_late` 已把 PMIC 测试寄存器 0x42 设成"关闭关机时序"（0x4C），原厂的 `resume_early` 不会再跑；probe 时改回 0x44 并记下原值。另加诊断 `pw4_usbwatch`：每 1 ms 读 USB/VBUS 相关 anatop 寄存器、usboh3 时钟门和 PMIC_INT_B，变化就记一行。
+补丁 `0019`（2026-11-24）：bd71827 的 DVS 初始化不再把 buck1/2 的 RUN 电压降到设备树的 1.1 V（寄存器里已有更高值时保留）。交接时 CPU 已在 996 MHz、电压 1.275 V，cpufreq 看不到频率变化，原先会在 1.1 V 下跑到第一次调频（35–90 s）。
 
-补丁 `0021`（2026-11-24，诊断用）：参数 `pw4_usb_runtime_pm_off`，OTG1 不进运行时 PM。
+补丁 `0020`（2026-11-25）：UDC 里关中断执行的忙等按次数设上限。单核关中断时 jiffies 不走，Lab126 原有的 200 ms 保护不生效；到上限时打印 `ci_hdrc udc: busy wait gave up in ...` 并退出。排查中没有实际触发过，作为防护保留。
 
-补丁 `0022`（2026-11-24）：i.MX 胶水层关掉控制器时钟期间，ChipIdea 的寄存器读写直接跳过、记一行并打印调用栈（前 3 次），免得总线挂死。
+补丁 `0021`（2026-11-25，诊断用，默认关闭）：启动参数 `pw4_lockup=1` 时，EPIT2 每 0.5 秒以 GIC 最高优先级中断一次，jiffies 停住时打印 `pw4-lockup:` 计数增长最快的中断和被打断处的寄存器。设备无日志卡死时用它区分中断风暴和总线挂死，下面 `0022` 的根因就是它抓到的。
 
-补丁 `0023`（2026-11-24，诊断用）：开机 45 s 后按 i2cdump 的格式打印 bd71827 全部 256 个寄存器（`pw4-pmic:`）。
-
-补丁 `0024`（2026-11-24）：bd71827 的 DVS 初始化不再把 buck1/2 的 RUN 电压降到设备树的 1.1 V（寄存器里已有更高值时保留）。交接时 CPU 已在 996 MHz、电压 1.275 V，cpufreq 看不到频率变化，原先会在 1.1 V 下跑到第一次调频（35–90 s）。
-
-补丁 `0025`、`0026`（2026-11-24，诊断用）：运行时可写的开关 `pw4_cpuidle_wfi`（空闲只做 WFI）、`pw4_cpufreq_hold`（不调频）、`pw4_udc_nopullup`（不拉 D+），以及 `pw4_usb_rpm_forbid`（probe 时禁止 OTG1 运行时挂起，`power/control` 写 auto 可恢复）。
-
-补丁 `0027`（2026-11-25，诊断用）：UDC 里关中断执行的忙等改为按次数设上限（单核关中断时 jiffies 不走，Lab126 原有的 200 ms 保护不生效），卡住时打印 `pw4-trace: udc stuck in ...`；记录除传输完成外的 UDC 中断、VBUS 会话和断开各步；usbwatch 增加 OTG1 控制器（时钟开时）和 USBPHY1 寄存器。
-
-补丁 `0028`（2026-11-25，诊断用）：EPIT2 每 0.5 秒以 GIC 最高优先级中断一次，jiffies 停住时打印 `pw4-lockup:` 计数增长最快的中断和被打断处的寄存器，用来区分中断风暴和总线挂死；usbwatch 不再读时钟关闭时的 USB PHY 寄存器。
-
-补丁 `0029`（2026-11-25，**USB 插拔卡死的修复**）：交接发生在原厂挂起流程中，`serial_imx_suspend()` 已置位 `UCR3_AWAKEN`，之后不会有 resume。USB 插拔时 RXD 上的边沿触发异步唤醒中断，端口未打开、时钟关闭时 `imx_int()` 清不掉，形成中断风暴（约 2 万次/秒），单核被占满。probe 时屏蔽该端口的全部中断源。
-
-补丁 `0030`（2026-11-25）：清理排查用的代码。回退 `0016`、`0018`、`0019`、`0021`、`0023`、`0025`、`0026` 的打印和开关，删除 usbwatch；保留 UDC 忙等的次数上限和时钟关闭时的寄存器访问保护（去掉打印前缀），死机检测器保留但默认关闭（启动参数 `pw4_lockup=1` 打开）。
+补丁 `0022`（2026-11-25，**USB 插拔卡死的修复**）：交接发生在原厂挂起流程中，`serial_imx_suspend()` 已置位 `UCR3_AWAKEN`，之后不会有 resume。USB 插拔时 RXD 上的边沿触发异步唤醒中断，端口未打开、时钟关闭时（安卓命令行没有 `console=`）`imx_int()` 清不掉，形成中断风暴（约 2 万次/秒），单核被占满。probe 时屏蔽该端口的全部中断源。Jump 35 实测插拔 5 个来回、7 次 VBUS 接入，UART1 中断计数为 0。
 
 **编译参数（2026-11-23 补）**：安卓内核要带 `KCFLAGS="-fno-pic -fno-pie"`，和 Readom 的 `tools/build-kernel.sh`、交接模块一样。AOSP 的 gcc 4.9 默认生成位置无关代码，不带这个参数时内核本身还能启动，但模块里会引用 `_GLOBAL_OFFSET_TABLE_`，加载时报 `Unknown symbol _GLOBAL_OFFSET_TABLE_`（第十次交接时 EPDC 驱动就是这样没加载上）。
 

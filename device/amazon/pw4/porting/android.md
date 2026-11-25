@@ -96,98 +96,66 @@ preinit 改名 `.real`（同 `boot/build_entry.py`），公开 initramfs 由 `pa
   要做是新增功能（蓝牙 HAL、协议栈、应用），先不做。
 - 还没动：`pw3-fg-state`（读 PW3 的 `wario_battery`，PW4 上只会记一行读不到）；休眠（`/sys/power/state` 有 `mem`）未测。
 
-**插 USB 卡死的分析（2026-11-24 凌晨，未上机）**：Jump 13 卡死时日志里连 `bd71827` 充电器中断的
-`usb_gadget_chg_det_sync` 都没有，所以卡在插线后最先发生的事上：i.MX 自己的 USB 唤醒。控制器在没插线时处于
-低功耗（时钟关、`in_lpm`），`ci_irq` 收到 VBUS 唤醒中断就 `pm_runtime_get`，恢复路径
-`imx_controller_resume` 先 `request_bus_freq(BUS_FREQ_HIGH)`（DDR 从低频切回高频，由 OCRAM 里的
-`lpddr2_freq_imx6sll.S` 做），再开时钟、读写 USBNC/PHY——全程不打印。嫌疑最大的是 DDR 调频。
-- 内核补丁 `0016`（诊断）：USB 唤醒中断、恢复的每一步、每次 DDR 调频（开始/完成）各打一行 `pw4-trace:`。
-  Lab126 日志每条都写回内存（`0011`），卡死后最后一行就是卡住的那一步；平时 EPDC 刷新也会调频，日志同时说明
-  调频本身在不在工作。
-- 参数 `pw4_busfreq_off`：DDR 一直停在开机时的频率（原厂在进休眠前已切到高频，交接就从那里开始）。
-- Jump 15 = 跟踪；Jump 16 = 跟踪 + `pw4_busfreq_off`（同一个系统镜像，只差命令行）。15 卡、16 不卡，就是调频。
-  `pack-initramfs.py --cmdline-extra` 加这种参数，`cmdline_sha256` 随之改。
+**Jump 15–17（2026-11-24）：Wi-Fi、充电灯**。电源键、前光正常。
+- Wi-Fi：bcmdhd 的 insmod 成功，但下载固件的是 SDIO probe 的内核工作线程（`kernel` 域），SELinux 拒绝它读
+  `/firmware`（`pw3_private_firmware_file`）。`sepolicy/pw4_hardware.te` 给 `kernel` 也放行。Jump 17 起 Wi-Fi 正常。
+- 充电灯触发器每次充电器事件都报 `scheduling while atomic`（`bd71827_led_set` 在读锁下走 I²C）→ 内核 `0016`。
 
-**Jump 15 上机（2026-11-24）**：电源键、前光正常。插 USB **没有卡死**：VBUS 唤醒 → DDR 切高频 → 时钟 → USBNC →
-PHY 全部走完（`pw4-trace` 共 4 ms），电脑枚举到 `configured`，能充电。Jump 13 的卡死这次没复现，原因待定（`0016` 先留着）。
-- Wi-Fi 仍不行：bcmdhd 的 insmod 成功，但下载固件的是 SDIO probe 的内核工作线程（`kernel` 域），SELinux 拒绝它
-  读 `/firmware`（`pw3_private_firmware_file`）。`sepolicy/pw4_hardware.te` 给 `kernel` 也放行。
-- 充电灯触发器每次充电器事件都报 `scheduling while atomic`（`bd71827_led_set` 在读锁下走 I²C）→ 内核 `0017`。
-- Jump 17 = 这两处修复（不带 `pw4_busfreq_off`）。
+## USB 插拔卡死（Jump 13–35，已解决）
 
-**Jump 17 上机（2026-11-24）**：Wi-Fi、充电灯正常。插 USB 又卡死，约 70 s 后硬件看门狗（60 s）重启，
-没有 panic 也没有 `Restarting`。最后一行是 `busfreq high done`；Jump 15 插线时同一位置下一行是 max14656 的
-`usb_gadget_chg_det_sync`，它前面只有 `cpufreq_override(2)`：CPU 396 → 996 MHz（升压经 I²C 写 bd71827，再重设 PLL1）。
-- 内核 `0018`（诊断）：DCIN 中断、max14656 检测、override、调频每一步都打 `pw4-trace`；参数 `pw4_cpufreq_override_off`。
-- Jump 18 = 跟踪；Jump 19 = 跟踪 + `pw4_cpufreq_override_off=1`（同一个系统镜像）。
+**现象**：插或拔 USB 线时整机冻结，没有 panic、没有任何日志，约 60 s 后硬件看门狗重启。插线时偶发，
+已连上电脑后拔线几乎必现；只供电的线、墙充很少触发。
 
-**Jump 18 上机（2026-11-24）**：插线一次就卡死。插线后**没有任何中断打印**（bd71827 DCIN、USB 唤醒都没有），
-软锁死检测（`softlockup_panic=1`）也没触发，像是硬件层面的冻结。卡死时 CPU 在 996 MHz（最后一次调频是升频）；
-Jump 17 卡死前刚升频；Jump 15 插线时 CPU 在 396 MHz，没卡。
-- 内核 `0019`：参数 `pw4_cpufreq_low`。Jump 20 = 跟踪 + `pw4_cpufreq_low=1`。
+**根因**：交接发生在原厂 `pm_test=core` 挂起的 syscore 回调里，所有驱动的挂起回调都已执行、恢复回调永远
+不会执行，它们留下的硬件状态都带进了安卓内核。`serial_imx_suspend()` 给 UART1 置了 `UCR3_AWAKEN`（异步唤醒
+中断）。线一动，RXD 上出现边沿，中断触发；安卓命令行没有 `console=`（原厂有 `console=ttymxc0`），端口没打开、
+时钟关着，`imx_int()` 清不掉标志，中断无限重入（约 2 万次/秒）。GIC 里 UART1 的中断号比定时器小，单核上
+定时器中断再也进不来：没有日志、软锁死检测也不触发，看起来和总线挂死一样。
 
-**Jump 19 上机**：关掉 override 仍卡死。**读代码的结论（2026-11-24）**：交接在原厂 `pm_test=core` 挂起的 syscore 回调里，
-所有驱动的挂起回调都已执行、恢复回调永远不会执行，它们留下的硬件状态都带进了安卓内核。与插线有关的：
-- `bd71827_i2c_suspend_late`：进 PMIC 测试模式把 0x42 设成 0x4C（关闭关机时序），`resume_early` 才改回 0x44；
-- ChipIdea（`CONFIG_USB_REX`）挂起时打开 PHY 唤醒、关掉 PHY 3.0V（`vdd3p0`），插线由 max14656 检测后再打开。
-内核 `0020` 在 probe 时恢复 0x42，并加 `pw4_usbwatch`。Jump 21 = 0020（不带调频参数）。
+**修复**：内核 `0022`，probe 时屏蔽端口的全部中断源。Jump 35 插拔 5 个来回（7 次 VBUS 接入）不冻，
+`/proc/interrupts` 里 UART1 计数为 0。
 
-**Jump 22–25（2026-11-24 下午，另一个助手做的）**：都带了 `pw4_busfreq_off`。`0020` 生效（日志 `power sequence register
-was 0x4c, restore 0`，证实原厂留下了 0x4C）。插线后中断、max14656、USB 唤醒、枚举都走完（22、24），但几秒后冻结。
-**这几次的日志都有位翻转**（22/23/24 分别 28/5/11 处被改坏的字符），不带 `pw4_busfreq_off` 的 15/17/18 一处都没有：
-关掉调频后 DDR 并不在正确的高频设置上，内存出错。所以 22–25 的冻结不能算到 USB 头上，`pw4_busfreq_off` 不能再用。
-Jump 21（`0020`，调频正常）跑过一次但日志没取就被覆盖了，要重测。
+**怎么找到的**：内核 `0021` 的死机检测器。EPIT2 每 0.5 s 以 GIC 最高优先级中断一次，jiffies 停住就打印计数
+增长最快的中断。Jump 34 第一次插线就抓到 `pw4-lockup: irq 18 hw 26 (2020000.serial) +12633`。在这之前的
+二十来次上机都是逐项排除，没有一项是原因：
 
-**更正（2026-11-24 晚）**：日志的位翻转从带 `0020` 的 Jump 21 起才有，与 `pw4_busfreq_off` 无关。恢复正常关机时序后，
-看门狗重启时 PMIC 会短暂断掉 DDR 供电，内存里的日志掉位。Jump 22–25 的结果有效。
+| 排除的假设 | 依据 |
+|---|---|
+| DDR 调频（busfreq） | 关掉调频、PLL_USB1 全程不变（Jump 29）仍冻 |
+| CPU 调频、`cpufreq_override` | 固定频率、关 override（Jump 19、20、29）仍冻 |
+| cpuidle（WAIT / LOW-POWER-IDLE） | `cpuidle.off=1`（Jump 28）仍冻 |
+| USB 运行时 PM | 禁止运行时挂起（Jump 29）仍冻 |
+| PMIC、电源、时钟配置 | anatop、CCM、GPC 寄存器、稳压器和时钟树与原厂逐项一致（`PMU_REG_CORE` 0x00482012，USBPHY1 由 ldo3 供电）；时钟树唯一的差别正是 uart1，当时当成无关项放过了 |
+| USB 高速通信本身 | 高速枚举、30 MB adb 读写校验正常；先软件断开再拔线不冻 |
+| UDC 关中断忙等死循环 | 全部加次数上限（`0020`）后没有一条触发 |
+| Wi-Fi | 关掉 Wi-Fi、卸载驱动后拔线仍冻过 |
 
-**Jump 21 上机**：插 PC 正常（中断、max14656、唤醒、枚举、配置都走完）；**拔线瞬间冻结**，1 ms 的监视和中断都来不及记录。
-只供电的线、墙充插拔都不冻（另一个助手的测试）。VBUS 有效是 max14656 驱动经 anatop 覆盖位写进去的（`VBUS_DETECT`
-0x1c→0xac），拔线后约 1.3 s 才撤掉，此间控制器不知道线已断。
-**原厂对照**（只读，`devmem`）：插 PC、拔线时 anatop/USB 寄存器的变化和安卓一样，`vdd3p0` 在原厂也始终关着，拔线后同样
-约 1.3 s 才撤覆盖。SoC 侧状态一致，下一步比 PMIC：原厂 `i2cdump -f -y 0 0x4b` 已存，Jump 26 用 `0023` 打出安卓下的。
+排查中另外发现并修掉的、同样是挂起中途交接留下的问题：
+- `bd71827_i2c_suspend_late` 把 PMIC 测试寄存器 0x42 设成 0x4C（关闭关机时序），`resume_early` 才改回 0x44
+  → 内核 `0017` 在 probe 时恢复（日志 `power sequence register was 0x4c`）。恢复之后，看门狗重启时 PMIC 会
+  短暂断掉 DDR 供电，Lab126 持久日志里会有位翻转，这是正常现象，不是内存不稳。
+- DVS 初始化把 buck1/buck2 的 RUN 电压写成设备树的 1.1 V，而交接时 CPU 已在 996 MHz（原厂 1.275 V），要到
+  第一次调频才升压 → 内核 `0019` 保留寄存器里已有的更高值。原厂里 `cpu0-arm` 是 buck2、`cpu0-soc` 是 buck1。
 
-**Jump 26 上机**：拔线仍冻结。PMIC 寄存器对比原厂：配置寄存器一致，只有 **buck1/buck2 RUN = 0x0c（1.1 V），原厂 0x13（1.275 V）**。
-原因：DVS 初始化写 1.1 V，交接时 CPU 已在 996 MHz（原厂从 u-boot 的 792 MHz 起，cpufreq 必然切一次并升压），
-所以要到第一次调频才升压。这是真问题（`0024` 修），但几次冻结都发生在第一次调频之后，不是拔线冻结的原因。
-原厂里 `cpu0-arm` 是 buck2、`cpu0-soc` 是 buck1。Jump 27 = `0024`；接 PC 时 ADB 可用，改用 adb 在现场做对照。
+对照用的事实：VBUS 有效是 max14656 驱动经 anatop 覆盖位写进去的（`VBUS_DETECT` 0x1c→0xac），拔线后约 1.3 s
+才撤掉，原厂也一样；`vdd3p0` 在原厂也始终关着。
 
-**Jump 27 上机**：`0024` 生效（`keep run selector 0x13`）。插 PC 后 230 ms、枚举中（主机 `not accepting address`）冻结，
-此时 DDR 在高频、电压正确。冻结与 USB 高速通信同时发生（枚举、通信中拔线），不只在 VBUS 跳变。
-下一个对照：Jump 28 = Jump 27 + `cpuidle.off=1`（6SLL 的 WAIT/LOW-POWER-IDLE 会门控 ARM 时钟、在 OCRAM 里让 DDR 自刷新）。
+**排查用的工具**（留在仓库里，默认不启用）：
+- `pack-initramfs.py --tcp-shell PORT`：开机完成后在该 TCP 端口开一个 root shell（`toybox nc` 经 `su`；init →
+  shell 域 → su）。Readom 的 adbd 编译时去掉了 TCP（`PW3_USB_ONLY_ADBD`），`service.adb.tcp.port` 不起作用。
+- 启动参数 `pw4_lockup=1`：上面的死机检测器。
+- `--cmdline-extra`、`--boot-prop`、`--adb-keys`：给诊断用的 Jump 加内核参数、开机属性、本机 adb 公钥（公钥只在本地打包，不进仓库）。
 
-**Jump 28 上机**：`cpuidle.off=1` 生效（`failed to register cpuidle driver`），插线正常、拔线仍冻结，排除 cpuidle。
-为省上机次数，一次准备两个：Jump 29 = 内存调频、CPU 调频、USB 运行时 PM、空闲低功耗全关（`pw4_busfreq_off`
-`pw4_cpufreq_hold` `pw4_usb_rpm_forbid` `pw4_cpuidle_wfi`）；不冻则用 adb 在运行中逐项打开再插拔。
-Jump 30 = 只加 `pw4_udc_nopullup`：线上无 USB 通信，冻则与通信无关。
+排查期间的内核打印、调试开关和每毫秒寄存器监视（原补丁 `0016`–`0030` 里的诊断部分）在 2026-11-25 整理时
+去掉了，补丁重新编号为 `0016`–`0022`，代码树与 Jump 36 的内核一致。逐次上机的记录在 git 历史里
+（`88ddf27` 及之前的 `android.md`）。
 
-**Jump 29、30 上机**：29（四项全关，开关都确认生效）插线即冻结，四项排除。30（`pw4_udc_nopullup`，日志 3 次
-`pullup refused`）插拔多次都不冻：**没有 USB 通信就不冻**，电源、PMIC、max14656 这一路排除。
-Jump 31 = 30 的内核 + Wi-Fi adb（`pack-initramfs.py --default-prop service.adb.tcp.port=5555`、`--adb-keys`
-本机公钥，只在本地打包），在不冻的状态下用 adb 运行中打开 D+ 上拉、换 USB 功能组合，逐项对照。
+## 已知情况
 
-### Jump 32–34 (2026-11-25): Wi-Fi root shell, the unplug freeze is not a busy wait
-
-- Readom's adbd is USB only (`PW3_USB_ONLY_ADBD`), so TCP adb never listens. The
-  diagnostic shell is `toybox nc` under `su` (init → shell domain → su).
-- With the gadget connected over the shell: HS enumeration and 30 MB adb push/pull
-  are fine; a soft disconnect followed by unplugging is fine; unplugging while
-  connected froze (Jump 32, 33), and once with Wi-Fi off (one other unplug with
-  Wi-Fi off did not). Plugging in with the pull-up refused also froze once.
-- Jump 33 bounded every UDC busy wait: no `udc stuck`, and the 1 ms watcher
-  logged nothing after the cable moved — no PMIC VBUS interrupt, no UDC
-  interrupt. Power, regulator and clock state match stock (PMU_REG_CORE
-  0x00482012, USBPHY1 from ldo3).
-- Jump 34 adds an EPIT2 lockup detector at top GIC priority to tell an
-  interrupt storm from a bus hang.
-
-### Jump 34 (2026-11-25): the plug freeze is a UART1 interrupt storm
-
-The lockup detector caught it at the first plug: `pw4-lockup: irq 18 hw 26
-(2020000.serial) +12633` every 0.5 s, jiffies stopped. The handoff starts
-inside a stock suspend, where `serial_imx_suspend()` set `UCR3_AWAKEN`; no
-resume ever clears it. An RXD edge when the USB cable moves raises the async
-wake interrupt, and with the port closed and its clocks off (the Android
-command line has no `console=`, stock has `console=ttymxc0`) `imx_int()` cannot
-clear it. Not USB, PHY, power or Wi-Fi. Kernel patch 0029 masks the port's
-interrupts at probe (Jump 35).
+- **微信读书慢**：和 PW3 一样受 1 GHz 单核限制（`docs/known-issues` 第 12 条）。刚装好时是 `quicken`（解释
+  执行），后台编译任务要设备息屏空闲约 71 分钟才跑；PW4 上休眠还没调通，没验证它能否自己触发，可以手动
+  `cmd package compile -m speed -f com.tencent.weread.eink`（约 20 分钟）。
+- **原厂长时间运行后跳转被拒**：原厂连续运行十几小时、用过 U 盘模式后，`pm_test=core` 挂起时很多时钟门没关
+  （`gates_clear=0`，`ccgr4=ffffffff`），模块拒绝跳转（`RESULT REFUSED`）。重启原厂后再点就能跳，哪个驱动
+  没关时钟没有查。
+- 未做：蓝牙、休眠（挂起/唤醒）、`pw3-fg-state`。

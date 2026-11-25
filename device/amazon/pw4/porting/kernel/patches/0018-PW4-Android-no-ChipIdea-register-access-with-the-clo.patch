@@ -1,11 +1,12 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: pw4-port <pw4-port@localhost>
-Date: Tue, 24 Nov 2026 19:45:41 +0800
-Subject: [PATCH 22/23] PW4 Android: no ChipIdea register access with the
+Date: Wed, 25 Nov 2026 13:20:59 +0800
+Subject: [PATCH 18/22] PW4 Android: no ChipIdea register access with the
  clocks off
 
-A register access while the i.MX glue has gated the controller clocks
-stalls the bus. Skip it, log it and dump the caller's stack (3 times).
+While the i.MX glue has the controller clocks off, skip the register
+access, log it and dump the stack (first three times) instead of hanging
+the bus.
 ---
  drivers/usb/chipidea/ci.h          | 29 ++++++++++++++++++++++++++++-
  drivers/usb/chipidea/ci_hdrc_imx.c | 18 +++++++++++++++++-
@@ -95,10 +96,10 @@ index e28d38be..2ec2ce24 100644
  	return val;
  }
 diff --git a/drivers/usb/chipidea/ci_hdrc_imx.c b/drivers/usb/chipidea/ci_hdrc_imx.c
-index 607265c6..4ecb17c6 100644
+index e3c22730..0ddfc8ec 100644
 --- a/drivers/usb/chipidea/ci_hdrc_imx.c
 +++ b/drivers/usb/chipidea/ci_hdrc_imx.c
-@@ -321,7 +321,11 @@ static void imx_disable_unprepare_clks(struct device *dev)
+@@ -318,7 +318,11 @@ static void imx_disable_unprepare_clks(struct device *dev)
  int imx_ci_hdrc_enable_clks(struct ci_hdrc *ci)
  {
  	struct device *dev = ci->dev->parent;
@@ -111,7 +112,7 @@ index 607265c6..4ecb17c6 100644
  }
  EXPORT_SYMBOL(imx_ci_hdrc_enable_clks);
  #endif /* CONFIG_USB_REX */
-@@ -697,6 +701,12 @@ static int imx_controller_suspend(struct device *dev)
+@@ -687,6 +691,12 @@ static int imx_controller_suspend(struct device *dev)
  		}
  	}
  
@@ -124,7 +125,7 @@ index 607265c6..4ecb17c6 100644
  	imx_disable_unprepare_clks(dev);
  	if (test_and_clear_bit(HIGH_BUS_FREQ, &data->bitflags)) {
  		release_bus_freq(BUS_FREQ_HIGH);
-@@ -726,6 +736,12 @@ static int imx_controller_resume(struct device *dev)
+@@ -714,6 +724,12 @@ static int imx_controller_resume(struct device *dev)
  	ret = imx_prepare_enable_clks(dev);
  	if (ret)
  		return ret;
@@ -138,7 +139,7 @@ index 607265c6..4ecb17c6 100644
  	data->in_lpm = false;
  
 diff --git a/drivers/usb/chipidea/core.c b/drivers/usb/chipidea/core.c
-index 55940510..60d516d7 100644
+index 9fc93781..04c245da 100644
 --- a/drivers/usb/chipidea/core.c
 +++ b/drivers/usb/chipidea/core.c
 @@ -547,6 +547,17 @@ int hw_wait_reg(struct ci_hdrc *ci, enum ci_hw_regs reg, u32 mask,
@@ -149,7 +150,7 @@ index 55940510..60d516d7 100644
 +{
 +	static int reported;
 +
-+	pr_info("pw4-trace: usb register %s with clocks off\n", what);
++	pr_warn("ci_hdrc: register %s with the clocks off\n", what);
 +	if (reported < 3) {
 +		reported++;
 +		dump_stack();

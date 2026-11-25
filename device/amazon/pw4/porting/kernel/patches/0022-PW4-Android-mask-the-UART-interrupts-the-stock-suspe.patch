@@ -1,8 +1,8 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: pw4-port <pw4-port@localhost>
-Date: Wed, 25 Nov 2026 12:49:19 +0800
-Subject: [PATCH] PW4 Android: mask the UART interrupts the stock suspend left
- enabled
+Date: Wed, 25 Nov 2026 13:20:59 +0800
+Subject: [PATCH 22/22] PW4 Android: mask the UART interrupts the stock suspend
+ left enabled
 
 The handoff starts inside a stock suspend: serial_imx_suspend() has set
 UCR3_AWAKEN and no resume follows. An RXD edge at USB plug/unplug raised

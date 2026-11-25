@@ -1,8 +1,8 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: pw4-port <pw4-port@localhost>
-Date: Tue, 24 Nov 2026 19:59:22 +0800
-Subject: [PATCH] PW4 Android: keep the stock run voltage of VDD_ARM/VDD_SOC at
- probe
+Date: Wed, 25 Nov 2026 13:20:59 +0800
+Subject: [PATCH 19/22] PW4 Android: keep the stock run voltage of
+ VDD_ARM/VDD_SOC at probe
 
 The DVS init wrote 1.1 V while the CPU was already at 996 MHz from the
 stock kernel; cpufreq saw no change and left it there until the first

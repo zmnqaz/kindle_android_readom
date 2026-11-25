@@ -1,7 +1,7 @@
 #!/bin/sh
 # Name: Readom Jump 36
 # Author: readom PW4 port
-# FOURTEENTH HANDOFF on the PW4: Jump 13 plus the PW4 USB gadget (configfs, adb), bcmdhd Wi-Fi and a USB register watcher in the kernel log.
+# Handoff into Android on the PW4 (same launcher since Jump 21: retries once when the suspend was busy).
 # It mounts mmcblk1p2 read only for the panel waveform, loads the display
 # driver, shows the start picture, then runs Readom's preinit, which maps
 # pw4-android/system.img and data.img from the user FAT and starts Android.
