@@ -10,3 +10,9 @@ BOARD_SEPOLICY_DIRS += device/amazon/pw4/sepolicy
 # waits for this module and this driver (patches/aosp-wificond/0008).
 BOARD_PW3_WIFI_MODULE := bcmdhd
 BOARD_PW3_WIFI_DRIVER := bcmsdh_sdmmc
+
+# The build takes system.prop from the device's own directory, and the PW4 has
+# none: without the PW3's, ART ran from a relocated copy of the boot image in
+# /data/dalvik-cache and dex2oat kept its watchdog, which stops a full compile
+# of a large application after 570 s (WeRead: "dex2oat did not finish").
+TARGET_SYSTEM_PROP := device/amazon/pw3/system.prop

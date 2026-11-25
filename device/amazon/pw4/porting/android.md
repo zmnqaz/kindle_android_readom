@@ -159,3 +159,8 @@ preinit 改名 `.real`（同 `boot/build_entry.py`），公开 initramfs 由 `pa
   （`gates_clear=0`，`ccgr4=ffffffff`），模块拒绝跳转（`RESULT REFUSED`）。重启原厂后再点就能跳，哪个驱动
   没关时钟没有查。
 - 未做：蓝牙、休眠（挂起/唤醒）、`pw3-fg-state`。
+- **PW4 没有带上 PW3 的 `system.prop`**（2026-11-25 发现并补上）：构建只取设备自己目录下的 `system.prop`，PW4 目录
+  里没有，于是 `dalvik.vm.extra-opts=-Xnorelocate` 和 `dalvik.vm.dex2oat-flags=--no-watch-dog ...` 都没生效：ART 用的是
+  `/data/dalvik-cache` 里搬过地址的启动镜像副本，`cmd package compile -m speed` 微信读书在 570 s 被 dex2oat 的看门狗
+  杀掉。`BoardConfig.mk` 现在用 `TARGET_SYSTEM_PROP` 指向 PW3 的那份。已有的数据镜像里要删一次
+  `/data/dalvik-cache/arm/system@framework@boot*`：副本还在时 ART 仍优先用它，`-Xnorelocate` 不起作用。
