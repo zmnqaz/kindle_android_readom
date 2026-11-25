@@ -1,0 +1,661 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: pw4-port <pw4-port@localhost>
+Date: Wed, 25 Nov 2026 12:58:48 +0800
+Subject: [PATCH] PW4 Android: remove the USB plug freeze diagnostics
+
+Revert the trace and switch patches (busfreq, cpufreq, cpuidle, USB runtime
+PM, pull-up, PMIC dump) and drop the register watcher. Keep the bounded UDC
+busy waits and the gated-register guard without traces; the lockup detector
+stays, off unless pw4_lockup=1.
+---
+ arch/arm/mach-imx/busfreq-imx.c           |  16 ---
+ arch/arm/mach-imx/cpuidle-imx6sll.c       |  10 --
+ drivers/cpufreq/cpufreq.c                 |  10 --
+ drivers/cpufreq/imx6q-cpufreq.c           |  25 -----
+ drivers/mfd/bd71827.c                     |  24 -----
+ drivers/misc/Makefile                     |   1 -
+ drivers/misc/pw4_lockup.c                 |   7 +-
+ drivers/misc/pw4_usbwatch.c               | 113 ----------------------
+ drivers/power/bd71827-power.c             |   1 -
+ drivers/power/max14656_charger_detector.c |   1 -
+ drivers/usb/chipidea/ci_hdrc_imx.c        |  24 -----
+ drivers/usb/chipidea/core.c               |   7 +-
+ drivers/usb/chipidea/udc.c                |  29 +-----
+ 13 files changed, 10 insertions(+), 258 deletions(-)
+ delete mode 100644 drivers/misc/pw4_usbwatch.c
+
+diff --git a/arch/arm/mach-imx/busfreq-imx.c b/arch/arm/mach-imx/busfreq-imx.c
+index 8ab69289..50d06ef3 100644
+--- a/arch/arm/mach-imx/busfreq-imx.c
++++ b/arch/arm/mach-imx/busfreq-imx.c
+@@ -679,7 +679,6 @@ static void exit_lpm_imx7d(void)
+ 
+ static void reduce_bus_freq(void)
+ {
+-	pr_info("pw4-trace: busfreq low begin (high %d audio %d)\n", high_bus_count, audio_bus_count);
+ 	mutex_lock(&cpu_freq_lock);
+ 	if (cpu_is_imx6())
+ 		clk_prepare_enable(pll3_clk);
+@@ -703,8 +702,6 @@ static void reduce_bus_freq(void)
+ 
+ 	if (cpu_is_imx6())
+ 		clk_disable_unprepare(pll3_clk);
+-	pr_info("pw4-trace: busfreq low done (audio %d low %d ultra %d)\n",
+-		audio_bus_freq_mode, low_bus_freq_mode, ultra_low_bus_freq_mode);
+ 
+ 	if (audio_bus_freq_mode)
+ 		dev_dbg(busfreq_dev,
+@@ -823,8 +820,6 @@ static int set_high_bus_freq(int high_bus_freq)
+ 	if (med_bus_freq_mode && !high_bus_freq)
+ 		return 0;
+ 
+-	pr_info("pw4-trace: busfreq high begin (low %d ultra %d audio %d)\n",
+-		low_bus_freq_mode, ultra_low_bus_freq_mode, audio_bus_freq_mode);
+ 	if (low_bus_freq_mode || ultra_low_bus_freq_mode)
+ 		busfreq_notify(LOW_BUSFREQ_EXIT);
+ 
+@@ -848,7 +843,6 @@ static int set_high_bus_freq(int high_bus_freq)
+ 
+ 	if (cpu_is_imx6())
+ 		clk_disable_unprepare(pll3_clk);
+-	pr_info("pw4-trace: busfreq high done\n");
+ 
+ 	if (high_bus_freq_mode)
+ 		dev_dbg(busfreq_dev,
+@@ -1157,9 +1151,6 @@ static DEVICE_ATTR(enable, 0644, bus_freq_scaling_enable_show,
+  *
+  */
+ 
+-static bool pw4_busfreq_off;
+-core_param(pw4_busfreq_off, pw4_busfreq_off, bool, 0444);
+-
+ static int busfreq_probe(struct platform_device *pdev)
+ {
+ 	u32 err;
+@@ -1322,13 +1313,6 @@ static int busfreq_probe(struct platform_device *pdev)
+ 
+ 	bus_freq_scaling_is_active = 1;
+ 	bus_freq_scaling_initialized = 1;
+-	/* PW4 Android, diagnosis of the USB plug freeze: with pw4_busfreq_off
+-	 * the DDR stays at the frequency it starts at (high: the stock kernel
+-	 * sets it before the suspend the handoff starts from). */
+-	if (pw4_busfreq_off) {
+-		bus_freq_scaling_is_active = 0;
+-		pr_info("pw4-trace: busfreq scaling off (pw4_busfreq_off)\n");
+-	}
+ 
+ 	ddr_low_rate = LPAPM_CLK;
+ 
+diff --git a/arch/arm/mach-imx/cpuidle-imx6sll.c b/arch/arm/mach-imx/cpuidle-imx6sll.c
+index d0dde5bb..81d413ab 100644
+--- a/arch/arm/mach-imx/cpuidle-imx6sll.c
++++ b/arch/arm/mach-imx/cpuidle-imx6sll.c
+@@ -90,21 +90,11 @@ static int imx6sll_idle_finish(unsigned long val)
+ 	return 0;
+ }
+ 
+-/* PW4 diagnosis: pw4_cpuidle_wfi=1 makes every idle state a plain WFI
+- * (no WAIT mode, no ARM power-off). Writable at run time. */
+-static bool pw4_cpuidle_wfi;
+-core_param(pw4_cpuidle_wfi, pw4_cpuidle_wfi, bool, 0644);
+-
+ static int imx6sll_enter_wait(struct cpuidle_device *dev,
+ 			    struct cpuidle_driver *drv, int index)
+ {
+ 	int mode = get_bus_freq_mode();
+ 
+-	if (pw4_cpuidle_wfi) {
+-		cpu_do_idle();
+-		return index;
+-	}
+-
+ 	imx6q_set_lpm(WAIT_UNCLOCKED);
+ 	if ((index == 1) || ((mode != BUS_FREQ_LOW) && index == 2)) {
+ 		cpu_do_idle();
+diff --git a/drivers/cpufreq/cpufreq.c b/drivers/cpufreq/cpufreq.c
+index 533b32ff..11dacf25 100644
+--- a/drivers/cpufreq/cpufreq.c
++++ b/drivers/cpufreq/cpufreq.c
+@@ -1636,21 +1636,12 @@ unsigned int cpufreq_get(unsigned int cpu)
+ EXPORT_SYMBOL(cpufreq_get);
+ 
+ #ifdef CONFIG_CPU_FREQ_OVERRIDE_LAB126
+-/* PW4 diagnosis: pw4_cpufreq_override_off=1 makes the override a no-op. */
+-static bool pw4_cpufreq_override_off;
+-core_param(pw4_cpufreq_override_off, pw4_cpufreq_override_off, bool, 0444);
+-
+ /* Lab126: Call the driver override */
+ unsigned int cpufreq_override(unsigned int is_override)
+ {
+ 	int cpu;
+ 	struct cpufreq_policy *policy;
+ 
+-	pr_info("pw4-trace: cpufreq override %u%s\n", is_override,
+-		pw4_cpufreq_override_off ? " (off)" : "");
+-	if (pw4_cpufreq_override_off)
+-		return 0;
+-
+ 	/*
+ 	   Require the "sysfs_performance_governor_lock" to lock and prevent
+ 	   user space changing the gorvernor mode to performance mode
+@@ -1668,7 +1659,6 @@ unsigned int cpufreq_override(unsigned int is_override)
+ 	}
+ 
+ 	mutex_unlock(&sysfs_performance_governor_lock);
+-	pr_info("pw4-trace: cpufreq override done\n");
+ 
+ 	return 0;
+ }
+diff --git a/drivers/cpufreq/imx6q-cpufreq.c b/drivers/cpufreq/imx6q-cpufreq.c
+index cc0b9e80..93994a26 100644
+--- a/drivers/cpufreq/imx6q-cpufreq.c
++++ b/drivers/cpufreq/imx6q-cpufreq.c
+@@ -74,14 +74,6 @@ unsigned char imx6q_cpufreq_power_optimization(unsigned char enable_optimization
+ }
+ EXPORT_SYMBOL_GPL(imx6q_cpufreq_power_optimization);
+ #endif
+-/* PW4 diagnosis: pw4_cpufreq_low=1 keeps the CPU at the lowest setpoint. */
+-static bool pw4_cpufreq_low;
+-core_param(pw4_cpufreq_low, pw4_cpufreq_low, bool, 0444);
+-/* PW4 diagnosis: pw4_cpufreq_hold=1 ignores every frequency change (the CPU
+- * stays where it is, 996 MHz after the handoff). Writable at run time. */
+-static bool pw4_cpufreq_hold;
+-core_param(pw4_cpufreq_hold, pw4_cpufreq_hold, bool, 0644);
+-
+ static int imx6q_set_target(struct cpufreq_policy *policy, unsigned int index)
+ {
+ 	struct dev_pm_opp *opp;
+@@ -89,22 +81,11 @@ static int imx6q_set_target(struct cpufreq_policy *policy, unsigned int index)
+ 	unsigned int old_freq, new_freq;
+ 	int ret;
+ 
+-	if (pw4_cpufreq_hold)
+-		return 0;
+-	if (pw4_cpufreq_low)
+-		index = 0;
+ 	mutex_lock(&set_cpufreq_lock);
+ 
+ 	new_freq = freq_table[index].frequency;
+ 	freq_hz = new_freq * 1000;
+ 	old_freq = policy->cur;
+-	if (pw4_cpufreq_low) {
+-		old_freq = clk_get_rate(arm_clk) / 1000;
+-		if (old_freq == new_freq) {
+-			mutex_unlock(&set_cpufreq_lock);
+-			return 0;
+-		}
+-	}
+ 
+ 	/*
+ 	 * ON i.MX6ULL, the 24MHz setpoint is not seen by cpufreq
+@@ -154,8 +135,6 @@ _no_power_optimization:
+ 	volt = dev_pm_opp_get_voltage(opp);
+ 	rcu_read_unlock();
+ 	volt_old = regulator_get_voltage(arm_reg);
+-	pr_info("pw4-trace: cpufreq %u -> %u kHz, arm %lu -> %lu uV, soc %u\n",
+-		old_freq, new_freq, volt_old, volt, imx6_soc_volt[index]);
+ 
+ 	dev_dbg(cpu_dev, "%u MHz, %ld mV --> %u MHz, %ld mV\n",
+ 		old_freq / 1000, volt_old / 1000,
+@@ -188,7 +167,6 @@ _no_power_optimization:
+ 			mutex_unlock(&set_cpufreq_lock);
+ 			return ret;
+ 		}
+-		pr_info("pw4-trace: cpufreq soc up done\n");
+ 		ret = regulator_set_voltage_tol(arm_reg, volt, 0);
+ 		if (ret) {
+ 			dev_err(cpu_dev,
+@@ -196,7 +174,6 @@ _no_power_optimization:
+ 			mutex_unlock(&set_cpufreq_lock);
+ 			return ret;
+ 		}
+-		pr_info("pw4-trace: cpufreq arm up done\n");
+ 	}
+ 
+ 	/*
+@@ -248,7 +225,6 @@ _no_power_optimization:
+ 			clk_set_parent(pll1_bypass, pll1_bypass_src);
+ 	}
+ 
+-	pr_info("pw4-trace: cpufreq pll done\n");
+ 	/* Ensure the arm clock divider is what we expect */
+ 	ret = clk_set_rate(arm_clk, new_freq * 1000);
+ 	if (ret) {
+@@ -290,7 +266,6 @@ _no_power_optimization:
+ 	} else if (old_freq > FREQ_396_MHZ && new_freq <= FREQ_396_MHZ) {
+ 		release_bus_freq(BUS_FREQ_HIGH);
+ 	}
+-	pr_info("pw4-trace: cpufreq done\n");
+ 
+ 	mutex_unlock(&set_cpufreq_lock);
+ 	return 0;
+diff --git a/drivers/mfd/bd71827.c b/drivers/mfd/bd71827.c
+index 7c09ae66..f97e38b4 100755
+--- a/drivers/mfd/bd71827.c
++++ b/drivers/mfd/bd71827.c
+@@ -372,28 +372,6 @@ static void bd71827_restore_off_sequence(struct bd71827 *bd71827)
+ 		 val, ret);
+ }
+ 
+-/* PW4 diagnosis: print all PMIC registers (as i2cdump does) 45 s after boot,
+- * to compare with the stock system's. */
+-static struct bd71827 *pw4_pmic;
+-static void pw4_pmic_dump(struct work_struct *work)
+-{
+-	char line[64];
+-	int row, col, n;
+-	unsigned int v;
+-
+-	for (row = 0; row < 256; row += 16) {
+-		n = scnprintf(line, sizeof(line), "%02x:", row);
+-		for (col = 0; col < 16; col++) {
+-			if (regmap_read(pw4_pmic->regmap, row + col, &v))
+-				n += scnprintf(line + n, sizeof(line) - n, " XX");
+-			else
+-				n += scnprintf(line + n, sizeof(line) - n, " %02x", v & 0xff);
+-		}
+-		pr_info("pw4-pmic: %s\n", line);
+-	}
+-}
+-static DECLARE_DELAYED_WORK(pw4_pmic_dump_work, pw4_pmic_dump);
+-
+ static int bd71827_i2c_probe(struct i2c_client *i2c,
+ 			    const struct i2c_device_id *id)
+ {
+@@ -445,8 +423,6 @@ static int bd71827_i2c_probe(struct i2c_client *i2c,
+ 	dev_info(bd71827->dev, "Device ID=0x%X\n", ret);
+ 
+ 	bd71827_restore_off_sequence(bd71827);
+-	pw4_pmic = bd71827;
+-	schedule_delayed_work(&pw4_pmic_dump_work, msecs_to_jiffies(45000));
+ 	bd71827_irq_init(bd71827, of_pmic_plat_data);
+ 
+ 	ret = mfd_add_devices(bd71827->dev, -1,
+diff --git a/drivers/misc/Makefile b/drivers/misc/Makefile
+index 7faa723a..6e4564a6 100644
+--- a/drivers/misc/Makefile
++++ b/drivers/misc/Makefile
+@@ -63,5 +63,4 @@ obj-$(CONFIG_CXL_BASE)		+= cxl/
+ obj-$(CONFIG_FRONTLIGHT)	+= frontlight.o
+ obj-$(CONFIG_IDME)		+= idme.o
+ obj-$(CONFIG_UID_CPUTIME) += uid_cputime.o
+-obj-y				+= pw4_usbwatch.o
+ obj-y				+= pw4_lockup.o
+diff --git a/drivers/misc/pw4_lockup.c b/drivers/misc/pw4_lockup.c
+index eb9abf62..9a8498c1 100644
+--- a/drivers/misc/pw4_lockup.c
++++ b/drivers/misc/pw4_lockup.c
+@@ -1,6 +1,7 @@
+ /*
+- * PW4 diagnosis: tell a bus hang from an interrupt storm in the USB plug
+- * freeze. EPIT2 (32 kHz) interrupts every 0.5 s at the highest GIC priority,
++ * PW4 diagnosis, off unless booted with pw4_lockup=1: tell a bus hang from an
++ * interrupt storm when the device freezes without a log line (this found the
++ * UART wake interrupt storm behind the USB plug freeze). EPIT2 (32 kHz) interrupts every 0.5 s at the highest GIC priority,
+  * so it still gets in when another interrupt keeps the CPU busy. When jiffies
+  * stop for a second it logs the interrupts that counted fastest and the
+  * interrupted registers (pw4-lockup: ...). Nothing logged after a freeze
+@@ -24,7 +25,7 @@
+ #include <asm/irq_regs.h>
+ #include <dt-bindings/clock/imx6sll-clock.h>
+ 
+-static bool pw4_lockup = true;
++static bool pw4_lockup;
+ core_param(pw4_lockup, pw4_lockup, bool, 0444);
+ 
+ #define EPIT_CR		0x00
+diff --git a/drivers/misc/pw4_usbwatch.c b/drivers/misc/pw4_usbwatch.c
+deleted file mode 100644
+index 4903bc22..00000000
+--- a/drivers/misc/pw4_usbwatch.c
++++ /dev/null
+@@ -1,113 +0,0 @@
+-/*
+- * PW4 diagnosis: watch the USB/VBUS hardware state every millisecond and log
+- * each change (pw4-trace: usbwatch ...). The Android port freezes when a USB
+- * cable goes in, before any interrupt handler prints; the Lab126 log keeps
+- * every line, so the last ones show what the hardware did first.
+- *
+- * CCM, anatop and the GPIO4 pad state of the PMIC interrupt line
+- * (PMIC_INT_B, GPIO4_IO24) are always clocked; the OTG1 controller registers
+- * are read only while its clock gate (usboh3) is on.
+- */
+-#include <linux/hrtimer.h>
+-#include <linux/init.h>
+-#include <linux/io.h>
+-#include <linux/kernel.h>
+-#include <linux/ktime.h>
+-#include <linux/moduleparam.h>
+-
+-static bool pw4_usbwatch = true;
+-core_param(pw4_usbwatch, pw4_usbwatch, bool, 0444);
+-
+-#define CCM_BASE	0x020C4000
+-#define ANATOP_BASE	0x020C8000
+-#define GPIO4_BASE	0x020A8000
+-#define USB_BASE	0x02184000
+-#define USBPHY1_BASE	0x020C9000
+-
+-struct watch_reg {
+-	const char *name;
+-	int base;	/* 0 CCM, 1 anatop, 2 GPIO4, 3 OTG1 (gated), 4 USBPHY1 */
+-	u32 off;
+-	u32 mask;
+-};
+-
+-static const struct watch_reg regs[] = {
+-	{ "usboh3_cg", 0, 0x80, 0x3 },			/* CCGR6 CG0 */
+-	{ "PLL_USB1", 1, 0x10, 0xffffffff },
+-	{ "REG_3P0", 1, 0x120, 0xffffffff },
+-	{ "VBUS_DETECT", 1, 0x1a0, 0xffffffff },
+-	{ "CHRG_DETECT", 1, 0x1b0, 0xffffffff },
+-	{ "VBUS_DET_STAT", 1, 0x1c0, 0xffffffff },
+-	{ "CHRG_DET_STAT", 1, 0x1d0, 0xffffffff },
+-	{ "USB1_MISC", 1, 0x1f0, 0xffffffff },
+-	{ "PMIC_INT_B", 2, 0x08, 1u << 24 },		/* GPIO4 PSR */
+-	{ "USBCMD", 3, 0x140, ~0x6000u },		/* not SUTW/ATDTW */
+-	{ "USBSTS", 3, 0x144, 0x1144 },			/* PCI URI SLI HCH */
+-	{ "USBINTR", 3, 0x148, ~0u },
+-	{ "PORTSC", 3, 0x184, ~0xc00u },		/* not the line state */
+-	{ "OTGSC", 3, 0x1a4, 0x005f1f00 },		/* not the 1 ms timer */
+-	/* not the USBPHY1 registers: read while the PHY is gated they return
+-	 * bus garbage */
+-};
+-
+-static void __iomem *bases[5];
+-static u32 last[ARRAY_SIZE(regs)];
+-static struct hrtimer timer;
+-
+-static bool usb_clocked(void)
+-{
+-	return (readl_relaxed(bases[0] + 0x80) & 0x3) == 0x3;	/* CCGR6 CG0 */
+-}
+-
+-static u32 read_reg(int i)
+-{
+-	return readl_relaxed(bases[regs[i].base] + regs[i].off) & regs[i].mask;
+-}
+-
+-static enum hrtimer_restart watch(struct hrtimer *t)
+-{
+-	int i;
+-	bool usb = usb_clocked();
+-
+-	for (i = 0; i < ARRAY_SIZE(regs); i++) {
+-		u32 v;
+-
+-		if (regs[i].base == 3 && !usb)
+-			continue;
+-		v = read_reg(i);
+-
+-		if (v != last[i]) {
+-			pr_info("pw4-trace: usbwatch %s %08x -> %08x\n",
+-				regs[i].name, last[i], v);
+-			last[i] = v;
+-		}
+-	}
+-	hrtimer_forward_now(t, ms_to_ktime(1));
+-	return HRTIMER_RESTART;
+-}
+-
+-static int __init pw4_usbwatch_init(void)
+-{
+-	int i;
+-
+-	if (!pw4_usbwatch)
+-		return 0;
+-	bases[0] = ioremap(CCM_BASE, 0x1000);
+-	bases[1] = ioremap(ANATOP_BASE, 0x1000);
+-	bases[2] = ioremap(GPIO4_BASE, 0x1000);
+-	bases[3] = ioremap(USB_BASE, 0x1000);
+-	bases[4] = ioremap(USBPHY1_BASE, 0x1000);
+-	if (!bases[0] || !bases[1] || !bases[2] || !bases[3] || !bases[4])
+-		return -ENOMEM;
+-	for (i = 0; i < ARRAY_SIZE(regs); i++) {
+-		if (regs[i].base == 3 && !usb_clocked())
+-			continue;
+-		last[i] = read_reg(i);
+-		pr_info("pw4-trace: usbwatch %s %08x\n", regs[i].name, last[i]);
+-	}
+-	hrtimer_init(&timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
+-	timer.function = watch;
+-	hrtimer_start(&timer, ms_to_ktime(1), HRTIMER_MODE_REL);
+-	return 0;
+-}
+-late_initcall(pw4_usbwatch_init);
+diff --git a/drivers/power/bd71827-power.c b/drivers/power/bd71827-power.c
+index 2446b2b4..fb15c796 100755
+--- a/drivers/power/bd71827-power.c
++++ b/drivers/power/bd71827-power.c
+@@ -3519,7 +3519,6 @@ static irqreturn_t bd71827_power_interrupt(int irq, void *pwrsys)
+         int reg, r;
+ 
+         reg = bd71827_reg_read(mfd, BD71827_REG_INT_STAT_03);
+-        pr_info("pw4-trace: bd71827 int03 %#x\n", reg);
+         if (reg <= 0)
+                 return IRQ_NONE;
+ 
+diff --git a/drivers/power/max14656_charger_detector.c b/drivers/power/max14656_charger_detector.c
+index d3fd0238..639b4b16 100644
+--- a/drivers/power/max14656_charger_detector.c
++++ b/drivers/power/max14656_charger_detector.c
+@@ -302,7 +302,6 @@ static void max14656_detect_worker(struct work_struct *work)
+     int ret = 0;
+ 
+     mutex_lock(&chip->work_lock);
+-    pr_info("pw4-trace: max14656 detect\n");
+ 
+ #ifdef CONFIG_CPU_FREQ_OVERRIDE_LAB126
+     cpufreq_override(2);
+diff --git a/drivers/usb/chipidea/ci_hdrc_imx.c b/drivers/usb/chipidea/ci_hdrc_imx.c
+index 38ace702..0ddfc8ec 100644
+--- a/drivers/usb/chipidea/ci_hdrc_imx.c
++++ b/drivers/usb/chipidea/ci_hdrc_imx.c
+@@ -28,13 +28,6 @@
+ #include "ci.h"
+ #include "ci_hdrc_imx.h"
+ 
+-static bool pw4_usb_runtime_pm_off;
+-core_param(pw4_usb_runtime_pm_off, pw4_usb_runtime_pm_off, bool, 0444);
+-/* PW4 diagnosis: keep the controller out of runtime suspend from probe on
+- * (pm_runtime_forbid, as power/control=on); write "auto" to re-allow. */
+-static bool pw4_usb_rpm_forbid;
+-core_param(pw4_usb_rpm_forbid, pw4_usb_rpm_forbid, bool, 0444);
+-
+ struct ci_hdrc_imx_platform_flag {
+ 	unsigned int flags;
+ 	bool runtime_pm;
+@@ -540,13 +533,6 @@ static int ci_hdrc_imx_probe(struct platform_device *pdev)
+ 
+ 	pdata.usb_phy = data->phy;
+ 	pdata.flags |= imx_platform_flag->flags;
+-	/* Diagnose PW4 cable-edge hangs with both OTG1 drivers kept active. */
+-	if (pw4_usb_runtime_pm_off &&
+-	    of_device_is_compatible(np, "fsl,imx6sll-usb") &&
+-	    data->usbmisc_data && data->usbmisc_data->index == 0) {
+-		pdata.flags &= ~CI_HDRC_SUPPORTS_RUNTIME_PM;
+-		dev_info(&pdev->dev, "pw4: USB OTG1 runtime PM disabled\n");
+-	}
+ 	if (pdata.flags & CI_HDRC_SUPPORTS_RUNTIME_PM)
+ 		data->supports_runtime_pm = true;
+ 
+@@ -626,12 +612,6 @@ static int ci_hdrc_imx_probe(struct platform_device *pdev)
+ 		goto disable_hsic_regulator;
+ 	}
+ 
+-	if (pw4_usb_rpm_forbid && data->usbmisc_data &&
+-	    data->usbmisc_data->index == 0) {
+-		pm_runtime_forbid(&data->ci_pdev->dev);
+-		dev_info(&pdev->dev, "pw4: USB OTG1 runtime suspend forbidden\n");
+-	}
+-
+ 	ret = imx_usbmisc_init_post(data->usbmisc_data);
+ 	if (ret) {
+ 		dev_err(&pdev->dev, "usbmisc post failed, ret=%d\n", ret);
+@@ -738,11 +718,9 @@ static int imx_controller_resume(struct device *dev)
+ 		return 0;
+ 	}
+ 
+-	pr_info("pw4-trace: imx resume: bus freq\n");
+ 	if (!test_and_set_bit(HIGH_BUS_FREQ, &data->bitflags)) {
+ 		request_bus_freq(BUS_FREQ_HIGH);
+ 	}
+-	pr_info("pw4-trace: imx resume: clocks\n");
+ 	ret = imx_prepare_enable_clks(dev);
+ 	if (ret)
+ 		return ret;
+@@ -755,7 +733,6 @@ static int imx_controller_resume(struct device *dev)
+ 
+ 	data->in_lpm = false;
+ 
+-	pr_info("pw4-trace: imx resume: usbmisc\n");
+ 	ret = imx_usbmisc_power_lost_check(data->usbmisc_data);
+ 	/* re-init if resume from power lost */
+ 	if (ret > 0) {
+@@ -778,7 +755,6 @@ static int imx_controller_resume(struct device *dev)
+ 		dev_err(dev, "usbmisc hsic_set_clk failed, ret=%d\n", ret);
+ 		goto hsic_set_clk_fail;
+ 	}
+-	pr_info("pw4-trace: imx resume: done\n");
+ 
+ 	return 0;
+ 
+diff --git a/drivers/usb/chipidea/core.c b/drivers/usb/chipidea/core.c
+index 57a05053..04c245da 100644
+--- a/drivers/usb/chipidea/core.c
++++ b/drivers/usb/chipidea/core.c
+@@ -551,7 +551,7 @@ void ci_pw4_gated_access(struct ci_hdrc *ci, const char *what)
+ {
+ 	static int reported;
+ 
+-	pr_info("pw4-trace: usb register %s with clocks off\n", what);
++	pr_warn("ci_hdrc: register %s with the clocks off\n", what);
+ 	if (reported < 3) {
+ 		reported++;
+ 		dump_stack();
+@@ -565,7 +565,6 @@ static irqreturn_t ci_irq(int irq, void *data)
+ 	u32 otgsc = 0;
+ 
+ 	if (ci->in_lpm) {
+-		pr_info("pw4-trace: usb wakeup irq\n");
+ 		disable_irq_nosync(irq);
+ 		ci->wakeup_int = true;
+ 		pm_runtime_get(ci->dev);
+@@ -598,7 +597,6 @@ static irqreturn_t ci_irq(int irq, void *data)
+ 	 * and disconnection events.
+ 	 */
+ 	if (ci->is_otg && (otgsc & OTGSC_BSVIE) && (otgsc & OTGSC_BSVIS)) {
+-		pr_info("pw4-trace: usb bsv irq otgsc %08x\n", otgsc);
+ 		ci->vbus_glitch_check_event = true;
+ 		/* Clear BSV irq */
+ 		hw_write_otgsc(ci, OTGSC_BSVIS, OTGSC_BSVIS);
+@@ -1181,15 +1179,12 @@ static int ci_controller_resume(struct device *dev)
+ 		return 0;
+ 	}
+ 
+-	pr_info("pw4-trace: ci resume: leave lpm\n");
+ 	ci_hdrc_enter_lpm(ci, false);
+-	pr_info("pw4-trace: ci resume: phy\n");
+ 	if (ci->usb_phy) {
+ 		usb_phy_set_suspend(ci->usb_phy, 0);
+ 		usb_phy_set_wakeup(ci->usb_phy, false);
+ 		hw_wait_phy_stable();
+ 	}
+-	pr_info("pw4-trace: ci resume: done\n");
+ 
+ 	ci->in_lpm = false;
+ 	if (ci->wakeup_int) {
+diff --git a/drivers/usb/chipidea/udc.c b/drivers/usb/chipidea/udc.c
+index bcd9d910..5729cc1b 100644
+--- a/drivers/usb/chipidea/udc.c
++++ b/drivers/usb/chipidea/udc.c
+@@ -18,7 +18,6 @@
+ #include <linux/kernel.h>
+ #include <linux/slab.h>
+ #include <linux/pm_runtime.h>
+-#include <linux/moduleparam.h>
+ #include <linux/usb/ch9.h>
+ #include <linux/usb/gadget.h>
+ #include <linux/usb/otg-fsm.h>
+@@ -93,15 +92,15 @@ static int hw_device_state(struct ci_hdrc *ci, u32 dma)
+ }
+ 
+ /*
+- * PW4 diagnosis: the busy waits below run with the controller lock held and
+- * interrupts off; on the single core jiffies stand still there, so a
+- * register that never clears hangs the SoC silently. Bound them by count and
+- * say which one was stuck.
++ * PW4: the busy waits below run with the controller lock held and interrupts
++ * off; on the single core jiffies stand still there, so Lab126's 200 ms
++ * limits never expire and a register that never clears would hang the SoC
++ * silently. Bound them by count and say which one gave up.
+  */
+ #define PW4_SPIN_MAX 2000000
+ static void pw4_stuck(struct ci_hdrc *ci, const char *what, int bit)
+ {
+-	pr_err("pw4-trace: udc stuck in %s bit %d: cmd %08x sts %08x portsc %08x prime %08x flush %08x stat %08x\n",
++	pr_err("ci_hdrc udc: busy wait gave up in %s bit %d: cmd %08x sts %08x portsc %08x prime %08x flush %08x stat %08x\n",
+ 	       what, bit, hw_read(ci, OP_USBCMD, ~0), hw_read(ci, OP_USBSTS, ~0),
+ 	       hw_read(ci, OP_PORTSC, ~0), hw_read(ci, OP_ENDPTPRIME, ~0),
+ 	       hw_read(ci, OP_ENDPTFLUSH, ~0), hw_read(ci, OP_ENDPTSTAT, ~0));
+@@ -1666,7 +1665,6 @@ static int ci_udc_vbus_session(struct usb_gadget *_gadget, int is_active)
+ 	unsigned long flags;
+ 	int gadget_ready = 0;
+ 
+-	pr_info("pw4-trace: udc vbus_session %d\n", is_active);
+ 	spin_lock_irqsave(&ci->lock, flags);
+ 	ci->vbus_active = is_active;
+ 	if (ci->driver)
+@@ -1739,20 +1737,10 @@ static int ci_udc_selfpowered(struct usb_gadget *_gadget, int is_on)
+ /* Change Data+ pullup status
+  * this func is used by usb_gadget_connect/disconnet
+  */
+-/* PW4 diagnosis: pw4_udc_nopullup=1 never raises D+, so a host never sees
+- * the device and the data lines stay quiet. Writable at run time. */
+-static bool pw4_udc_nopullup;
+-core_param(pw4_udc_nopullup, pw4_udc_nopullup, bool, 0644);
+-
+ static int ci_udc_pullup(struct usb_gadget *_gadget, int is_on)
+ {
+ 	struct ci_hdrc *ci = container_of(_gadget, struct ci_hdrc, gadget);
+ 
+-	if (pw4_udc_nopullup && is_on) {
+-		pr_info("pw4-trace: udc pullup refused (pw4_udc_nopullup)\n");
+-		is_on = 0;
+-	}
+-
+ 	/*
+ 	 * Data+ pullup controlled by OTG state machine in OTG fsm mode;
+ 	 * and don't touch Data+ in host mode for dual role config.
+@@ -1967,9 +1955,6 @@ static irqreturn_t udc_irq(struct ci_hdrc *ci)
+ 		}
+ 	}
+ 	intr = hw_test_and_clear_intr_active(ci);
+-	if (intr & ~USBi_UI)
+-		pr_info("pw4-trace: udc irq %#x portsc %08x\n", intr,
+-			hw_read(ci, OP_PORTSC, ~0));
+ 
+ 	if (intr) {
+ 		/* order defines priority - do NOT change it */
+@@ -2138,18 +2123,14 @@ void ci_hdrc_gadget_connect(struct usb_gadget *gadget, int is_active)
+ 		usb_gadget_set_state(gadget, USB_STATE_POWERED);
+ 		usb_udc_vbus_handler(gadget, true);
+ 	} else {
+-		pr_info("pw4-trace: udc gadget disconnect begin\n");
+ 		usb_udc_vbus_handler(gadget, false);
+-		pr_info("pw4-trace: udc gadget pulled down\n");
+ 		if (ci->driver)
+ 			ci->driver->disconnect(gadget);
+-		pr_info("pw4-trace: udc function disconnect done\n");
+ 		hw_device_state(ci, 0);
+ 		if (ci->platdata->notify_event)
+ 			ci->platdata->notify_event(ci,
+ 			CI_HDRC_CONTROLLER_STOPPED_EVENT);
+ 		_gadget_stop_activity(gadget);
+-		pr_info("pw4-trace: udc stop activity done\n");
+ 		pm_runtime_put_sync(&gadget->dev);
+ 		usb_gadget_set_state(gadget, USB_STATE_NOTATTACHED);
+ 	}
+-- 
+2.53.0
+
