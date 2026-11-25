@@ -1,0 +1,101 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: pw4-port <pw4-port@localhost>
+Date: Wed, 25 Nov 2026 16:58:01 +0800
+Subject: [PATCH] PW4 Android: keep the eMMC awake across suspend, at High
+ Speed
+
+Stock never suspended the eMMC through the MMC core (Falcon did). Re-
+initialising it on resume (CMD5 sleep, power off, HS200 init and tuning)
+left CRC errors and data timeouts; one aborted the ext4 journal of /data.
+Run it at High Speed, skip sleep and re-init across suspend (the host gets
+its settings back), and keep BUCK5 (eMMC VCC) on in the suspend state.
+---
+ drivers/mmc/core/mmc.c             |  4 ++++
+ drivers/mmc/host/sdhci-esdhc-imx.c | 20 ++++++++++++++++++++
+ drivers/power/bd71827-power.c      |  8 ++++++--
+ include/linux/mmc/host.h           |  3 +++
+ 4 files changed, 33 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/mmc/core/mmc.c b/drivers/mmc/core/mmc.c
+index 0670e2df..9effb1da 100644
+--- a/drivers/mmc/core/mmc.c
++++ b/drivers/mmc/core/mmc.c
+@@ -1823,6 +1823,10 @@ static int _mmc_suspend(struct mmc_host *host, bool is_suspend)
+ 	if (err)
+ 		goto out;
+ 
++	/* PW4: stays awake and powered, so there is nothing to restore */
++	if (is_suspend && (host->caps2 & MMC_CAP2_PW4_KEEP_AWAKE))
++		goto out;
++
+ 	if (mmc_can_poweroff_notify(host->card) &&
+ 		((host->caps2 & MMC_CAP2_FULL_PWR_CYCLE) || !is_suspend))
+ 		err = mmc_poweroff_notify(host->card, notify_type);
+diff --git a/drivers/mmc/host/sdhci-esdhc-imx.c b/drivers/mmc/host/sdhci-esdhc-imx.c
+index 79b53afe..1076dd83 100644
+--- a/drivers/mmc/host/sdhci-esdhc-imx.c
++++ b/drivers/mmc/host/sdhci-esdhc-imx.c
+@@ -1350,6 +1350,26 @@ static int sdhci_esdhc_imx_probe(struct platform_device *pdev)
+ 		if (!(imx_data->socdata->flags & ESDHC_FLAG_HS200))
+ 			host->quirks2 |= SDHCI_QUIRK2_BROKEN_HS200;
+ 
++#ifdef CONFIG_FALCON
++		/*
++		 * PW4 Android, the eMMC (taken from Falcon, above): stock never
++		 * suspended it through the MMC core. Re-initialising it on resume
++		 * (CMD5 sleep, power off, full init with HS200 tuning) left CRC
++		 * errors and data timeouts behind, and one aborted the ext4
++		 * journal. Run it at High Speed (no tuning) and keep it awake and
++		 * powered across suspend: the card is not touched, the controller
++		 * gets its settings back (HOST_OFF_CARD_ON), and bd71827-power
++		 * keeps BUCK5 (eMMC VCC) on in the suspend state.
++		 */
++		if (of_device_is_compatible(pdev->dev.of_node, "falcon_blk")) {
++			host->quirks2 |= SDHCI_QUIRK2_BROKEN_HS200 |
++					 SDHCI_QUIRK2_HOST_OFF_CARD_ON;
++			host->mmc->pm_caps |= MMC_PM_KEEP_POWER;
++			host->mmc->pm_flags |= MMC_PM_KEEP_POWER;
++			host->mmc->caps2 |= MMC_CAP2_PW4_KEEP_AWAKE;
++		}
++#endif
++
+ 		/*
+ 		* errata ESDHC_FLAG_ERR004536 fix for MX6Q TO1.2 and MX6DL
+ 		* TO1.1, it's harmless for MX6SL
+diff --git a/drivers/power/bd71827-power.c b/drivers/power/bd71827-power.c
+index fb15c796..f88f43b8 100755
+--- a/drivers/power/bd71827-power.c
++++ b/drivers/power/bd71827-power.c
+@@ -2979,9 +2979,13 @@ static int bd71827_init_hardware(struct bd71827_power *pwr)
+ 	/* set the VDD_SOC to 0.9 V when in suspend mode */
+ 	bd71827_reg_write(mfd, BD71827_REG_BUCK1_VOLT_SUSP, BUCK1_VOL_900);
+ 
+-	/* Turn off eMMC voltage when in suspend mode */
++	/*
++	 * Stock turns off the eMMC voltage in the suspend state; Falcon
++	 * re-initialises the card on resume. PW4 Android keeps the eMMC awake
++	 * across suspend (sdhci-esdhc-imx), so its voltage stays on.
++	 */
+ 	val = bd71827_reg_read(mfd, BD71827_REG_BUCK5_MODE);
+-	val &=~(BUCK5_LP_ON);
++	val |= BUCK5_LP_ON;
+ 	bd71827_reg_write(mfd, BD71827_REG_BUCK5_MODE, val);
+ 
+ 	bd71827_reg_write(mfd, BD71827_REG_CHG_WDT_PRE, BD71827_PRECHG_TIME_30MIN);
+diff --git a/include/linux/mmc/host.h b/include/linux/mmc/host.h
+index e3233d90..64f46ab3 100644
+--- a/include/linux/mmc/host.h
++++ b/include/linux/mmc/host.h
+@@ -290,6 +290,9 @@ struct mmc_host {
+ #define MMC_CAP2_SDIO_IRQ_NOTHREAD (1 << 17)
+ #define MMC_CAP2_NO_WRITE_PROTECT (1 << 18)	/* No physical write protect pin, assume that card is always read-write */
+ #define MMC_CAP2_CD_POST	(1 << 19)	/* post card rescan, let client driver to start */
++/* PW4: across system suspend the (e)MMC card is neither put to sleep nor
++ * re-initialised; it stays powered and selected (sdhci-esdhc-imx, eMMC) */
++#define MMC_CAP2_PW4_KEEP_AWAKE	(1 << 30)
+ 
+ 	mmc_pm_flag_t		pm_caps;	/* supported pm features */
+ 
+-- 
+2.53.0
+

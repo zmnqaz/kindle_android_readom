@@ -161,7 +161,12 @@ preinit 改名 `.real`（同 `boot/build_entry.py`），公开 initramfs 由 `pa
 - **插着 USB 按电源键息屏会 panic**（Jump 36，2026-11-25）：息屏时安卓请求挂起，被固件缓存重新请求 EPDC 固件
   （`Wakeup pending, aborting suspend`）中止；中止后的卡探测把 Wi-Fi 芯片当成拔出，bcmdhd 移除时 `BUG()`
   在 `sdio_claim_host`。内核 `0023`（Jump 37）。挂起本身仍会被固件缓存中止，所以现在息屏不省电，见休眠计划。
-- 未做：蓝牙、休眠（挂起/唤醒）、`pw3-fg-state`。
+- **休眠（进行中，2026-11-25）**：Jump 38 关掉固件回退（`CONFIG_FW_LOADER_USER_HELPER_FALLBACK`），挂起不再被中止。
+  `pm_test` 五级都返回 0、UART1 中断仍为 0；看门狗 `WCR=0x773d`（`WDZST` 已置位）。随后发现：挂起中止会让 Wi-Fi
+  失效（内核 `0024`）；eMMC 恢复后出现 CRC 错误和超时，Jump 39 上 `/data` 日志中止、变只读（`data.img` 在电脑上
+  `e2fsck` 修复，无文件丢失），内核 `0025`。唤醒后 bcmdhd 重建网络接口，wificond 按设计中止重启，能否自己恢复待测。
+  **测试 Jump 之前先在电脑上备份 `data.img`。**
+- 未做：蓝牙、`pw3-fg-state`。
 - **PW4 没有带上 PW3 的 `system.prop`**（2026-11-25 发现并补上）：构建只取设备自己目录下的 `system.prop`，PW4 目录
   里没有，于是 `dalvik.vm.extra-opts=-Xnorelocate` 和 `dalvik.vm.dex2oat-flags=--no-watch-dog ...` 都没生效：ART 用的是
   `/data/dalvik-cache` 里搬过地址的启动镜像副本，`cmd package compile -m speed` 微信读书在 570 s 被 dex2oat 的看门狗

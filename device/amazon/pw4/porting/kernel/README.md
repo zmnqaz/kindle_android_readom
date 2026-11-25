@@ -99,6 +99,8 @@ make O=<out> ARCH=arm olddefconfig
 
 补丁 `0024`（2026-11-25）：Wi-Fi 跨挂起中止和模块重载都能恢复。Lab126 的设计是 `suspend_late` 关 BCM4343、`resume_early` 开，恢复时重新初始化 SDIO 卡；挂起在卡已挂起、晚期阶段之前被中止（唤醒事件、2 s 内的闹钟，安卓里很常见）时芯片没有断电重启，重新初始化报 -110，Wi-Fi 直到重启都没了。现在 SDIO 核心在卡挂起和恢复时通知 `wifi-bcm4343`，没人做过断电重启就补做一次。另外 `0023` 把主机标成不可拔出后，关开 Wi-Fi 时旧卡不会被清掉；`wifi_card_detect(1)` 遇到没有驱动绑定的卡就先移除。
 
+补丁 `0025`（2026-11-25）：eMMC 跨挂起保持唤醒，跑 High Speed。原厂从没用 MMC 核心挂起过这块 eMMC（由 Falcon 管）；恢复时重新初始化（CMD5 睡眠、断电、HS200 初始化和调谐）之后出现 CRC 错误和数据超时，有一次让 `/data` 的 ext4 日志中止、文件系统变只读（Jump 39）。现在 eMMC 不进 HS200（不需要调谐），挂起时不睡眠、不重新初始化（控制器恢复时重设参数，`SDHCI_QUIRK2_HOST_OFF_CARD_ON`），`bd71827-power` 在挂起态保持 BUCK5（eMMC VCC）。
+
 **编译参数（2026-11-23 补）**：安卓内核要带 `KCFLAGS="-fno-pic -fno-pie"`，和 Readom 的 `tools/build-kernel.sh`、交接模块一样。AOSP 的 gcc 4.9 默认生成位置无关代码，不带这个参数时内核本身还能启动，但模块里会引用 `_GLOBAL_OFFSET_TABLE_`，加载时报 `Unknown symbol _GLOBAL_OFFSET_TABLE_`（第十次交接时 EPDC 驱动就是这样没加载上）。
 
 ## 五、第 0 阶段分类的修正
