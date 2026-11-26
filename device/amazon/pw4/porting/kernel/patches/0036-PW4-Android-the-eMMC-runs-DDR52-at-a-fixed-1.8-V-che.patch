@@ -1,0 +1,486 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: pw4-port <pw4-port@localhost>
+Date: Thu, 26 Nov 2026 16:49:12 +0800
+Subject: [PATCH] PW4 Android: the eMMC runs DDR52 at a fixed 1.8 V, checked
+ after each resume
+
+- DDR52 back (HS SDR failed awake, Jump 53); VSELECT held on and 3.3 V refused,
+  so every path signals 1.8 V; Legacy/HS timing clears DDR_EN in the hardware.
+- Deep-sleep resume: vendor registers back before the reset, then the same
+  sequence as a runtime resume; card clock stopped before suspend.
+- mmc core: EXT_CSD read after resume checks bus mode and user partition,
+  retries, re-initialises the card if needed; counters and a DDR clock cap.
+---
+ drivers/mmc/core/mmc.c             | 128 +++++++++++++++++++++
+ drivers/mmc/host/sdhci-esdhc-imx.c | 174 +++++++++++++++++++++++------
+ drivers/mmc/host/sdhci.c           |   8 ++
+ drivers/mmc/host/sdhci.h           |   2 +
+ 4 files changed, 279 insertions(+), 33 deletions(-)
+
+diff --git a/drivers/mmc/core/mmc.c b/drivers/mmc/core/mmc.c
+index 9effb1da..1450c254 100644
+--- a/drivers/mmc/core/mmc.c
++++ b/drivers/mmc/core/mmc.c
+@@ -11,6 +11,7 @@
+  */
+ 
+ #include <linux/err.h>
++#include <linux/moduleparam.h>
+ #include <linux/of.h>
+ #include <linux/slab.h>
+ #include <linux/stat.h>
+@@ -1906,6 +1907,130 @@ static int mmc_shutdown(struct mmc_host *host)
+ 	return err;
+ }
+ 
++/*
++ * PW4: the eMMC is kept awake and powered across system suspend
++ * (MMC_CAP2_PW4_KEEP_AWAKE), so _mmc_resume() leaves it alone, while its host
++ * controller comes back from a power-off after a deep sleep. Read the EXT_CSD
++ * once -- a CRC-checked data read in the bus mode in use -- and check that
++ * the card is still in that mode and in the user area (mmc_blk_resume()
++ * assumes the main partition, which only holds after a re-initialisation).
++ * A failure is retried once after 10 ms, then the card is re-initialised
++ * (its cache was flushed in _mmc_suspend()). Counters, in
++ * /sys/module/mmc_core/parameters/: pw4_resume_checks (resumes checked),
++ * pw4_resume_bad (first read failed or wrong mode), pw4_resume_reinit
++ * (card re-initialised), pw4_resume_dead (still failing after that),
++ * pw4_resume_part (card was left in a boot/RPMB/GP partition).
++ */
++static unsigned int pw4_resume_checks, pw4_resume_bad, pw4_resume_reinit;
++static unsigned int pw4_resume_dead, pw4_resume_part;
++module_param(pw4_resume_checks, uint, 0444);
++module_param(pw4_resume_bad, uint, 0444);
++module_param(pw4_resume_reinit, uint, 0444);
++module_param(pw4_resume_dead, uint, 0444);
++module_param(pw4_resume_part, uint, 0444);
++
++static int pw4_check_card(struct mmc_card *card)
++{
++	struct mmc_host *host = card->host;
++	struct mmc_ios *ios = &host->ios;
++	u8 *ext_csd, width, timing, part;
++	int err;
++
++	err = mmc_get_ext_csd(card, &ext_csd);
++	if (err)
++		return err;
++
++	switch (ios->bus_width) {
++	case MMC_BUS_WIDTH_8:
++		width = EXT_CSD_BUS_WIDTH_8;
++		break;
++	case MMC_BUS_WIDTH_4:
++		width = EXT_CSD_BUS_WIDTH_4;
++		break;
++	default:
++		width = EXT_CSD_BUS_WIDTH_1;
++		break;
++	}
++	if (ios->timing == MMC_TIMING_MMC_DDR52 && width != EXT_CSD_BUS_WIDTH_1)
++		width = width == EXT_CSD_BUS_WIDTH_8 ? EXT_CSD_DDR_BUS_WIDTH_8 :
++						       EXT_CSD_DDR_BUS_WIDTH_4;
++
++	switch (ios->timing) {
++	case MMC_TIMING_MMC_HS:
++	case MMC_TIMING_MMC_DDR52:
++		timing = EXT_CSD_TIMING_HS;
++		break;
++	case MMC_TIMING_MMC_HS200:
++		timing = EXT_CSD_TIMING_HS200;
++		break;
++	case MMC_TIMING_MMC_HS400:
++		timing = EXT_CSD_TIMING_HS400;
++		break;
++	default:
++		timing = EXT_CSD_TIMING_BC;
++		break;
++	}
++
++	if (ext_csd[EXT_CSD_BUS_WIDTH] != width ||
++	    (ext_csd[EXT_CSD_HS_TIMING] & 0x0f) != timing) {
++		pr_warn("%s: pw4: card bus width %#x timing %#x, expected %#x %#x\n",
++			mmc_hostname(host), ext_csd[EXT_CSD_BUS_WIDTH],
++			ext_csd[EXT_CSD_HS_TIMING], width, timing);
++		err = -EIO;
++		goto out;
++	}
++
++	part = ext_csd[EXT_CSD_PART_CONFIG];
++	if (part & EXT_CSD_PART_CONFIG_ACC_MASK) {
++		pw4_resume_part++;
++		pr_info("%s: pw4: card left in partition %u, back to the user area\n",
++			mmc_hostname(host), part & EXT_CSD_PART_CONFIG_ACC_MASK);
++		part &= ~EXT_CSD_PART_CONFIG_ACC_MASK;
++		err = mmc_switch(card, EXT_CSD_CMD_SET_NORMAL,
++				 EXT_CSD_PART_CONFIG, part,
++				 card->ext_csd.part_time);
++		if (!err)
++			card->ext_csd.part_config = part;
++	}
++out:
++	kfree(ext_csd);
++	return err;
++}
++
++static int pw4_resume_check(struct mmc_host *host)
++{
++	struct mmc_card *card = host->card;
++	int err;
++
++	mmc_claim_host(host);
++	pw4_resume_checks++;
++
++	err = pw4_check_card(card);
++	if (err) {
++		pw4_resume_bad++;
++		pr_warn("%s: pw4: card check after resume failed: %d\n",
++			mmc_hostname(host), err);
++		mmc_delay(10);
++		err = pw4_check_card(card);
++		pr_warn("%s: pw4: card check after 10 ms: %d\n",
++			mmc_hostname(host), err);
++	}
++	if (err) {
++		pw4_resume_reinit++;
++		mmc_power_cycle(host, card->ocr);
++		err = mmc_init_card(host, card->ocr, card);
++		if (!err)
++			err = pw4_check_card(card);
++		pr_warn("%s: pw4: card re-initialised after resume: %d\n",
++			mmc_hostname(host), err);
++		if (err)
++			pw4_resume_dead++;
++	}
++
++	mmc_release_host(host);
++	return err;
++}
++
+ /*
+  * Callback for resume.
+  */
+@@ -1915,6 +2040,9 @@ static int mmc_resume(struct mmc_host *host)
+ 
+ 	if (!(host->caps & MMC_CAP_RUNTIME_RESUME)) {
+ 		err = _mmc_resume(host);
++		if (!err && (host->caps2 & MMC_CAP2_PW4_KEEP_AWAKE) &&
++		    !mmc_card_suspended(host->card))
++			err = pw4_resume_check(host);
+ 		pm_runtime_set_active(&host->card->dev);
+ 		pm_runtime_mark_last_busy(&host->card->dev);
+ 	}
+diff --git a/drivers/mmc/host/sdhci-esdhc-imx.c b/drivers/mmc/host/sdhci-esdhc-imx.c
+index 4384ef2b..7b5302df 100644
+--- a/drivers/mmc/host/sdhci-esdhc-imx.c
++++ b/drivers/mmc/host/sdhci-esdhc-imx.c
+@@ -267,8 +267,29 @@ struct pltfm_imx_data {
+ 	/* PW4: vendor registers kept across a deep sleep (see the resume) */
+ 	u32 pw4_regs[8];
+ 	bool pw4_regs_saved;
++	/* PW4: this is the eMMC host (fixed 1.8 V I/O, kept awake) */
++	bool pw4_emmc;
+ };
+ 
++#ifdef CONFIG_FALCON
++/*
++ * PW4 eMMC knobs and counters, /sys/module/sdhci_esdhc_imx/parameters/:
++ * pw4_ddr_max_hz caps the DDR52 card clock (0: no cap, 49.5 MHz from the
++ * 396 MHz root); it takes effect on the next clock set-up, i.e. within
++ * 50 ms of the next idle period. pw4_resumes counts system resumes of the
++ * eMMC host, pw4_resume_lost the ones that found registers lost (a deep
++ * sleep powered the uSDHC off), pw4_resume_left the ones that still found
++ * a difference after the full re-initialisation (should stay 0).
++ */
++static unsigned int pw4_ddr_max_hz;
++module_param(pw4_ddr_max_hz, uint, 0644);
++MODULE_PARM_DESC(pw4_ddr_max_hz, "PW4 eMMC: cap of the DDR card clock in Hz (0: none)");
++static unsigned int pw4_resumes, pw4_resume_lost, pw4_resume_left;
++module_param(pw4_resumes, uint, 0444);
++module_param(pw4_resume_lost, uint, 0444);
++module_param(pw4_resume_left, uint, 0444);
++#endif
++
+ static const struct platform_device_id imx_esdhc_devtype[] = {
+ 	{
+ 		.name = "sdhci-esdhc-imx25",
+@@ -547,7 +568,8 @@ static void esdhc_writew_le(struct sdhci_host *host, u16 val, int reg)
+ 		return;
+ 	case SDHCI_HOST_CONTROL2:
+ 		new_val = readl(host->ioaddr + ESDHC_VENDOR_SPEC);
+-		if (val & SDHCI_CTRL_VDD_180)
++		/* PW4: the eMMC bus is 1.8 V whatever the core asks for */
++		if ((val & SDHCI_CTRL_VDD_180) || imx_data->pw4_emmc)
+ 			new_val |= ESDHC_VENDOR_SPEC_VSELECT;
+ 		else
+ 			new_val &= ~ESDHC_VENDOR_SPEC_VSELECT;
+@@ -713,6 +735,11 @@ static void esdhc_writeb_le(struct sdhci_host *host, u8 val, int reg)
+ 			writel(new_val & ESDHC_MIX_CTRL_TUNING_MASK,
+ 					host->ioaddr + ESDHC_MIX_CTRL);
+ 			imx_data->is_ddr = 0;
++			/* PW4: keep signalling 1.8 V through a reset */
++			if (imx_data->pw4_emmc)
++				writel(readl(host->ioaddr + ESDHC_VENDOR_SPEC) |
++				       ESDHC_VENDOR_SPEC_VSELECT,
++				       host->ioaddr + ESDHC_VENDOR_SPEC);
+ 		}
+ 	}
+ }
+@@ -766,6 +793,11 @@ static inline void esdhc_pltfm_set_clock(struct sdhci_host *host,
+ 		else
+ 			clock = clock > 150000000 ? 150000000 : clock;
+ 	}
++#ifdef CONFIG_FALCON
++	if (imx_data->pw4_emmc && imx_data->is_ddr && pw4_ddr_max_hz &&
++	    clock > pw4_ddr_max_hz)
++		clock = pw4_ddr_max_hz;
++#endif
+ 
+ 	while (host_clock / pre_div / 16 > clock && pre_div < 256)
+ 		pre_div *= 2;
+@@ -990,6 +1022,13 @@ static void esdhc_set_uhs_signaling(struct sdhci_host *host, unsigned timing)
+ 	imx_data->is_ddr = 0;
+ 
+ 	switch (timing) {
++	/*
++	 * Legacy and High Speed too: is_ddr is cleared above, so the DDR_EN
++	 * bit must go as well (a fall back from DDR52 used to leave it set).
++	 */
++	case MMC_TIMING_LEGACY:
++	case MMC_TIMING_MMC_HS:
++	case MMC_TIMING_SD_HS:
+ 	case MMC_TIMING_UHS_SDR12:
+ 	case MMC_TIMING_UHS_SDR25:
+ 	case MMC_TIMING_UHS_SDR50:
+@@ -1371,13 +1410,26 @@ static int sdhci_esdhc_imx_probe(struct platform_device *pdev)
+ 			host->mmc->pm_flags |= MMC_PM_KEEP_POWER;
+ 			host->mmc->caps2 |= MMC_CAP2_PW4_KEEP_AWAKE;
+ 			/*
+-			 * High Speed SDR, not DDR52: even with the vendor
+-			 * registers put back after a deep sleep (below), DDR52
+-			 * reads failed with CRC errors after repeated sleeps;
+-			 * SystemUI died on a SIGBUS from one and the screen stayed
+-			 * on the sleep picture (Jump 50, 2026-11-26).
++			 * DDR52 again. High Speed SDR (0035) failed while awake:
++			 * response CRC errors and commands that never completed
++			 * ("Timeout waiting for hardware interrupt") from 31 s
++			 * after boot (Jump 53); DDR52 ran clean awake for hours.
++			 * Its failures were bursts right after deep sleeps, which
++			 * the resume below now handles.
++			 *
++			 * VCCQ is a fixed 1.8 V rail and the SD2 pads are in
++			 * 1.8 V mode (LVE, bit 22 of 0x407059, in all three
++			 * pinctrl states). Say so from the start: VSELECT held
++			 * on, 3.3 V refused (the core settles on 1.8 V at power
++			 * up), so no path -- boot, reset, runtime or system
++			 * resume -- runs the bus with the host set to 3.3 V.
+ 			 */
+-			host->mmc->caps &= ~(MMC_CAP_1_8V_DDR | MMC_CAP_1_2V_DDR);
++			imx_data->pw4_emmc = true;
++			host->quirks2 |= SDHCI_QUIRK2_PW4_FIXED_1_8_V;
++			writel(readl(host->ioaddr + ESDHC_VENDOR_SPEC) |
++			       ESDHC_VENDOR_SPEC_VSELECT,
++			       host->ioaddr + ESDHC_VENDOR_SPEC);
++			dev_info(&pdev->dev, "pw4: eMMC, 1.8 V I/O, DDR52, kept awake across suspend\n");
+ 		}
+ #endif
+ 
+@@ -1467,14 +1519,22 @@ static int sdhci_esdhc_imx_remove(struct platform_device *pdev)
+  * with the eMMC at DDR52 the first reads after a deep sleep failed with over
+  * a thousand CRC errors and system_server died (Jump 46, 2026-11-26). Keep
+  * them across the sleep, say which ones were lost, and write them back.
++ * Only the bits that matter are compared (the mask), so that a suspend that
++ * did not power the uSDHC off reports nothing.
+  */
+-static const u16 pw4_usdhc_regs[] = {
+-	SDHCI_HOST_CONTROL,	/* burst length enable (bit 27) */
+-	ESDHC_WTMK_LVL, ESDHC_MIX_CTRL, ESDHC_DLL_CTRL,
+-	0x6c,			/* ERR004536 bit 7 */
+-	ESDHC_VENDOR_SPEC,	/* VSELECT: 1.8 V signalling */
+-	0xc8,			/* VEND_SPEC2 */
+-	ESDHC_TUNING_CTRL,
++static const struct {
++	u16 reg;
++	u32 mask;
++} pw4_usdhc_regs[] = {
++	{ SDHCI_HOST_CONTROL, ESDHC_BURST_LEN_EN_INCR },
++	{ ESDHC_WTMK_LVL, ~0u },
++	{ ESDHC_MIX_CTRL, ESDHC_MIX_CTRL_DDREN | ESDHC_MIX_CTRL_HS400_EN |
++			  ESDHC_MIX_CTRL_TUNING_MASK },
++	{ ESDHC_DLL_CTRL, ~0u },
++	{ 0x6c, BIT(7) },				/* ERR004536 */
++	{ ESDHC_VENDOR_SPEC, ESDHC_VENDOR_SPEC_VSELECT },	/* 1.8 V */
++	{ 0xc8, ~0u },					/* VEND_SPEC2 */
++	{ ESDHC_TUNING_CTRL, ~0u },
+ };
+ 
+ static void pw4_usdhc_save(struct sdhci_host *host, struct pltfm_imx_data *imx)
+@@ -1482,24 +1542,13 @@ static void pw4_usdhc_save(struct sdhci_host *host, struct pltfm_imx_data *imx)
+ 	int i;
+ 
+ 	for (i = 0; i < ARRAY_SIZE(pw4_usdhc_regs); i++)
+-		imx->pw4_regs[i] = readl(host->ioaddr + pw4_usdhc_regs[i]);
++		imx->pw4_regs[i] = readl(host->ioaddr + pw4_usdhc_regs[i].reg);
+ 	imx->pw4_regs_saved = true;
+ }
+ 
+-static void pw4_usdhc_restore(struct sdhci_host *host, struct pltfm_imx_data *imx)
++/* Write back what set_ios does not write: whole registers, or probe bits */
++static void pw4_usdhc_write(struct sdhci_host *host, struct pltfm_imx_data *imx)
+ {
+-	u32 v;
+-	int i;
+-
+-	if (!imx->pw4_regs_saved)
+-		return;
+-	for (i = 0; i < ARRAY_SIZE(pw4_usdhc_regs); i++) {
+-		v = readl(host->ioaddr + pw4_usdhc_regs[i]);
+-		if (v != imx->pw4_regs[i])
+-			dev_info(mmc_dev(host->mmc), "pw4: resume reg %#x was %#x now %#x\n",
+-				 pw4_usdhc_regs[i], imx->pw4_regs[i], v);
+-	}
+-	/* What set_ios does not write: whole registers, or the probe's bits */
+ 	writel((readl(host->ioaddr + SDHCI_HOST_CONTROL) & ~ESDHC_BURST_LEN_EN_INCR) |
+ 	       (imx->pw4_regs[0] & ESDHC_BURST_LEN_EN_INCR), host->ioaddr + SDHCI_HOST_CONTROL);
+ 	writel(imx->pw4_regs[1], host->ioaddr + ESDHC_WTMK_LVL);
+@@ -1510,7 +1559,24 @@ static void pw4_usdhc_restore(struct sdhci_host *host, struct pltfm_imx_data *im
+ 	       (imx->pw4_regs[5] & ESDHC_VENDOR_SPEC_VSELECT), host->ioaddr + ESDHC_VENDOR_SPEC);
+ 	writel(imx->pw4_regs[6], host->ioaddr + 0xc8);
+ 	writel(imx->pw4_regs[7], host->ioaddr + ESDHC_TUNING_CTRL);
+-	imx->pw4_regs_saved = false;
++}
++
++/* Registers that differ from before the sleep, each one logged */
++static int pw4_usdhc_compare(struct sdhci_host *host, struct pltfm_imx_data *imx,
++			     const char *when)
++{
++	int i, n = 0;
++	u32 v;
++
++	for (i = 0; i < ARRAY_SIZE(pw4_usdhc_regs); i++) {
++		v = readl(host->ioaddr + pw4_usdhc_regs[i].reg);
++		if (!((v ^ imx->pw4_regs[i]) & pw4_usdhc_regs[i].mask))
++			continue;
++		dev_info(mmc_dev(host->mmc), "pw4: %s reg %#x was %#x now %#x\n",
++			 when, pw4_usdhc_regs[i].reg, imx->pw4_regs[i], v);
++		n++;
++	}
++	return n;
+ }
+ 
+ int sdhci_esdhc_suspend(struct device *dev)
+@@ -1518,6 +1584,7 @@ int sdhci_esdhc_suspend(struct device *dev)
+ 	struct sdhci_host *host = dev_get_drvdata(dev);
+ 	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
+ 	struct pltfm_imx_data *imx_data = pltfm_host->priv;
++	int ret;
+ 
+ #ifdef CONFIG_PM
+ 	pm_runtime_get_sync(host->mmc->parent);
+@@ -1532,7 +1599,17 @@ int sdhci_esdhc_suspend(struct device *dev)
+ 	if (esdhc_is_usdhc(imx_data))
+ 		pw4_usdhc_save(host, imx_data);
+ 
+-	return sdhci_pltfm_suspend(dev);
++	ret = sdhci_pltfm_suspend(dev);
++
++	/*
++	 * PW4: the eMMC stays powered and selected. Stop its clock here, with
++	 * the bus idle, rather than leave it running until the M/F mix loses
++	 * power in the middle of a cycle. The resume programs it again.
++	 */
++	if (!ret && imx_data->pw4_emmc)
++		host->ops->set_clock(host, 0);
++
++	return ret;
+ }
+ 
+ #ifdef CONFIG_FALCON
+@@ -1541,7 +1618,7 @@ static int sdhci_esdhc_resume(struct device *dev)
+ 	struct sdhci_host *host = dev_get_drvdata(dev);
+ 	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
+ 	struct pltfm_imx_data *imx_data = pltfm_host->priv;
+-	int ret;
++	int ret, lost = 0;
+ 
+ 	if (in_falcon()) {
+ 		/*
+@@ -1552,10 +1629,41 @@ static int sdhci_esdhc_resume(struct device *dev)
+ 			writel(0x10401040, host->ioaddr + ESDHC_WTMK_LVL);
+ 	}
+ 
++	/*
++	 * Vendor registers first, before the controller is reset and the bus
++	 * clocked again: after a deep sleep they are at their power-on values
++	 * (Jump 48/50: VSELECT and 0x6c bit 7 on the eMMC host).
++	 */
++	if (esdhc_is_usdhc(imx_data) && imx_data->pw4_regs_saved) {
++		lost = pw4_usdhc_compare(host, imx_data, "resume");
++		pw4_usdhc_write(host, imx_data);
++	}
++
+ 	ret = sdhci_pltfm_resume(dev);
+ 
+-	if (esdhc_is_usdhc(imx_data))
+-		pw4_usdhc_restore(host, imx_data);
++	if (esdhc_is_usdhc(imx_data) && imx_data->pw4_regs_saved) {
++		if (!ret && imx_data->pw4_emmc) {
++			/*
++			 * PW4 eMMC: then the same sequence as a runtime resume
++			 * (reset, signal voltage, set_ios with the clock forced),
++			 * the path the card ran on for hours awake at DDR52.
++			 * After a deep sleep the first reads used to come ~40 ms
++			 * after this, before any runtime suspend, and failed with
++			 * CRC errors in bursts (Jump 50).
++			 */
++			sdhci_runtime_suspend_host(host);
++			sdhci_runtime_resume_host(host);
++			pw4_usdhc_write(host, imx_data);
++			pw4_resumes++;
++			if (lost)
++				pw4_resume_lost++;
++			if (pw4_usdhc_compare(host, imx_data, "still lost after resume"))
++				pw4_resume_left++;
++		} else {
++			pw4_usdhc_write(host, imx_data);
++		}
++		imx_data->pw4_regs_saved = false;
++	}
+ 
+ #ifdef CONFIG_PM
+ 	pm_runtime_mark_last_busy(host->mmc->parent);
+diff --git a/drivers/mmc/host/sdhci.c b/drivers/mmc/host/sdhci.c
+index 1d62f1ad..8c57f05b 100644
+--- a/drivers/mmc/host/sdhci.c
++++ b/drivers/mmc/host/sdhci.c
+@@ -1760,6 +1760,14 @@ static int sdhci_do_start_signal_voltage_switch(struct sdhci_host *host,
+ 
+ 	switch (ios->signal_voltage) {
+ 	case MMC_SIGNAL_VOLTAGE_330:
++		/*
++		 * PW4: the eMMC's VCCQ is a fixed 1.8 V rail and its pads are
++		 * in 1.8 V mode. Refuse 3.3 V so that mmc_power_up() settles
++		 * on 1.8 V and the core never records a 3.3 V bus.
++		 */
++		if (host->quirks2 & SDHCI_QUIRK2_PW4_FIXED_1_8_V)
++			return -EINVAL;
++
+ 		/* Set 1.8V Signal Enable in the Host Control2 register to 0 */
+ 		ctrl &= ~SDHCI_CTRL_VDD_180;
+ 		sdhci_writew(host, ctrl, SDHCI_HOST_CONTROL2);
+diff --git a/drivers/mmc/host/sdhci.h b/drivers/mmc/host/sdhci.h
+index 4a3eab64..f39a6817 100644
+--- a/drivers/mmc/host/sdhci.h
++++ b/drivers/mmc/host/sdhci.h
+@@ -415,6 +415,8 @@ struct sdhci_host {
+ #define SDHCI_QUIRK2_CLOCK_DIV_ZERO_BROKEN		(1<<15)
+ /* Host or Card can't support no thread sdio irq */
+ #define SDHCI_QUIRK2_SDIO_IRQ_THREAD			(1<<16)
++/* PW4: the card's I/O rail is a fixed 1.8 V, 3.3 V signalling is refused */
++#define SDHCI_QUIRK2_PW4_FIXED_1_8_V			(1<<17)
+ 
+ 
+ 	int irq;		/* Device IRQ */
+-- 
+2.53.0
+
