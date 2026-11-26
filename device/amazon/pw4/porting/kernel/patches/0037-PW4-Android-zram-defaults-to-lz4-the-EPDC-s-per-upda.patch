@@ -1,0 +1,64 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: pw4-port <pw4-port@localhost>
+Date: Thu, 26 Nov 2026 19:43:10 +0800
+Subject: [PATCH] PW4 Android: zram defaults to lz4, the EPDC's per-update
+ lines are debug
+
+- lz4 when built in (CONFIG_ZRAM_LZ4_COMPRESS=y): faster to read back on one 1 GHz core
+- Algorithm processing / ACD data / SW mitigation lines become dev_dbg (dynamic debug)
+---
+ drivers/block/zram/zram_drv.c            | 5 +++++
+ drivers/video/fbdev/mxc/mxc_epdc_v2_fb.c | 6 +++---
+ 2 files changed, 8 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/block/zram/zram_drv.c b/drivers/block/zram/zram_drv.c
+index 6e134f47..e82c5fb0 100644
+--- a/drivers/block/zram/zram_drv.c
++++ b/drivers/block/zram/zram_drv.c
+@@ -38,7 +38,12 @@
+ /* Globals */
+ static int zram_major;
+ static struct zram *zram_devices;
++/* PW4: lz4 when built in; its decompression is about twice as fast as lzo on this single 1 GHz core */
++#ifdef CONFIG_ZRAM_LZ4_COMPRESS
++static const char *default_compressor = "lz4";
++#else
+ static const char *default_compressor = "lzo";
++#endif
+ 
+ /* Module params (documentation at end) */
+ static unsigned int num_devices = 1;
+diff --git a/drivers/video/fbdev/mxc/mxc_epdc_v2_fb.c b/drivers/video/fbdev/mxc/mxc_epdc_v2_fb.c
+index 78922d53..ef40f131 100755
+--- a/drivers/video/fbdev/mxc/mxc_epdc_v2_fb.c
++++ b/drivers/video/fbdev/mxc/mxc_epdc_v2_fb.c
+@@ -2665,7 +2665,7 @@ static int epdc_working_buffer_update(struct mxc_epdc_fb_data *fb_data,
+ 		|| (acd_version == WFM_ACD_VER_REAGLD)
+ 		|| (acd_version == WFM_ACD_VER_ECLIPSE)) {
+ 
+-		dev_info(fb_data->dev, "Algorithm processing needed %d\n", acd_version);
++		dev_dbg(fb_data->dev, "Algorithm processing needed %d\n", acd_version);
+ 		proc_data->reagl_en = 1;
+ 		proc_data->reagl_d_en = (acd_version == WFM_ACD_VER_REAGLD) ? 1 : 0;
+ 	} else {
+@@ -2776,7 +2776,7 @@ static int epdc_working_buffer_update(struct mxc_epdc_fb_data *fb_data,
+ 		}
+ 		proc_data->reagl_en = 1;
+ 		proc_data->reagl_d_en = (acd_version == WFM_ACD_VER_REAGLD) ? 1 : 0;
+-		dev_info(fb_data->dev, "%s: %d - ACD data SFT:%d ASV:%d\n", __func__, __LINE__, proc_data->reagl_sft, proc_data->reagl_asv);
++		dev_dbg(fb_data->dev, "%s: %d - ACD data SFT:%d ASV:%d\n", __func__, __LINE__, proc_data->reagl_sft, proc_data->reagl_asv);
+ 		/* This is a blocking call, so upon return PxP tx should be done */
+ 		mutex_lock(&fb_data->pxp_mutex);
+ 		ret = pxp_wfe_b_process_update(fb_data, update_region);
+@@ -4281,7 +4281,7 @@ static int is_SW_mitigation_needed(struct fb_info *info)
+        else if (temp > 15 && batt_level<= 20)
+                res =1;
+        if(res)
+-               dev_info(fb_data->dev,
++               dev_dbg(fb_data->dev,
+                        "SW mitigation needed temp=%dC battery = %d\n",temp, batt_level);
+        return res;
+ }
+-- 
+2.53.0
+
