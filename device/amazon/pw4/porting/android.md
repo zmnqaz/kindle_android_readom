@@ -193,3 +193,20 @@ preinit 改名 `.real`（同 `boot/build_entry.py`），公开 initramfs 由 `pa
 - **Jump 46**（日常版）：同一内核，系统带蓝牙协议栈、Settings `0010` 和 `bluetooth_le`，不开调试 shell。
 - 还没做：蓝牙地址来源（现在由 HAL 随机生成并保存）、芯片低功耗模式（LPM）、蓝牙开着时的待机电流和休眠联动。
 
+## 微信读书卡顿与刷新（2026-11-26，Jump 54–57，分支 `port/pw4-lpm`）
+
+现象：翻页、切页面慢，触摸没反应，听书时更明显。量到的：
+
+- CPU 单核 996 MHz、内存总线 396 MHz 都是满速，没有配错；没有 GPU，界面全由 CPU 画。操作时空闲为 0，微信读书界面线程约 47%，换页和读存储约 15%，蓝牙音频约 11%。应用和系统界面都已是 `speed` 预编译。
+- 微信读书约 300 MB（PSS 209 MB + zram 里 95 MB），其中 native heap 约 175 MB；256 MB 的 zram 只用了约 60 MB，加大没有用。
+- 电量 ≤20% 时原厂 EPDC 驱动进入 `SW mitigation`，测流畅度前先充电。
+
+做了的：
+
+- 内核补丁 `0037`：zram 用 lz4，EPDC 每次更新的日志降成调试级。
+- 蓝牙 A2DP 只留 SBC（`overlay/packages/apps/Bluetooth`）。听书播放中自动点 10 次下一页，点击到第一次更新：Jump 55（AAC）0.5–4.4 s、两次 5 s 内无更新；Jump 56（SBC，同时带下面两项）中位约 0.7 s、一次 4.5 s。各只跑了一轮。
+- 开机完成后 eMMC 队列用 deadline、`extra_free_kbytes` 4096（`init.pw4.hardware.rc`），都没有单独量过。预读 32 KB 和 ondemand 沿用 PW3 量过的设置，没有改。
+- **波形号**（`device/amazon/pw3/gralloc/framebuffer.cpp` 的 `selector()`，只对 PW4 生效）：合成器发的是 Lab126 的逻辑选择号，PW3 的 3.0.35 驱动会映射到波形文件的槽位，PW4 的 4.1.15 驱动把这段映射编译掉了，直接当槽位用。结果 GL16（5）实际跑的是 REAGLD，A2（4）实际跑的是 REAGL。现在 A2 发 6、GL16 发 3；`debug.pw3.epdc.pw4_grey=reagld|reagl` 可换回原来的观感对比。设备上打开 `mxc_epdc_debug` 确认：修正前请求 `0x5 (gld16 (reagld))` 490 ms；修正后 `0x6 (a2)` 131 ms、`0x3 (gl16)` 约 478 ms，`MXCFB_SEND_UPDATE` 平均阻塞从约 130 ms 降到 8–23 ms。
+- Jump 57 上使用者手动翻页（听书播放中）：抬手到第一次更新中位 0.55 s，到刷完约 1.0–1.1 s，多数一页一次整页更新，CPU 有约 15% 空闲。其中约 0.5 s 是 GL16 波形本身的时间。
+
+没有打开的：`debug.pw3.epdc.coalesce_ms` 和 `debug.pw3.epdc.defer_busy`（把连续几帧并成一次更新，默认关）只过了主机测试，设备上没有开过；修正波形号后一页本来就只有一次更新，开它只会让首刷更晚。`debug.pw3.vsync_hz` 降到 15 可能再省应用的 CPU，没有试。
