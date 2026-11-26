@@ -159,7 +159,7 @@ void Panel::replaced(const Rect& area) {
             debt_[size_t(ty) * tilesX_ + tx] = uint8_t(policy_.fullEvery > 255 ? 255 : policy_.fullEvery);
 }
 void Panel::present(const Rect* damage, size_t count, uint8_t* fb, size_t fbStride, std::vector<PanelUpdate>* updates,
-                    bool idle) {
+                    bool idle, bool hold) {
     const Rect screen{0, 0, width_, height_};
     if (stale_ && !invalid_) {
         // All of the canvas is new against the picture shown.
@@ -179,6 +179,28 @@ void Panel::present(const Rect* damage, size_t count, uint8_t* fb, size_t fbStri
         pending_ = touched_ = {0, 0, 0, 0};
         debt_.assign(debt_.size(), 0);   // this GC16 covers the screen
         updates->push_back({screen, Waveform::Gc16, true});
+        return;
+    }
+    if (hold) {
+        // Only what is asked for changes. shown_ and the framebuffer stay as
+        // the panel has them, so settle() finds the difference whichever
+        // frame it runs after.
+        for (size_t r = 0; r < count; ++r) {
+            const Rect area = intersect(damage[r], screen);
+            if (isEmpty(area)) continue;
+            const int width = area.right - area.left;
+            for (int y = area.top; y < area.bottom; ++y) {
+                const size_t at = size_t(y) * width_ + area.left;
+                uint8_t* next = next_.data();
+                uint8_t* t = target_.data() + at;
+                levelRow(canvas_.data() + at, next, width);
+                if (!std::memcmp(next, t, size_t(width))) continue;
+                int a = 0, b = width;
+                differingSpan(next, t, &a, &b);
+                std::memcpy(t + a, next + a, size_t(b - a));
+                include(&pending_, area.left + a, y, area.left + b, y + 1);
+            }
+        }
         return;
     }
     // Shown once only if nothing is owed: a second pass that is due means the
@@ -271,6 +293,15 @@ bool Panel::changeSpans(const Rect& area, unsigned percent) {
     }
     return false;
 }
+bool Panel::spansPage(const Rect* damage, size_t count) {
+    if (invalid_ || stale_) return false;
+    const Rect screen{0, 0, width_, height_};
+    for (size_t r = 0; r < count; ++r) {
+        const Rect area = intersect(damage[r], screen);
+        if (!isEmpty(area) && changeSpans(area, policy_.pagePercent)) return true;
+    }
+    return false;
+}
 // An update between black and white: exact with the fast waveforms. The stock
 // system keeps A2 to its keyboard's keys - small and soon changed back.
 PanelUpdate Panel::plainUpdate(const Rect& box) const {
@@ -350,6 +381,7 @@ bool Panel::settle(uint8_t* fb, size_t fbStride, PanelUpdate* update) {
     pending_ = touched_ = {0, 0, 0, 0};
     const int width = area.right - area.left;
     Rect box{0, 0, 0, 0};
+    bool grey = false;
     for (int y = area.top; y < area.bottom; ++y) {
         const size_t at = size_t(y) * width_ + area.left;
         const uint8_t* t = target_.data() + at;
@@ -357,6 +389,7 @@ bool Panel::settle(uint8_t* fb, size_t fbStride, PanelUpdate* update) {
         if (!std::memcmp(s, t, size_t(width))) continue;
         int a = 0, b = width;
         differingSpan(s, t, &a, &b);
+        grey |= exactRow(t + a, s + a, b - a).grey;
         std::memcpy(s + a, t + a, size_t(b - a));
         std::memcpy(fb + size_t(y) * fbStride + area.left + a, t + a, size_t(b - a));
         include(&box, area.left + a, y, area.left + b, y + 1);
@@ -368,7 +401,10 @@ bool Panel::settle(uint8_t* fb, size_t fbStride, PanelUpdate* update) {
         return true;
     }
     if (isEmpty(box)) return false;
-    *update = charge(isPage(box) ? exactUpdate(box) : PanelUpdate{box, Waveform::Gl16, false});
+    // What a first pass leaves always involves a grey level -- a pixel it
+    // could show exactly, it did. Only frames that were held can come out
+    // black and white here, and they get what present() would have given them.
+    *update = charge(!grey ? plainUpdate(box) : isPage(box) ? exactUpdate(box) : PanelUpdate{box, Waveform::Gl16, false});
     return true;
 }
 }  // namespace pw3

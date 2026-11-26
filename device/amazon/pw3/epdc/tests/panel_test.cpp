@@ -653,6 +653,53 @@ int main() {
         paint(topLeft, 68); show(topLeft);
         assert(updates.size() == 1 && updates[0].waveform == pw3::Waveform::Gl16);
     }
+    // Held frames: the picture asked for follows every frame, the screen
+    // none of them, and settle() shows the last one in one update.
+    {
+        const int PW2 = 300, PH2 = 300, PS2 = 320;
+        pw3::Panel panel(PW2, PH2);
+        std::vector<uint8_t> fb(size_t(PS2) * PH2);
+        std::vector<pw3::PanelUpdate> updates;
+        const pw3::Rect all{0, 0, PW2, PH2}, page{0, 0, PW2, 200}, line{20, 250, 280, 260};
+        const auto paint = [&](const pw3::Rect& r, uint8_t v) {
+            for (int y = r.top; y < r.bottom; ++y)
+                std::memset(panel.canvas() + size_t(y) * PW2 + r.left, v, size_t(r.right - r.left));
+        };
+        const auto hold = [&](const pw3::Rect& r) {
+            updates.clear();
+            panel.present(&r, 1, fb.data(), size_t(PS2), &updates, true, true);
+        };
+        paint(all, 255);
+        // Unknown content is repainted, held or not.
+        hold(all);
+        assert(updates.size() == 1 && updates[0].waveform == pw3::Waveform::Gc16 && !panel.pending());
+        const std::vector<uint8_t> white = fb;
+
+        paint(page, 68);
+        assert(panel.spansPage(&page, 1) && !panel.spansPage(&line, 1));
+        hold(page);
+        assert(updates.empty() && panel.pending() && fb == white);
+        assert(!panel.spansPage(&page, 1));          // taken note of already
+        paint(page, 119); paint(line, 0);
+        hold(page); hold(line);
+        assert(updates.empty() && fb == white);
+        pw3::PanelUpdate u{};
+        assert(panel.settle(fb.data(), size_t(PS2), &u) && !panel.pending());
+        assert(u.waveform == pw3::Waveform::Gl16 && !u.full);
+        assert(u.rect.left == 0 && u.rect.top == 0 && u.rect.right == PW2 && u.rect.bottom == 260);
+        assert(!std::memcmp(panel.shown(), panel.target(), size_t(PW2) * PH2));
+        assert(fb[0] == panel.level(119) && fb[size_t(255) * PS2 + 30] == 0 && fb[size_t(280) * PS2] == 255);
+
+        // Held and drawn back before it was shown: nothing to send.
+        paint(line, 255); hold(line);
+        paint(line, 0); hold(line);
+        assert(panel.pending() && !panel.settle(fb.data(), size_t(PS2), &u) && !panel.pending());
+
+        // A held change between black and white leaves as one: no 16 levels.
+        paint(line, 255); hold(line);
+        assert(panel.settle(fb.data(), size_t(PS2), &u) && u.waveform == pw3::Waveform::A2 && !u.full);
+        assert(u.rect.left == line.left && u.rect.top == line.top && u.rect.right == line.right && u.rect.bottom == line.bottom);
+    }
     bool rejected = false;
     try { pw3::Panel bad(0, 10); } catch (const std::invalid_argument&) { rejected = true; }
     assert(rejected);

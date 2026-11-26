@@ -278,9 +278,76 @@ void theAttemptComesBackWhenAnUpdateEnds() {
     if (fake.sent.size() == 2) CHECK(wholeScreenGc16(fake.sent[1]));
     pthread_mutex_unlock(&d.lock);
 }
+
+// Held frames (Device::coalesceNs, deferBusy). Without the settle thread: what
+// is asked here is which frame reaches the driver and which is kept, and
+// settleLocked() is what that thread calls when the frames are due.
+void paint(Device& d, const pw3::Rect& r, uint8_t luma) {
+    for (int y = r.top; y < r.bottom; ++y)
+        memset(d.panel->canvas() + size_t(y) * kWidth + r.left, luma, size_t(r.right - r.left));
+}
+void aPageWaitsForTheFramesThatFollow() {
+    fake.reset();
+    Fixture f;
+    Device& d = f.d;
+    Hold held(&d.lock);
+    const pw3::Rect all{0, 0, kWidth, kHeight}, line{0, kHeight - 2, kWidth, kHeight};
+    paint(d, all, 255);
+    CHECK(presentLocked(&d, &all, 1) == 0 && fake.sent.size() == 1);   // the first frame: the screen, GC16
+    d.finished = d.marker; d.inflight.clear();                           // and it has ended
+    d.coalesceNs = 60 * 1000000;
+    // A page, and one frame later its last line again: nothing is sent yet.
+    paint(d, pw3::Rect{0, 0, kWidth, kHeight - 4}, 119);
+    CHECK(presentLocked(&d, &all, 1) == 0 && fake.sent.size() == 1);
+    CHECK(d.holding && d.held == 1 && d.panel->pending());
+    paint(d, line, 0);
+    CHECK(presentLocked(&d, &line, 1) == 0 && fake.sent.size() == 1 && d.held == 2);
+    // Due: one update with both, and nothing is owed.
+    settleLocked(&d);
+    CHECK(fake.sent.size() == 2 && !d.holding && !d.panel->pending());
+    if (fake.sent.size() == 2) CHECK(fake.sent[1].region.top == 0 && fake.sent[1].region.height == uint32_t(kHeight));
+    CHECK(!memcmp(d.panel->shown(), d.panel->target(), size_t(kWidth) * kHeight));
+    // A change smaller than a page is not kept waiting.
+    d.finished = d.marker; d.inflight.clear();
+    paint(d, line, 255);
+    CHECK(presentLocked(&d, &line, 1) == 0 && fake.sent.size() == 3 && !d.holding);
+}
+void aFrameOverABusyAreaWaits() {
+    fake.reset();
+    Fixture f;
+    Device& d = f.d;
+    Hold held(&d.lock);
+    const pw3::Rect all{0, 0, kWidth, kHeight}, top{0, 0, kWidth, 8}, bottom{0, 24, kWidth, kHeight};
+    paint(d, all, 255);
+    CHECK(presentLocked(&d, &all, 1) == 0 && fake.sent.size() == 1);
+    d.finished = d.marker; d.inflight.clear();
+    d.deferBusy = true;
+    paint(d, top, 119);
+    CHECK(presentLocked(&d, &top, 1) == 0 && fake.sent.size() == 2);    // idle: sent
+    // The panel is drawing `top`. Elsewhere goes out at once; over it, waits.
+    paint(d, bottom, 119);
+    CHECK(presentLocked(&d, &bottom, 1) == 0 && fake.sent.size() == 3 && !d.holding);
+    paint(d, top, 0);
+    CHECK(presentLocked(&d, &top, 1) == 0 && fake.sent.size() == 3 && d.holding);
+    paint(d, top, 68);
+    CHECK(presentLocked(&d, &top, 1) == 0 && fake.sent.size() == 3);
+    // The panel is idle: the last picture, once.
+    d.finished = d.marker; d.inflight.clear();
+    settleLocked(&d);
+    CHECK(fake.sent.size() == 4 && !d.holding && !d.panel->pending());
+    CHECK(!memcmp(d.panel->shown(), d.panel->target(), size_t(kWidth) * kHeight));
+    // Off, which is the default, the same frame is sent as before.
+    d.deferBusy = false;
+    paint(d, top, 255);
+    CHECK(presentLocked(&d, &top, 1) == 0 && fake.sent.size() == 5);
+    paint(d, top, 119);
+    CHECK(presentLocked(&d, &top, 1) == 0 && fake.sent.size() == 6 && d.held == 2);
+}
 }  // namespace
 
 int main() {
+    aPageWaitsForTheFramesThatFollow();
+    aFrameOverABusyAreaWaits();
     aRepaintPerFailure();
     aSecondFailureWaitsForTheNextFrame();
     asleepSendsNothing();
