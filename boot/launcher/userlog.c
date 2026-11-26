@@ -19,6 +19,17 @@
  * enumeration alone is 1,476 of those lines; the storage this project writes
  * to is mmc0/mmcblk0.
  *
+ * The PW4 (CHECK_PROFILE 3, the helper's build) has them the other way round:
+ * its eMMC is mmc1/mmcblk1 and mmc0 is the Wi-Fi card's SDIO bus
+ * (device/amazon/pw4/porting/README.md), so it keeps `mmc1` and not `mmc0`.
+ * Its USB device controller is the ChipIdea one (`ci_hdrc`) with the stock
+ * `g_mass_storage` gadget, where the PW3 has the ARC one and g_file_storage.
+ * And its PID 1 before Android prints under `pw4-handoff:`
+ * (boot/handoff-init/pw4-handoff-init.c, P(): the display driver, the panel's
+ * waveform file name, the touch driver, and USB clock and PHY registers --
+ * fixed text and numbers). The lists differ by #if rather than by a table the
+ * program chooses from, so a PW3 build of this file is the object it was.
+ *
  * `pw3-` is a prefix, not a tag: it is what this project's own patches and
  * programs print under, so a diagnostic that is added later is in the log that
  * gets read instead of being dropped by a list nobody remembered to extend.
@@ -28,10 +39,19 @@
  * the identifier check is the second gate either way. */
 static const char *const ALLOW[] = {
 	"PM:", "suspend debug", "add wake up", "remove wake up",	/* the suspend path the handover rides on */
+#if defined(CHECK_PROFILE) && CHECK_PROFILE == 3
+	"ci_hdrc", "g_mass_storage",					/* the PW4's cable */
+#else
 	"otg udc vbus", "fsl-usb2-udc", "g_file_storage",		/* the cable: a computer on it stops the start */
+#endif
 	"android_usb", "g_android",					/* and, under Android, the gadget on it */
 	"pw3-",								/* every line this project prints itself (see below) */
+#if defined(CHECK_PROFILE) && CHECK_PROFILE == 3
+	"pw4-handoff:",							/* the PW4's PID 1 before Android */
+	"mmc1", "mmcblk", "sdhci", "emmc", "EXT3-fs", "EXT4-fs",	/* the PW4's eMMC */
+#else
 	"mmc0", "mmcblk", "sdhci", "emmc", "EXT3-fs", "EXT4-fs",	/* the storage the images are on */
+#endif
 	"mxc_epdc", "imx_epdc",						/* the panel */
 	"KERNEL: I pmic:",						/* the stock power events: charger, power button */
 	"Unable to handle kernel", "Internal error", "Kernel panic",	/* a kernel in trouble */

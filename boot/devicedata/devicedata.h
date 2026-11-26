@@ -67,6 +67,34 @@ int dd_atags(const char *root, const struct dd_profile *profile, const char *cmd
  * Built with -DPW_DEVICE_TREE and boot/handoff/pw4_fdt.c + pw3_plan.c. */
 int dd_fdt(const char *root, const struct dd_profile *profile, const char *cmdline,
            uint32_t initrd_start, uint32_t initrd_size, struct dd_buf *out, struct dd_why *why);
+
+#ifdef PW_DEVICE_TREE
+/* What a device-tree Kindle (PW4) fixes beyond struct dd_profile. Kept apart,
+ * and only in -DPW_DEVICE_TREE builds, so that a PW3 build of this file is the
+ * same object it was before the PW4 was added: nothing a PW3 runs changed.
+ * Also needs boot/handoff/sha256.c. */
+struct dd_pin { const char *path; size_t bytes; const char *sha256; };
+struct dd_tree_profile {
+    const struct dd_profile *base;   /* command line, user mount, Wi-Fi paths, kernel */
+    const char *compatible;          /* the first entry of the root node's compatible */
+    const char *disk;                /* the eMMC, e.g. mmcblk1 */
+    const char *user_partition;      /* the partition the user FAT is in, e.g. mmcblk1p10 */
+    /* Stock files the archive carries, read now and never stored: they are
+     * Amazon's and Broadcom's, so they reach the Android kernel only from the
+     * device they are on. Pinned by size and SHA256, read from a device: they
+     * are part of the firmware this build is for, as the kernel is. */
+    struct dd_pin epdc_firmware, wifi_firmware, bt_firmware;
+    size_t nvram_max;                /* the Wi-Fi NVRAM (base->wifi_board) is not pinned */
+};
+extern const struct dd_tree_profile dd_pw4_rex_5_18_1_1_1;
+/* dd_device_matches and dd_archive for such a Kindle. The archive carries the
+ * EPDC firmware, the Wi-Fi firmware and NVRAM, the Bluetooth patch file and
+ * the storage entry's configuration; no waveform: the Android kernel's PID 1
+ * reads the panel's own from its partition (boot/handoff-init/pw4-handoff-init.c). */
+int dd_tree_device_matches(const char *root, const struct dd_tree_profile *profile, struct dd_why *why);
+int dd_tree_archive(const char *root, const struct dd_tree_profile *profile, const struct dd_build *build,
+                    struct dd_buf *out, struct dd_why *why);
+#endif
 int dd_archive(const char *root, const struct dd_profile *profile, const struct dd_build *build,
                struct dd_buf *out, struct dd_why *why);
 

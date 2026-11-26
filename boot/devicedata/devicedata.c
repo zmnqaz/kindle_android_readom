@@ -3,6 +3,7 @@
 #include "devicedata.h"
 #ifdef PW_DEVICE_TREE
 #include "../handoff/pw4_fdt.h"
+#include "../handoff/sha256.h"
 #endif
 #include <ctype.h>
 #include <dirent.h>
@@ -27,9 +28,10 @@ const struct dd_profile dd_pw3_5_16_2_1_1 = {
     "#8 PREEMPT Tue Aug 1 12:49:59 UTC 2023",
 };
 
-/* Kindle Paperwhite 4 (i.MX6SLL, device tree). DRAFT: the user FAT mount and
- * the Wi-Fi paths are the stock ones the probes found, see
- * device/amazon/pw4/porting/README.md; the archive side is not written yet. */
+/* Kindle Paperwhite 4 (i.MX6SLL, device tree): the user FAT mount and the
+ * Wi-Fi paths are the stock ones the probes found, see
+ * device/amazon/pw4/porting/README.md. What else the PW4 fixes, and its
+ * archive, are dd_pw4_rex_5_18_1_1_1 below (-DPW_DEVICE_TREE only). */
 const struct dd_profile dd_pw4_5_18_1_1_1 = {
     "console=ttymxc0,115200 consoleblank=0 uart_at_4m quiet secure_cpu=1 androidboot.secure_cpu=1 androidboot.prod=1 androidboot.unlocked_kernel=false",
     "/mnt/base-us",
@@ -590,5 +592,220 @@ int dd_fdt(const char *root, const struct dd_profile *profile, const char *cmdli
     if (rc) return fail(why, "device tree not usable (%d)", rc);
     out->size = used;
     return 0;
+}
+
+/* ---- the PW4 (device tree): identity and archive ----
+ *
+ * Everything below is new code beside the PW3's rather than the PW3's made
+ * general, on purpose: a PW3 build of this file (no -DPW_DEVICE_TREE) is the
+ * object it was before, so the entry that runs on PW3s did not change. The
+ * price is that the storage lines are written twice. */
+
+/* Kindle Paperwhite 4 (board "rex", i.MX6SLL), stock firmware 5.18.1.1.1.
+ * The eMMC is mmc1 (mmc0 is the Wi-Fi card's SDIO bus), and the user FAT is
+ * at an offset in its tenth partition, "userdata", which the stock system
+ * mounts through loop0 (device/amazon/pw4/porting/README.md, storage).
+ *
+ * The three pinned files are the ones the development jumps carried in a
+ * device archive made on a computer (porting/make-device-archive.py, until
+ * this): read off the device, sizes and SHA256 of those copies. The EPDC
+ * firmware is the generic one the v2 driver asks for (handoff.md, Jump 10);
+ * the Bluetooth patch is the one the stock btd loads (android.md, Bluetooth,
+ * Jump 44), under the fixed name bt_vendor.conf asks for. The NVRAM is not
+ * pinned: it is the one file of the three Wi-Fi inputs that could differ
+ * between two devices (nobody has two to compare), and the driver takes
+ * whatever the stock driver takes. */
+const struct dd_tree_profile dd_pw4_rex_5_18_1_1_1 = {
+    &dd_pw4_5_18_1_1_1, "amzn,imx6sll-rex", "mmcblk1", "mmcblk1p10",
+    {"/lib/firmware/imx/epdc/epdc_ED060KC4.fw", 2327256,
+     "4c65aea90545d7e71fdb47aee4dd4b663529d61e5a679c1bce8d13ef53b87de8"},
+    {"/opt/brcm_4343w/wifi/firmware/fw_bcmdhd_sr.bin", 369119,
+     "d92101953f131eb29acf85fb54466d88131d8e163b01cc757ce1a4f510c7421c"},
+    {"/opt/brcm_4343w/bluetooth/firmware/BCM4343A1_001.002.009.0152.0515.hcd", 35568,
+     "0d5fee0ddb32c628a0a9d99329ab8bee2f45ac3156b95699db3c7c24123ead71"},
+    16384,
+};
+
+/* The stock command line and kernel, as dd_device_matches checks them. */
+static int tree_stock_system(const char *root, const struct dd_profile *base, struct dd_why *why) {
+    char live[1024], stock[1024] = "", *save = NULL;
+    if (read_text(root, "/proc/cmdline", live, sizeof(live), why)) return -1;
+    for (char *token = strtok_r(live, " ", &save); token; token = strtok_r(NULL, " ", &save)) {
+        if (!strcmp(token, "rootwait") || !strncmp(token, "root=", 5)) continue;
+        if (strlen(stock) + strlen(token) + 2 > sizeof(stock)) return fail(why, "stock command line too long");
+        if (*stock) strcat(stock, " ");
+        strcat(stock, token);
+    }
+    if (strcmp(stock, base->stock_cmdline))
+        return fail_other_device(why, "stock command line is not this model's");
+    if (read_text(root, "/proc/version", live, sizeof(live), why)) return -1;
+    char expected[256];
+    int n = snprintf(expected, sizeof(expected), "Linux version %s ", base->kernel_release);
+    if (n <= 0 || (size_t)n >= sizeof(expected)) return fail(why, "kernel release too long");
+    if (strncmp(live, expected, (size_t)n) || !strstr(live, base->kernel_version))
+        return fail_other_device(why, "stock kernel is not this firmware's");
+    return 0;
+}
+
+/* A pinned stock file, whole. `identity`: a file that is there and is not the
+ * pinned one says this is not the firmware the build is for (the screen that
+ * says so, rather than "restart and tap again", which would be for ever). */
+static int pinned(const char *root, const struct dd_pin *pin, struct dd_buf *out, struct dd_why *why, int identity) {
+    if (read_file(root, pin->path, pin->bytes + 1, out, why)) return -1;
+    SHA256_CTX ctx;
+    unsigned char digest[32];
+    char hex[65];
+    sha256_init(&ctx);
+    sha256_update(&ctx, out->data, out->size);
+    sha256_final(&ctx, digest);
+    for (int i = 0; i < 32; ++i) snprintf(hex + 2 * i, 3, "%02x", digest[i]);
+    if (out->size == pin->bytes && !strcmp(hex, pin->sha256)) return 0;
+    if (identity) {
+        why->other_device = 1;
+        return fail(why, "%s is not this firmware's (%zu bytes)", pin->path, out->size);
+    }
+    return fail(why, "%s changed since it was checked", pin->path);
+}
+
+int dd_tree_device_matches(const char *root, const struct dd_tree_profile *profile, struct dd_why *why) {
+    struct dd_buf b = {0};
+    if (tree_stock_system(root, profile->base, why)) return -1;
+    /* The board, by the device tree the boot loader gave the stock kernel: the
+     * first, most specific entry of the root compatible. The SoC alone
+     * ("fsl,imx6sll") is what the handoff module checks; other Kindles are
+     * built on it too. */
+    if (read_file(root, "/sys/firmware/devicetree/base/compatible", 4096, &b, why)) return -1;
+    size_t first = b.size ? strnlen((const char *)b.data, b.size) : 0;
+    int rc = first == b.size || first != strlen(profile->compatible) || memcmp(b.data, profile->compatible, first)
+             ? fail_other_device(why, "not this model's board") : 0;
+    const struct dd_pin *pins[] = {&profile->epdc_firmware, &profile->wifi_firmware, &profile->bt_firmware};
+    for (unsigned i = 0; i < 3 && !rc; ++i) rc = pinned(root, pins[i], &b, why, 1);
+    dd_free(&b);
+    return rc;
+}
+
+static int tree_block_name(const char *n, const char *disk) {
+    size_t d = strlen(disk);
+    if (strncmp(n, disk, d)) return 0;
+    n += d;
+    if (!*n || !strcmp(n, "rpmb")) return 1;
+    if (!strncmp(n, "boot", 4)) n += 4;
+    else if (*n == 'p') ++n;
+    else return 0;
+    return *n && all_of(n, strlen(n), isdigit);
+}
+
+/* storage_lines() for a profile's disk and user partition: fat_offset,
+ * fat_sizelimit (loop0, the stock mount of the user FAT) and the eMMC's block
+ * devices with their sizes and starts, for the storage entry. */
+static int tree_storage_lines(const char *root, const struct dd_tree_profile *profile, struct dd_buf *conf,
+                              struct dd_why *why) {
+    struct dd_buf mounts = {0};
+    char backing[128], offset[32], limit[32], value[32], path[160], device[48];
+    if (read_file(root, "/proc/self/mounts", 65536, &mounts, why) || append_zero(&mounts, 1)) { dd_free(&mounts); return -1; }
+    int seen = 0, good = 0;
+    for (char *save = NULL, *line = strtok_r((char *)mounts.data, "\n", &save); line; line = strtok_r(NULL, "\n", &save)) {
+        char source[128], target[128], type[32];
+        if (sscanf(line, "%127s %127s %31s", source, target, type) == 3 && !strcmp(target, profile->base->user_mount)) {
+            ++seen;
+            good = !strcmp(type, "vfat") && (!strcmp(source, "/dev/loop/0") || !strcmp(source, "/dev/loop0"));
+        }
+    }
+    dd_free(&mounts);
+    if (seen != 1 || !good) return fail(why, "user FAT is not the one vfat mount on loop0");
+    if (read_text(root, "/sys/block/loop0/loop/backing_file", backing, sizeof(backing), why) ||
+        read_text(root, "/sys/block/loop0/loop/offset", offset, sizeof(offset), why) ||
+        read_text(root, "/sys/block/loop0/loop/sizelimit", limit, sizeof(limit), why)) return -1;
+    uint64_t fat_offset, fat_limit;
+    snprintf(device, sizeof(device), "/dev/%s", profile->user_partition);
+    if (strcmp(backing, device) || !decimal(offset, &fat_offset) || !decimal(limit, &fat_limit) ||
+        fat_offset % 512 || fat_limit % 512) return fail(why, "loop0 is not the user partition at a sector offset");
+    if (append_text(conf, "fat_offset=%llu\nfat_sizelimit=%llu\n", (unsigned long long)fat_offset, (unsigned long long)fat_limit))
+        return fail(why, "out of memory");
+
+    char full[512];
+    snprintf(full, sizeof(full), "%s/sys/class/block", strcmp(root, "/") ? root : "");
+    char *names[32];
+    unsigned count = 0;
+    DIR *dir = opendir(full);
+    if (!dir) return fail(why, "cannot list /sys/class/block");
+    for (struct dirent *e; (e = readdir(dir));) {
+        if (!tree_block_name(e->d_name, profile->disk)) continue;
+        if (count == 32 || !(names[count] = strdup(e->d_name))) { closedir(dir); while (count) free(names[--count]); return fail(why, "too many eMMC block devices"); }
+        ++count;
+    }
+    closedir(dir);
+    qsort(names, count, sizeof(names[0]), name_order);
+    int rc = 0, disk = 0, user = 0;
+    uint64_t disk_size = 0, user_start = 0, user_size = 0;
+    size_t d = strlen(profile->disk);
+    for (unsigned i = 0; i < count && !rc; ++i) {
+        uint64_t sectors, start = 0;
+        int partition = names[i][d] == 'p';
+        snprintf(path, sizeof(path), "/sys/class/block/%s/size", names[i]);
+        if (read_text(root, path, value, sizeof(value), why) || !decimal(value, &sectors) || !sectors) { rc = fail(why, "no size for %s", names[i]); break; }
+        if (partition) {
+            snprintf(path, sizeof(path), "/sys/class/block/%s/start", names[i]);
+            if (read_text(root, path, value, sizeof(value), why) || !decimal(value, &start)) { rc = fail(why, "no start for %s", names[i]); break; }
+            rc = append_text(conf, "block=%s:%llu:%llu\n", names[i], (unsigned long long)sectors, (unsigned long long)start);
+        } else {
+            rc = append_text(conf, "block=%s:%llu:-\n", names[i], (unsigned long long)sectors);
+        }
+        if (!strcmp(names[i], profile->disk)) { disk = 1; disk_size = sectors; }
+        if (!strcmp(names[i], profile->user_partition)) { user = 1; user_start = start; user_size = sectors; }
+    }
+    while (count) free(names[--count]);
+    if (rc) return rc;
+    if (!disk || !user || user_start >= disk_size || user_size > disk_size - user_start || fat_offset >= user_size * 512 ||
+        (fat_limit && fat_limit > user_size * 512 - fat_offset)) return fail(why, "eMMC geometry inconsistent");
+    return 0;
+}
+
+/* The device half of the PW4's initramfs, as the development jumps had it
+ * made on a computer (porting/make-device-archive.py), now made here:
+ *   lib/firmware/imx/epdc/epdc_ED060KC4.fw   the EPDC driver's request_firmware;
+ *                                            PID 1 deletes it once the driver is up
+ *   firmware/bcmdhd/fw_bcmdhd_sr.bin,        bcmdhd's firmware_path and nvram_path
+ *   firmware/bcmdhd/nvram_wfo.txt            (device/amazon/pw4/hardware/init.pw4.hardware.rc)
+ *   firmware/bluetooth/BCM4343A1.hcd         FwPatchFileName (device/amazon/pw4/bluetooth/
+ *                                            bt_vendor.conf); readable by all, as the HAL
+ *                                            runs as bluetooth and the root is read only
+ *                                            by the time an rc could give it a group (Jump 45)
+ *   pw3-preinit.conf, pw3-testdata.conf      the storage entry's, as on the PW3
+ * The modes are the ones those jumps ran with. */
+int dd_tree_archive(const char *root, const struct dd_tree_profile *profile, const struct dd_build *build,
+                    struct dd_buf *out, struct dd_why *why) {
+    struct dd_buf epdc = {0}, wifi = {0}, nvram = {0}, bt = {0}, conf = {0}, data = {0};
+    int rc = -1;
+    out->size = 0;
+    if (pinned(root, &profile->epdc_firmware, &epdc, why, 0) || pinned(root, &profile->wifi_firmware, &wifi, why, 0) ||
+        pinned(root, &profile->bt_firmware, &bt, why, 0)) goto done;
+    if (read_file(root, profile->base->wifi_board, profile->nvram_max, &nvram, why)) goto done;
+    if (!nvram.size || memchr(nvram.data, 0, nvram.size)) { fail(why, "Wi-Fi NVRAM is not a text file"); goto done; }
+    if (append(&conf, build->preinit_conf, strlen(build->preinit_conf)) || tree_storage_lines(root, profile, &conf, why)) {
+        if (!why->text[0]) fail(why, "out of memory");
+        goto done;
+    }
+    if (build->data_path && data_conf(root, profile->base, build, &data, why)) goto done;
+    static const struct { const char *name; uint32_t mode; } dirs[] = {
+        {"lib", 0040755}, {"lib/firmware", 0040755}, {"lib/firmware/imx", 0040755}, {"lib/firmware/imx/epdc", 0040755},
+        {"firmware", 0040755}, {"firmware/bcmdhd", 0040750}, {"firmware/bluetooth", 0040755}};
+    for (unsigned i = 0; i < sizeof(dirs) / sizeof(dirs[0]); i++)
+        if (dd_newc(out, dirs[i].name, dirs[i].mode, NULL, 0)) goto oom;
+    if (dd_newc(out, "lib/firmware/imx/epdc/epdc_ED060KC4.fw", 0100644, epdc.data, epdc.size) ||
+        dd_newc(out, "firmware/bcmdhd/fw_bcmdhd_sr.bin", 0100640, wifi.data, wifi.size) ||
+        dd_newc(out, "firmware/bcmdhd/nvram_wfo.txt", 0100640, nvram.data, nvram.size) ||
+        dd_newc(out, "firmware/bluetooth/BCM4343A1.hcd", 0100644, bt.data, bt.size) ||
+        dd_newc(out, "pw3-preinit.conf", 0100400, conf.data, conf.size) ||
+        (build->data_path && dd_newc(out, "pw3-testdata.conf", 0100400, data.data, data.size)) ||
+        dd_newc_end(out)) goto oom;
+    rc = 0;
+    goto done;
+oom:
+    fail(why, "out of memory");
+done:
+    dd_free(&epdc); dd_free(&wifi); dd_free(&nvram); dd_free(&bt); dd_free(&conf); dd_free(&data);
+    if (rc) dd_free(out);
+    return rc;
 }
 #endif

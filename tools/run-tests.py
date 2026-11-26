@@ -159,8 +159,16 @@ TESTS = [
                           'boot/devicedata/devicedata.c', 'boot/handoff/pw3_plan.c'], False),
     ('device-data-fdt', 'c', ['-DPW_DEVICE_TREE', 'boot/devicedata/tests/devicedata_fdt_test.c',
                               'boot/devicedata/devicedata.c', 'boot/handoff/pw3_plan.c',
-                              'boot/handoff/pw4_fdt.c'], False),
+                              'boot/handoff/pw4_fdt.c', 'boot/handoff/sha256.c'], False),
+    # The PW4's identity check and device archive, made on the device where the
+    # development jumps made them on a computer (porting/make-device-archive.py).
+    ('device-data-tree', 'c', ['-DPW_DEVICE_TREE', 'boot/devicedata/tests/devicedata_tree_test.c',
+                               'boot/devicedata/devicedata.c', 'boot/handoff/pw3_plan.c',
+                               'boot/handoff/pw4_fdt.c', 'boot/handoff/sha256.c'], False),
     ('user-log', 'c', ['boot/launcher/tests/userlog_test.c', 'boot/launcher/userlog.c'], False),
+    # The same filter as the PW4's helper is built (its eMMC is mmc1, its Wi-Fi mmc0).
+    ('user-log-pw4', 'c', ['-DCHECK_PROFILE=3', 'boot/launcher/tests/userlog_pw4_test.c',
+                           'boot/launcher/userlog.c'], False),
     ('report-area', 'c', ['-Idevice/amazon/pw3/report', 'boot/launcher/tests/report_test.c'], False),
     # The report PID 1 writes when it refuses to start. It is the path that only
     # runs after something has already gone wrong, so without this it would
