@@ -86,7 +86,7 @@
 
 ### 4.1 Sanctuary（主方法）
 
-维护者的 Kindle 第十代（`5.18.1.1.1`）就是用它越狱的。**全程在 Kindle 上，不用电脑，不用登录亚马逊账号。**
+维护者 2026 年 11 月在 Kindle 第十代 `5.18.1.1.1` 上按这套正常流程重新越狱过一次，走通了。**全程在 Kindle 上，不用电脑，不用登录亚马逊账号。**
 原教程：中文 <https://bookfere.com/post/1190.html>；英文 <https://kindlemodding.org/jailbreaking/Sanctuary/>。
 步骤以原教程为准，原页面改了听原页面的。
 
