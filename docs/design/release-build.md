@@ -499,7 +499,7 @@ Android 8.1 可以要求"特权应用拿 `signature|privileged` 权限必须在
 2. 在 `user` 构建上重跑本文第三、四节的检查。
 3. GPL 源码包（`tools/collect-copyleft-sources.py`）与镜像一起发布。
 4. `tools/check-image-references.py`：镜像里每个 init `.rc` 点名的程序都在、每个动态库都在。2026-10-19 的 `user` 镜像上 59 个程序、4311 处库引用，一个不缺。
-5. 入口回执里 `"entry"` 是 `release`，命令行里只有 `boot/build_entry.py` 的 `CMDLINE_ANDROID` 列出的参数。测试入口和它的脚手架已经删除，`build_entry.py` 不再接受 `--test`；核对时确认命令行里没有任何 `androidboot.pw3.` 开头的参数。
+5. 入口回执里 `"entry"` 是 `release`，命令行里只有机型配置 `entry.cmdline_android` 列出的参数（`boot/profiles/<机型>.json`）。测试入口和它的脚手架已经删除，`build_entry.py` 不再接受 `--test`；核对时确认命令行里没有任何 `androidboot.pw3.` 开头的参数。
 
 ### 八、使用者交出去的那个文件夹里有什么（2026-10-20 实测）
 

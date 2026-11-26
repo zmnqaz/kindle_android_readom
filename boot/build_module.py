@@ -132,7 +132,13 @@ def main():
     if footprint['input_sha256']['arch/arm/boot/zImage'] != sha(kernel):
         sys.exit('the footprint is of another kernel than --kernel')
     envelope = footprint['page_rounded_envelope']
-    work = (Path('/home/builder/pw3-boot-module') if platform.node() == 'lima-pw3' else a.output.resolve().parent / '.work') / a.output.name
+    # The module is compiled in a directory of a fixed name: the path of its
+    # sources is in the module (__FILE__ in WARN and BUG), so a build in a
+    # directory named after the entry would make the second of two builds of
+    # one release a different module, and the Readom.sh a different file.
+    # READOM_MODULE_WORK is build_entry.py's on another host than the VM.
+    root = os.environ.get('READOM_MODULE_WORK') or ('/home/builder/pw3-boot-module' if platform.node() == 'lima-pw3' else None)
+    work = (Path(root) if root else a.output.resolve().parent / '.work') / a.output.name
     if work.exists():
         shutil.rmtree(work)
     work.mkdir(parents=True)

@@ -58,5 +58,56 @@
       "sha256": "ba9491d55a253991c4260fa880a2fc0b59b35369449bcae4ecbb6d71eab8a2cc"
     }
   },
-  "stock_functions_source": "function bodies of the stock 5.16.2.1.1 kernel (image sha256 3915c4c0d09566d674a8d2b4ca249292a056e882d5291fe3997f1dc6ca49e02d), read from a device's own eMMC; only their sizes and hashes are kept"
+  "stock_functions_source": "function bodies of the stock 5.16.2.1.1 kernel (image sha256 3915c4c0d09566d674a8d2b4ca249292a056e882d5291fe3997f1dc6ca49e02d), read from a device's own eMMC; only their sizes and hashes are kept",
+  "entry": {
+    "handoff_init": "pw3-handoff-init",
+    "handoff_dir": "pw3-handoff",
+    "handoff_modules": [
+      "mxc_epdc_fb.ko"
+    ],
+    "cmdline_android": [
+      "loglevel=1",
+      "panic=5",
+      "rdinit=/pw3-testfile-init",
+      "androidboot.hardware=pw3",
+      "androidboot.init_rc=/init.pw3-main.rc"
+    ],
+    "device_names": [
+      "adb_keys",
+      "firmware",
+      "pw3-preinit.conf",
+      "pw3-testdata.conf"
+    ],
+    "init_kernel_release": false,
+    "cache_audit": "stock",
+    "data_format": 1,
+    "data_bytes": 1879048192
+  },
+  "entry_why": "what boot/build_entry.py puts into the public initramfs and after the stock command line: PID 1 of the initramfs (boot/handoff-init/<handoff_init>.c, compiled by the build), the kernel modules it loads from /<handoff_dir>, the keys after cmdline_base (the reasons are in the comment above PROFILE in build_entry.py), and the top-level names the device archive owns, which the public ramdisk must not carry. init_kernel_release: whether the build passes the kernel release to the init program (-DKERNEL_RELEASE) rather than relying on the one written into its source",
+  "stock_files": {
+    "eips": {
+      "path": "/usr/sbin/eips",
+      "bytes": 62176,
+      "sha256": "73eb0d2532f9c899e98fb8feacb7a085ab0652f628f1c2c7b2e2d1cefae3f4ae"
+    },
+    "original_boot": [
+      {
+        "path": "/sbin/init",
+        "bytes": 1360,
+        "sha256": "ad624cbad3090bf15e65c8420a4e451ee10fd067a40b1bfe662965e82d932d0a"
+      },
+      {
+        "path": "/etc/upstart/init.sh",
+        "bytes": 1360,
+        "sha256": "ad624cbad3090bf15e65c8420a4e451ee10fd067a40b1bfe662965e82d932d0a"
+      },
+      {
+        "path": "/sbin/init.exe",
+        "bytes": 111824,
+        "sha256": "9fcbbf735c2fd4d7758ebdbf836c79c61b405867d28d4488d09315f80e21d2cf"
+      }
+    ]
+  },
+  "stock_files_why": "the stock files the entry checks before it does anything (boot/launcher/helper.c, launcher-template.sh): eips, which draws every screen, so a screen is only trusted when it is the stock one; and the stock boot chain, which is checked unchanged before and after the suspend cycle (original_boot). Read from the device itself; build_launcher.py refuses a profile with a value missing",
+  "entry_data_why": "data_format and data_bytes: the data image an installer of this model keeps (installer/README.md, \"state\"): format 1, Android 8.1 with a 1.75 GiB /data (device/amazon/pw3/BoardConfig.mk). build_launcher.py refuses a payload of another format or size, and build_entry.py a --data of another size"
 }

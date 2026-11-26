@@ -5,10 +5,17 @@ script (launcher/launcher-template.sh) carrying a static helper, which carries
 the handoff module, the kernel and the public initramfs. Nothing in it belongs
 to a device; the helper adds the device's part on the device (devicedata/).
 
-Usage: build_launcher.py --module DIR --kernel ZIMAGE --public-initramfs FILE --cmdline TEXTFILE
-                         --preinit-conf FILE [--data PATH:BYTES] --name FILE.sh --title TITLE --output DIR
+Usage: build_launcher.py [--profile FILE] --module DIR --kernel ZIMAGE --public-initramfs FILE
+                         --cmdline TEXTFILE --preinit-conf FILE [--data PATH:BYTES] --name FILE.sh
+                         --title TITLE --output DIR [--dev-unpinned]
                          [--installer DIR --screens DIR --system-image FILE --release-url URL
                           --ca-bundle FILE --zstd-archive FILE]
+  --profile        the model and stock firmware the module was built for (boot/profiles/;
+                   the PW3 one when not given): its stock files, kernel and model names
+  --dev-unpinned   build although the profile's stock_files are not all read yet. The helper
+                   then prints the size and SHA256 of each one it finds instead of refusing
+                   a mismatch; the receipt says stock_pins_complete: false. For reading those
+                   values on a development device, never for a release
   --module         output of build_module.py for the same kernel, initramfs and command line
   --preinit-conf   pw3-preinit.conf without the device's fat_* and block= lines
   --data           data image (relative to the user FAT) and its size, for pw3-testdata.conf
@@ -22,14 +29,17 @@ Usage: build_launcher.py --module DIR --kernel ZIMAGE --public-initramfs FILE --
   --ca-bundle      the CA bundle of source-lock.json "installer_ca_bundle", for the download
   --zstd-archive   the zstd release of source-lock.json "installer_zstd"
 """
-import argparse, base64, hashlib, json, os, platform, re, shutil, subprocess, sys, tarfile
+import argparse, base64, hashlib, json, os, re, shutil, subprocess, sys, tarfile
 import urllib.parse
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 PORT = HERE.parent
-MUSL = '/home/builder/toolchains/musl-arm/bin/musl-gcc'
-READELF = '/home/builder/toolchains/aosp-arm-gcc49/bin/arm-linux-androideabi-readelf'
+sys.path.insert(0, str(HERE))
+import build_host   # noqa: E402
+
+PROFILE = HERE / 'profiles/pw3-5.16.2.1.1.json'
+HOST = build_host.DEFAULTS   # build_host.load(), in main()
 INITRD_START = 0x84000000   # PHYS_OFFSET + 64 MiB: the module's initramfs destination
 ZSTD_FLAGS = ['-DZSTD_LEGACY_SUPPORT=0', '-DZSTD_TRACE=0', '-DZSTD_DISABLE_ASM', '-DDEBUGLEVEL=0']
 
@@ -258,7 +268,14 @@ def installer_inputs(a, conf, data_path, data_size):
     # E101 names the model and firmware this build is for, and a screen that
     # named another one would send someone looking for the wrong thing. The
     # names come from the profile both sides read (boot/profiles/).
-    profile = json.loads((HERE / 'profiles/pw3-5.16.2.1.1.json').read_text())
+    profile = json.loads(a.profile.read_text())
+    # The data image is the model's own (the profile's entry: format and size),
+    # and an installer keeps an existing one only of its release's format: a
+    # payload built with the other model's --data-format or BoardConfig would
+    # install, and then refuse every device that had the right one (E304).
+    if manifest['data_format'] != profile['entry']['data_format'] or data['unpacked_bytes'] != profile['entry']['data_bytes']:
+        sys.exit('the payload\'s data image is format %r of %d bytes; this model\'s is format %r of %d bytes'
+                 % (manifest['data_format'], data['unpacked_bytes'], profile['entry']['data_format'], profile['entry']['data_bytes']))
     if screens.get('supported') != [profile['supported_zh'], profile['supported_en']]:
         sys.exit('the screens were rendered for another model: ' + str(screens.get('supported')))
     # --release-url is the directory the asset sits in; the payload's own name is
@@ -312,14 +329,53 @@ def zstd_objects(archive, out):
     objects = []
     for c in sorted(list((lib / 'common').glob('*.c')) + list((lib / 'decompress').glob('*.c'))):
         o = out / 'zstd' / (c.parent.name + '-' + c.stem + '.o')
-        subprocess.run([MUSL, '-std=gnu11', '-O2', '-c', *ZSTD_FLAGS, '-I', str(lib), '-I', str(lib / 'common'), str(c),
+        subprocess.run([HOST['musl_gcc'], '-std=gnu11', '-O2', '-c', *ZSTD_FLAGS, '-I', str(lib), '-I', str(lib / 'common'), str(c),
                         '-o', str(o)], check=True)
         objects.append(str(o))
     return lib, objects
 
 
+def stock_files_header(profile, unpinned):
+    """stock-files.h for the helper: the stock kernel's uname, and the stock
+    files it checks (the profile's stock_files), as calls of a check function
+    the helper passes in -- exact_file(path, sha256, bytes). A value the profile
+    does not have yet is refused, or with --dev-unpinned becomes a call of
+    stock_unpinned(path, needed), which prints what the device has.
+
+    For the PW3 profile this expands to the same calls, with the same
+    literals, that helper.c carried before the values moved to the profile."""
+    files = profile['stock_files']
+    missing = [f['path'] for f in [files['eips']] + files['original_boot'] if not (f['sha256'] and f['bytes'])]
+    if missing and not unpinned:
+        sys.exit('the profile\'s stock_files are not read yet: %s. Read them on the device (sha256sum, stat -c %%s) '
+                 'and fill them in, or build a development entry with --dev-unpinned' % ', '.join(missing))
+    if unpinned and not missing:
+        sys.exit('--dev-unpinned is for a profile with stock_files to read; this one has them all')
+
+    def call(f, needed):
+        if not re.fullmatch(r'/[A-Za-z0-9._/-]+', f['path']):
+            sys.exit('stock file path: %r' % f['path'])
+        if f['sha256'] and f['bytes']:
+            if not re.fullmatch(r'[0-9a-f]{64}', f['sha256']) or not isinstance(f['bytes'], int) or f['bytes'] <= 0:
+                sys.exit('stock file pin: %r' % f)
+            return 'check(%s, %s, %d)' % (c_string(f['path']), c_string(f['sha256']), f['bytes'])
+        return '((void)check, stock_unpinned(%s, %d))' % (c_string(f['path']), needed)
+    lines = ['#pragma once', '/* Generated by boot/build_launcher.py from the profile\'s stock_files; do not edit. */',
+             '#define STOCK_KERNEL_RELEASE %s' % c_string(profile['stock_kernel_release']),
+             '#define STOCK_KERNEL_VERSION %s' % c_string(profile['stock_kernel_version']),
+             '#define STOCK_EIPS(check) %s' % call(files['eips'], 1),
+             '#define STOCK_ORIGINAL_BOOT(check) (%s)' % ' && '.join(call(f, 0) for f in files['original_boot']),
+             '#define STOCK_PINS_COMPLETE %d' % (not missing), '']
+    if missing:
+        lines.insert(2, '#define PW_STOCK_UNPINNED 1')
+    return '\n'.join(lines), not missing, files['eips']['sha256']
+
+
 def main():
+    global HOST
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument('--profile', type=Path, default=PROFILE)
+    ap.add_argument('--dev-unpinned', action='store_true')
     for name in ['module', 'kernel', 'public-initramfs', 'cmdline', 'preinit-conf', 'output']:
         ap.add_argument('--' + name, type=Path, required=True)
     ap.add_argument('--data')
@@ -330,8 +386,7 @@ def main():
     ap.add_argument('--name', required=True)
     ap.add_argument('--title', required=True)
     a = ap.parse_args()
-    if platform.node() != 'lima-pw3' or os.geteuid() == 0:
-        sys.exit('Run as the builder in the build VM.')
+    HOST = build_host.load('Run as the builder in the build VM.')
     if not re.fullmatch(r'[A-Za-z0-9._-]+\.sh', a.name) or not re.fullmatch(r'[A-Za-z0-9 ._-]+', a.title):
         sys.exit('name: ASCII file name ending in .sh; title: ASCII letters, digits, spaces')
     receipt = json.loads((a.module / 'build-result.json').read_text())
@@ -339,18 +394,31 @@ def main():
     kernel, public = a.kernel.read_bytes(), a.public_initramfs.read_bytes()
     cmdline = a.cmdline.read_text().rstrip('\n')
     conf = a.preinit_conf.read_text()
-    # Profile 1 is the Kindle's stock kernel; profile 2 is the QEMU one, which
+    # Profile 1 is the PW3's stock kernel; profile 2 is the QEMU one, which
     # launcher/helper.c has its own branches for (CHECK_PROFILE == 2: the kernel
     # it refuses to run under, and the /test-fault-stage checkpoint the client
     # test drives). Those branches had no builder: this refused anything but
     # profile 1, so boot/handoff/tests/run_client_test.py -- the only test that
     # runs this helper and the launcher script on ARM, under the stock shell,
     # against a FAT disk -- could not be given anything to run.
-    if receipt['module_profile'] not in (1, 2):
+    # Profile 3 is the PW4's stock kernel (device tree: dd_fdt in place of
+    # dd_atags), and only as a release entry: it has no test build of its own.
+    if receipt['module_profile'] not in (1, 2, 3):
         sys.exit('unknown module profile: %r' % receipt['module_profile'])
     virtual = receipt['module_profile'] == 2
+    device_tree = receipt['module_profile'] == 3
     if virtual and a.installer:
         sys.exit('a release entry installs a system image, which is the stock profile')
+    if device_tree and not a.installer:
+        sys.exit('profile 3 is built as a release entry only (--installer)')
+    profile = json.loads(a.profile.read_text())
+    if not virtual and profile['module_profile'] != receipt['module_profile']:
+        sys.exit('--profile is for module profile %r and the module for %r'
+                 % (profile['module_profile'], receipt['module_profile']))
+    # The QEMU profile checks no stock files; it is built with the PW3 values,
+    # which it never reads.
+    stock_h, pins_complete, eips_sha = stock_files_header(
+        profile if not virtual else json.loads(PROFILE.read_text()), a.dev_unpinned and not virtual)
     if (sha(module) != receipt['modules_sha256']['pw3_first_kernel'] or sha(kernel) != receipt['kernel']['sha256'] or
             sha(public) != receipt['public_initramfs']['sha256'] or cmdline != receipt['cmdline']):
         sys.exit('the module was built for another kernel, initramfs or command line')
@@ -389,12 +457,13 @@ def main():
                '#define BUILD_DATA_PATH %s' % (c_string(data_path) if data_path else 'NULL'),
                '#define BUILD_DATA_SIZE %du' % data_size]
     (out / 'payload.h').write_text('#pragma once\n' + '\n'.join(header) + '\n')
+    (out / 'stock-files.h').write_text(stock_h)
     (out / 'payload.S').write_text(asm)
     helper = out / 'helper'
     # The virtual profile says what it is doing in its own words ("FIRST KERNEL
     # CHECK", "BOOT ATTEMPT") rather than Android's, so it is the one build that
     # does not ask for PW3_ANDROID_FIRST_BOOT.
-    command = [MUSL, '-std=gnu11', '-static', '-O2', '-Wall', '-Wextra', '-Werror',
+    command = [HOST['musl_gcc'], '-std=gnu11', '-static', '-O2', '-Wall', '-Wextra', '-Werror',
                '-DCHECK_PROFILE=%d' % receipt['module_profile']] + \
               ([] if virtual else ['-DPW3_ANDROID_FIRST_BOOT']) + [
                '-I', str(out), '-I', str(HERE / 'launcher'), '-I', str(HERE / 'handoff'), '-I', str(HERE / 'devicedata'),
@@ -402,6 +471,11 @@ def main():
                str(HERE / 'launcher/helper.c'), str(HERE / 'launcher/userlog.c'),
                str(HERE / 'handoff/sha256.c'), str(HERE / 'devicedata/devicedata.c'),
                str(out / 'payload.S'), '-o', str(helper)]
+    if device_tree:
+        # The device tree is made on the device from the stock one
+        # (devicedata.h: dd_fdt needs these two and the define).
+        command[1:1] = ['-DPW_DEVICE_TREE']
+        command[-3:-3] = [str(HERE / 'handoff/pw4_fdt.c'), str(HERE / 'handoff/pw3_plan.c')]
     if release_h:
         (out / 'release.h').write_text(release_h)
         lib, objects = zstd_objects(a.zstd_archive, out)
@@ -442,17 +516,17 @@ def main():
     objects = []
     for source in inputs:
         obj = objdir / (Path(source).name + '.o')
-        subprocess.run([MUSL, *flags, '-c', source, '-o', str(obj)], check=True)
+        subprocess.run([HOST['musl_gcc'], *flags, '-c', source, '-o', str(obj)], check=True)
         objects.append(str(obj))
-    subprocess.run([MUSL, *flags, *objects, *prebuilt, '-o', str(helper)], check=True)
+    subprocess.run([HOST['musl_gcc'], *flags, *objects, *prebuilt, '-o', str(helper)], check=True)
     random_names = [line.split()[-1] for line in
-                    subprocess.check_output([READELF, '-s', str(helper)], text=True).splitlines()
+                    subprocess.check_output([HOST['arm_tools'] + 'readelf', '-s', str(helper)], text=True).splitlines()
                     if ' FILE ' in line]
     stray = [n for n in random_names if re.fullmatch(r'cc[A-Za-z0-9]{6}\.o', n)]
     if stray:
         sys.exit('the helper still carries a compiler temporary name, so it '
                  'cannot be rebuilt and compared: ' + ', '.join(stray))
-    elf = subprocess.check_output([READELF, '-h', '-lW', str(helper)], text=True)
+    elf = subprocess.check_output([HOST['arm_tools'] + 'readelf', '-h', '-lW', str(helper)], text=True)
     if 'INTERP' in elf or 'ARM' not in elf:
         sys.exit('the helper is not a static ARM executable')
     template = (HERE / 'launcher/launcher-template.sh').read_text()
@@ -484,7 +558,11 @@ def main():
         if template.count(literal) != 1:
             sys.exit('launcher-template.sh no longer carries this line exactly once, so '
                      'substituting it would do nothing: ' + literal)
+    # The stock eips the launcher's own last line is drawn with, checked as the
+    # helper checks it. A development build that has no hash for it yet draws
+    # with whatever eips the device has (an empty hash compares equal to itself).
     script = (template.replace(title_from, '# Name: ' + a.title)
+              .replace('@EIPS_SHA256@', eips_sha if pins_complete else '"$eips_hash"')
               .replace(self_from, 'SELF=/mnt/us/documents/' + a.name)
               .replace('@STOPPED_MESSAGE@', stopped)
               .replace('@LOGPREFIX@', prefix).replace('@LOGPARENT@', prefix.rsplit('/', 1)[0])
@@ -492,6 +570,8 @@ def main():
     head = script.split('\n__PW3_FIRST_KERNEL_HELPER_BASE64__\n', 1)[0]
     if '@LOG' in head:
         sys.exit('the launcher script still has a log placeholder in it')
+    if '@EIPS_SHA256@' in head:
+        sys.exit('the launcher script still has the eips placeholder in it')
     if '@STOPPED_MESSAGE@' in head:
         sys.exit('the launcher script still has the stopped-message placeholder in it')
     if ('\nSELF=/mnt/us/documents/' + a.name + '\n') not in head:
@@ -508,7 +588,8 @@ def main():
     result = {'schema': 1, 'launcher': a.name, 'launcher_bytes': launcher.stat().st_size, 'launcher_sha256': sha(launcher.read_bytes()),
               'helper_sha256': sha(helper.read_bytes()), 'module_receipt_sha256': sha((a.module / 'build-result.json').read_bytes()),
               'kernel_sha256': sha(kernel), 'public_initramfs_sha256': sha(public), 'cmdline': cmdline,
-              'data_path': data_path, 'data_size': data_size, 'installer': installer_receipt, 'contains_device_data': False}
+              'data_path': data_path, 'data_size': data_size, 'installer': installer_receipt,
+              'profile': a.profile.name, 'stock_pins_complete': pins_complete, 'contains_device_data': False}
     (out / 'build-result.json').write_text(json.dumps(result, indent=2) + '\n')
     print(json.dumps(result, indent=1))
 

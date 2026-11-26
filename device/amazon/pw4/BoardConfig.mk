@@ -3,6 +3,17 @@
 # same family (Cortex-A9, i.MX6SL vs SLL) and so is the panel (1072x1448).
 include device/amazon/pw3/BoardConfig.mk
 
+# /data is 2 GiB on the PW4, not the PW3's 1.75 GiB (the owner's decision,
+# 2026-11-26): the PW4 has an 8 GB eMMC whose user volume is about 6.3 GB
+# (porting/README.md, storage), so the PW3's arithmetic -- a 3.27 GB volume on
+# which 256 MiB more would keep readers with books from installing at all --
+# does not apply, and 2 GiB is what the development images ran with. A clean
+# install then needs 512 MiB + 2 GiB + 64 MiB = 2.5625 GiB (2.75 GB) free.
+# It is the PW4's own data format (boot/profiles/pw4-5.18.1.1.1.json,
+# entry.data_format), so an installer never takes one model's data image for
+# the other's; the PW3's size and format are unchanged.
+BOARD_USERDATAIMAGE_PARTITION_SIZE := 2147483648
+
 # PW4 policy additions (sepolicy/pw4_hardware.te).
 BOARD_SEPOLICY_DIRS += device/amazon/pw4/sepolicy
 

@@ -2,8 +2,10 @@
 """Audit the compiled ARM boundary, including regressions hidden by flat-cache QEMU."""
 import argparse,hashlib,json,re,subprocess
 from pathlib import Path
-p=argparse.ArgumentParser();p.add_argument('--module',type=Path,required=True);p.add_argument('--profile',choices=['stock','qemu'],required=True);p.add_argument('--output',type=Path,required=True);a=p.parse_args()
-prefix='/home/builder/toolchains/aosp-arm-gcc49/bin/arm-linux-androideabi-'
+p=argparse.ArgumentParser();p.add_argument('--module',type=Path,required=True);p.add_argument('--profile',choices=['stock','qemu'],required=True);p.add_argument('--output',type=Path,required=True)
+# The AOSP binutils prefix; the build VM's unless the caller is on another host (boot/build_host.py).
+p.add_argument('--tools-prefix',default='/home/builder/toolchains/aosp-arm-gcc49/bin/arm-linux-androideabi-');a=p.parse_args()
+prefix=a.tools_prefix
 syms={}
 for line in subprocess.check_output([prefix+'nm','-S','--defined-only',str(a.module)],text=True).splitlines():
  v=line.split()

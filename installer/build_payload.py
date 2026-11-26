@@ -17,24 +17,33 @@ so the Kindle needs one decoder and 8 MiB of memory for it.
 The data image is made here, from an empty directory, by the tool and with the arguments
 the build uses for userdata.img. Run this on the tree that produced the export.
 
-Usage: build_payload.py --export DIR --data-format N --version VERSION --output DIR
+Usage: build_payload.py [--product NAME] --export DIR --data-format N --version VERSION --output DIR
+  --product      the AOSP product the export was built as (device/amazon/NAME): its
+                 BoardConfig.mk sizes the data image and its out/ directory labels it;
+                 pw3 when not given
   --export       export-aosp-images.py output (system.raw.img)
   --data-format  what Android keeps in /data and how big it is: a release keeps an existing
-                 data image only of its own format (1: Android 8.1, 1.75 GiB)
+                 data image only of its own format (PW3: 1, Android 8.1, 1.75 GiB; PW4: 41,
+                 Android 8.1, 2 GiB). The profile's entry.data_format, which
+                 build_launcher.py checks the manifest against
+
+The AOSP out/ directory is the build host's (boot/build_host.py: the PW3 build VM
+unless READOM_BUILD_HOST names a host file).
 """
-import argparse, datetime, hashlib, json, os, platform, re, struct, subprocess, sys, tempfile
+import argparse, datetime, hashlib, json, re, struct, subprocess, sys, tempfile
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 PORT = HERE.parent
+sys.path.insert(0, str(PORT / 'boot'))
+import build_host   # noqa: E402
+
+# Set in main() from --product and the build host. The build tree
+# (tools/build-aosp-system.sh): the host tool that makes every ext4 image here,
+# and the labels it gives them. The x86 host binaries run in the arm VM under
+# its interpreter, as they do in the build.
 BOARD_CONFIG = PORT / 'device/amazon/pw3/BoardConfig.mk'
-# The build tree (tools/build-aosp-system.sh): the host tool that makes every ext4 image
-# here, and the labels it gives them. The x86 host binaries run in the arm VM under its
-# interpreter, as they do in the build.
-AOSP_OUT = Path('/home/builder/android-src/out')
-PRODUCT = AOSP_OUT / 'target/product/pw3'
-MAKE_EXT4FS = AOSP_OUT / 'host/linux-x86/bin/make_ext4fs'
-FILE_CONTEXTS = PRODUCT / 'obj/ETC/file_contexts.bin_intermediates/file_contexts.bin'
+PRODUCT = MAKE_EXT4FS = FILE_CONTEXTS = None
 # What an ext4 holds when nothing has been put in it: inodes 1 to 10 are ext4's own and
 # 11 is lost+found. One more means a file, and a file here reaches every device.
 EMPTY_INODES = 11
@@ -57,12 +66,28 @@ def compress(raw, out):
         sys.exit('%s needs a %d byte window; pw3-unpack accepts at most %d' % (out.name, window, WINDOW))
 
 
-def data_bytes():
-    """The size of the data image, from the configuration the system was built with."""
-    found = re.search(r'^BOARD_USERDATAIMAGE_PARTITION_SIZE\s*:=\s*(\d+)\s*$', BOARD_CONFIG.read_text(), re.M)
-    if not found:
+def data_bytes(board=None):
+    """The size of the data image, from the configuration the system was built with.
+
+    A board that takes another's configuration (the PW4's starts with `include
+    device/amazon/pw3/BoardConfig.mk`) is read the way make reads it: the
+    included file first, then the lines after the include, the last assignment
+    standing."""
+    board = board or BOARD_CONFIG
+    value = None
+    for line in board.read_text().splitlines():
+        included = re.fullmatch(r'\s*-?include\s+(device/amazon/[a-z0-9]+/BoardConfig\.mk)\s*', line)
+        if included:
+            if PORT / included.group(1) == board:
+                sys.exit('%s includes itself' % board)
+            inner = data_bytes(PORT / included.group(1)) if (PORT / included.group(1)).is_file() else None
+            value = inner if inner is not None else value
+        found = re.fullmatch(r'BOARD_USERDATAIMAGE_PARTITION_SIZE\s*:=\s*(\d+)\s*', line)
+        if found:
+            value = int(found.group(1))
+    if board == BOARD_CONFIG and value is None:
         sys.exit('no BOARD_USERDATAIMAGE_PARTITION_SIZE in ' + str(BOARD_CONFIG))
-    return int(found.group(1))
+    return value
 
 
 def empty_data_image(out, size):
@@ -108,14 +133,21 @@ def entry(packed, raw, raw_sha):
 
 
 def main():
+    global BOARD_CONFIG, PRODUCT, MAKE_EXT4FS, FILE_CONTEXTS
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument('--product', default='pw3')
     ap.add_argument('--export', type=Path, required=True)
     ap.add_argument('--data-format', type=int, required=True)
     ap.add_argument('--version', required=True)
     ap.add_argument('--output', type=Path, required=True)
     a = ap.parse_args()
-    if platform.node() != 'lima-pw3' or os.geteuid() == 0:
-        sys.exit('Run as the builder in the build VM.')
+    host = build_host.load('Run as the builder in the build VM.')
+    if not re.fullmatch(r'[a-z0-9]+', a.product) or not (PORT / 'device/amazon' / a.product / 'BoardConfig.mk').is_file():
+        sys.exit('no product device/amazon/%s' % a.product)
+    BOARD_CONFIG = PORT / 'device/amazon' / a.product / 'BoardConfig.mk'
+    PRODUCT = Path(host['aosp_out']) / 'target/product' / a.product
+    MAKE_EXT4FS = Path(host['aosp_out']) / 'host/linux-x86/bin/make_ext4fs'
+    FILE_CONTEXTS = PRODUCT / 'obj/ETC/file_contexts.bin_intermediates/file_contexts.bin'
     export = json.loads((a.export / 'build-result.json').read_text())
     system = a.export / 'system.raw.img'
     if sha_file(system) != export['files']['system.raw.img']['sha256']:

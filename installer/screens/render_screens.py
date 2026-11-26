@@ -16,8 +16,11 @@ Outputs:
 Usage: render_screens.py --manifest PAYLOAD/manifest.json --cjk-font NotoSansCJK-Regular.ttc
                          --latin-font Roboto-Regular.ttf --latin-title-font Roboto-Medium.ttf --output DIR
 """
-import argparse, hashlib, json, os, platform, re, subprocess, sys
+import argparse, hashlib, json, re, subprocess, sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'boot'))
+import build_host   # noqa: E402  the build host's check (boot/build_host.py)
 
 from PIL import Image, ImageDraw, ImageFont
 
@@ -487,8 +490,7 @@ def main():
     for name in ['manifest', 'profile', 'cjk-font', 'latin-font', 'latin-title-font', 'output']:
         ap.add_argument('--' + name, type=Path, required=True)
     a = ap.parse_args()
-    if platform.node() != 'lima-pw3' or os.geteuid() == 0:
-        sys.exit('Run as the builder in the build VM.')
+    build_host.load('Run as the builder in the build VM.')
     manifest = json.loads(a.manifest.read_text())
     payload_mb = round(manifest['files']['system']['bytes'] / 1e6)
     payload_name = manifest['files']['system']['name']

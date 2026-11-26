@@ -534,7 +534,7 @@ What would change this: the day a privileged application somebody else wrote is 
 2. Run sections 3 and 4 again on the `user` build.
 3. Publish the GPL source package (`tools/collect-copyleft-sources.py`) with the image.
 4. `tools/check-image-references.py`: every program an init `.rc` in the image names is there, and so is every shared library. On the `user` image of 2026-10-19: 59 programs, 4311 library references, nothing missing.
-5. `"entry"` in the entry receipt is `release`, and the command line holds only the arguments `CMDLINE_ANDROID` in `boot/build_entry.py` lists. The test entry and its scaffolding have been removed and `build_entry.py` no longer accepts `--test`; check that the command line has no argument beginning with `androidboot.pw3.`.
+5. `"entry"` in the entry receipt is `release`, and the command line holds only the arguments the profile's `entry.cmdline_android` lists (`boot/profiles/<model>.json`). The test entry and its scaffolding have been removed and `build_entry.py` no longer accepts `--test`; check that the command line has no argument beginning with `androidboot.pw3.`.
 
 ### 8. What is in the folder the reader hands over (measured 2026-10-20)
 

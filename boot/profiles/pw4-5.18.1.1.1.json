@@ -46,5 +46,57 @@
       "sha256": "b5337f06d4acbbb2581785f37189c91a4eb69b65ae87d83a7aa5f6d80ac30ef9"
     }
   },
-  "stock_functions_source": "sizes: distance to the next text symbol in the device's /proc/kallsyms (80069564, 800229b8, 80021cec); hashes: of those bytes in the device's own memory (readom-probe2 /dev/mem dumps, 2026-11-23), not of a rebuild, whose code differs. The dump's outer_cache has flush_all = 800229b8 and disable = 80021cec and no write_sec, so the L2 is driven from the secure world directly; l2c310_disable tail-calls l2c_disable (800219c4), which is not pinned"
+  "stock_functions_source": "sizes: distance to the next text symbol in the device's /proc/kallsyms (80069564, 800229b8, 80021cec); hashes: of those bytes in the device's own memory (readom-probe2 /dev/mem dumps, 2026-11-23), not of a rebuild, whose code differs. The dump's outer_cache has flush_all = 800229b8 and disable = 80021cec and no write_sec, so the L2 is driven from the secure world directly; l2c310_disable tail-calls l2c_disable (800219c4), which is not pinned",
+  "entry": {
+    "handoff_init": "pw4-handoff-init",
+    "handoff_dir": "pw4-handoff",
+    "handoff_modules": [
+      "mxc_epdc_v2_fb.ko",
+      "gt9xx-ts.ko"
+    ],
+    "cmdline_android": [
+      "loglevel=1",
+      "rdinit=/pw3-testfile-init",
+      "androidboot.hardware=pw3",
+      "androidboot.init_rc=/init.pw3-main.rc"
+    ],
+    "device_names": [
+      "adb_keys",
+      "firmware",
+      "lib",
+      "pw3-preinit.conf",
+      "pw3-testdata.conf"
+    ],
+    "init_kernel_release": true,
+    "cache_audit": "stock",
+    "data_format": 41,
+    "data_bytes": 2147483648
+  },
+  "entry_why": "as the PW3 profile's, for the release entry: the PW4 PID 1 loads the v2 EPDC driver and the Goodix touch driver (device/amazon/pw4/porting/handoff.md, Jump 10), panic=5 is already in cmdline_base, and the device archive owns lib/ (lib/firmware/imx/epdc/epdc_ED060KC4.fw, which the EPDC driver asks for) as well as firmware/. None of the development switches of porting/pack-initramfs.py (pw4_lockup, a TCP shell, adb keys, boot properties) is in a release entry. The kernel release is passed to pw4-handoff-init, which loads the drivers only under the kernel they were built for",
+  "stock_files": {
+    "eips": {
+      "path": "/usr/sbin/eips",
+      "bytes": null,
+      "sha256": null
+    },
+    "original_boot": [
+      {
+        "path": "/sbin/init",
+        "bytes": null,
+        "sha256": null
+      },
+      {
+        "path": "/etc/upstart/init.sh",
+        "bytes": null,
+        "sha256": null
+      },
+      {
+        "path": "/sbin/init.exe",
+        "bytes": null,
+        "sha256": null
+      }
+    ]
+  },
+  "stock_files_why": "as the PW3 profile's. NOT READ YET: no PW4 probe hashed these files, and which of the three boot files exist on 5.18.1.1.1 is not known either (on PW3 /sbin/init is a script that runs /sbin/init.exe). Read them on the device (sha256sum and stat -c %s) and fill them in, dropping a path the device does not have; build_launcher.py refuses a release while any is null, and --dev-unpinned builds a development entry that prints what it finds instead",
+  "entry_data_why": "data_format and data_bytes: the PW4's own data image, 2 GiB (device/amazon/pw4/BoardConfig.mk, the owner's decision of 2026-11-26), numbered apart from the PW3's format 1 -- 41, the PW4's first -- so that a manifest says which model's data it means. Format numbers only meet within one model (a Kindle of another model stops at E101 before its data is looked at); the number is distinct anyway, because it costs nothing, and a payload built with the other model's is then refused by build_launcher.py rather than installed"
 }
