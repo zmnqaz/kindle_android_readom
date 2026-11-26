@@ -177,3 +177,14 @@ preinit 改名 `.real`（同 `boot/build_entry.py`），公开 initramfs 由 `pa
   `/data/dalvik-cache` 里搬过地址的启动镜像副本，`cmd package compile -m speed` 微信读书在 570 s 被 dex2oat 的看门狗
   杀掉。`BoardConfig.mk` 现在用 `TARGET_SYSTEM_PROP` 指向 PW3 的那份。已有的数据镜像里要删一次
   `/data/dalvik-cache/arm/system@framework@boot*`：副本还在时 ART 仍优先用它，`-Xnorelocate` 不起作用。
+
+## 蓝牙（2026-11-26，分支 `port/pw4-bt`，内核分支 `bt-prep`）
+
+- **Jump 44**（只换内核）：`bt_pwr_ctrl` 的 rfkill（`/sys/devices/soc0/bt_pwr_ctrl/rfkill/rfkill0`）开关 10 次，UART1、UART3 中断不动；
+  ttymxc2 上 HCI 复位 200 次无失败，芯片名 `BCM43430A1`；加载原厂 btd 用的 `BCM4343A1_001.002.009.0152.0515.hcd`
+  后名字变为 "BCM4343A1 26MHz Class 1.5 Amazon eReader-0152"，921600 和 3 Mbaud 各 300 次复位无失败。
+- **Jump 45**（加蓝牙协议栈）：固件目录要全员可读（根文件系统此时只读，rc 里改属组无效）；还要声明
+  `android.hardware.bluetooth_le`，否则 BluetoothManagerService 停在 BLE_ON 不绑 GattService。"已连接的设备"页
+  因为没有 UsbService 崩溃（Settings 补丁 `0010`）。之后能打开蓝牙、配对 Bose 耳机（选不带 `LE-` 的条目），
+  微信读书听书从耳机出声，音频欠载 0；播放时单核基本占满（微信读书 80%、解码 22%、蓝牙 17%）。
+
