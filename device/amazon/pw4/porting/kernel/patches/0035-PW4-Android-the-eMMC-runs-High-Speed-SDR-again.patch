@@ -1,0 +1,34 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: pw4-port <pw4-port@localhost>
+Date: Thu, 26 Nov 2026 15:48:24 +0800
+Subject: [PATCH] PW4 Android: the eMMC runs High Speed SDR (again)
+
+With the uSDHC vendor registers restored (0034), DDR52 still gave CRC
+errors after repeated deep sleeps; SystemUI died on a SIGBUS from one and
+the screen stayed on the sleep picture (Jump 50). The restore stays.
+---
+ drivers/mmc/host/sdhci-esdhc-imx.c | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/drivers/mmc/host/sdhci-esdhc-imx.c b/drivers/mmc/host/sdhci-esdhc-imx.c
+index b2effeba..4384ef2b 100644
+--- a/drivers/mmc/host/sdhci-esdhc-imx.c
++++ b/drivers/mmc/host/sdhci-esdhc-imx.c
+@@ -1370,6 +1370,14 @@ static int sdhci_esdhc_imx_probe(struct platform_device *pdev)
+ 			host->mmc->pm_caps |= MMC_PM_KEEP_POWER;
+ 			host->mmc->pm_flags |= MMC_PM_KEEP_POWER;
+ 			host->mmc->caps2 |= MMC_CAP2_PW4_KEEP_AWAKE;
++			/*
++			 * High Speed SDR, not DDR52: even with the vendor
++			 * registers put back after a deep sleep (below), DDR52
++			 * reads failed with CRC errors after repeated sleeps;
++			 * SystemUI died on a SIGBUS from one and the screen stayed
++			 * on the sleep picture (Jump 50, 2026-11-26).
++			 */
++			host->mmc->caps &= ~(MMC_CAP_1_8V_DDR | MMC_CAP_1_2V_DDR);
+ 		}
+ #endif
+ 
+-- 
+2.53.0
+
