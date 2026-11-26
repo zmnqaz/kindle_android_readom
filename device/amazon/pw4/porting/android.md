@@ -93,7 +93,7 @@ preinit 改名 `.real`（同 `boot/build_entry.py`），公开 initramfs 由 `pa
 - 低电量：沿用 PW3 的 3450 mV 不改。PW4 驱动 3500 mV 报低电、3400 mV 报严重（原厂到这里关机），电量 0% 也定在 3400 mV，
   3450 正在两者之间。
 - 蓝牙：原厂不用 Linux 蓝牙栈，是 Broadcom 的 `bsa_server` 走 `/dev/ttymxc2`、加载 `.hcd` 固件。Readom 本来没有蓝牙，
-  要做是新增功能（蓝牙 HAL、协议栈、应用），先不做。
+  要做是新增功能（蓝牙 HAL、协议栈、应用），当时先不做。2026-11-26 已做，见下面「蓝牙」一节。
 - 还没动：`pw3-fg-state`（读 PW3 的 `wario_battery`，PW4 上只会记一行读不到）；休眠（`/sys/power/state` 有 `mem`）未测。
 
 **Jump 15–17（2026-11-24）：Wi-Fi、充电灯**。电源键、前光正常。
@@ -155,6 +155,8 @@ preinit 改名 `.real`（同 `boot/build_entry.py`），公开 initramfs 由 `pa
 - **微信读书慢**：和 PW3 一样受 1 GHz 单核限制（`docs/known-issues` 第 12 条）。刚装好时是 `quicken`（解释
   执行），后台编译任务要设备息屏空闲约 71 分钟才跑；PW4 上休眠还没调通，没验证它能否自己触发，可以手动
   `cmd package compile -m speed -f com.tencent.weread.eink`（约 20 分钟）。
+- **启动脚本**：模板现在是 `probe/ReadomJump46.sh`。每次尝试前先关 Wi-Fi，跳转被拒或提交时忙最多试三次；被拒时
+  USB 时钟开着（插着 USB 线）就不再重试，屏幕提示拔掉 USB 线再点。之后的 Jump 照它改。
 - **原厂长时间运行后跳转被拒**：原厂连续运行十几小时、用过 U 盘模式后，`pm_test=core` 挂起时很多时钟门没关
   （`gates_clear=0`，`ccgr4=ffffffff`），模块拒绝跳转（`RESULT REFUSED`）。重启原厂后再点就能跳，哪个驱动
   没关时钟没有查。
@@ -172,14 +174,14 @@ preinit 改名 `.real`（同 `boot/build_entry.py`），公开 initramfs 由 `pa
   0.1 s 内重新睡下，电源键唤醒，Wi-Fi 重连、触摸解锁，`/data` 无错误。** Jump 43（日常版，同一内核和系统）
   整夜息屏掉电 3%（2026-11-25 晚到 11-26 早，起点约 23%）。待做：插 USB 时的休眠。
   **测试 Jump 之前先在电脑上备份 `data.img`。**
-- 未做：蓝牙、`pw3-fg-state`。
+- 蓝牙能用了（2026-11-26 合入主线，见下面「蓝牙」一节），日常版 Jump 46 带蓝牙。未做：`pw3-fg-state`。
 - **PW4 没有带上 PW3 的 `system.prop`**（2026-11-25 发现并补上）：构建只取设备自己目录下的 `system.prop`，PW4 目录
   里没有，于是 `dalvik.vm.extra-opts=-Xnorelocate` 和 `dalvik.vm.dex2oat-flags=--no-watch-dog ...` 都没生效：ART 用的是
   `/data/dalvik-cache` 里搬过地址的启动镜像副本，`cmd package compile -m speed` 微信读书在 570 s 被 dex2oat 的看门狗
   杀掉。`BoardConfig.mk` 现在用 `TARGET_SYSTEM_PROP` 指向 PW3 的那份。已有的数据镜像里要删一次
   `/data/dalvik-cache/arm/system@framework@boot*`：副本还在时 ART 仍优先用它，`-Xnorelocate` 不起作用。
 
-## 蓝牙（2026-11-26，分支 `port/pw4-bt`，内核分支 `bt-prep`）
+## 蓝牙（2026-11-26，在分支 `port/pw4-bt` 上做完后合入 `port/pw4`；内核补丁 `0028`–`0032`）
 
 - **Jump 44**（只换内核）：`bt_pwr_ctrl` 的 rfkill（`/sys/devices/soc0/bt_pwr_ctrl/rfkill/rfkill0`）开关 10 次，UART1、UART3 中断不动；
   ttymxc2 上 HCI 复位 200 次无失败，芯片名 `BCM43430A1`；加载原厂 btd 用的 `BCM4343A1_001.002.009.0152.0515.hcd`
@@ -188,4 +190,6 @@ preinit 改名 `.real`（同 `boot/build_entry.py`），公开 initramfs 由 `pa
   `android.hardware.bluetooth_le`，否则 BluetoothManagerService 停在 BLE_ON 不绑 GattService。"已连接的设备"页
   因为没有 UsbService 崩溃（Settings 补丁 `0010`）。之后能打开蓝牙、配对 Bose 耳机（选不带 `LE-` 的条目），
   微信读书听书从耳机出声，音频欠载 0；播放时单核基本占满（微信读书 80%、解码 22%、蓝牙 17%）。
+- **Jump 46**（日常版）：同一内核，系统带蓝牙协议栈、Settings `0010` 和 `bluetooth_le`，不开调试 shell。
+- 还没做：蓝牙地址来源（现在由 HAL 随机生成并保存）、芯片低功耗模式（LPM）、蓝牙开着时的待机电流和休眠联动。
 
