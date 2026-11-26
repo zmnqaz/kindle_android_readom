@@ -111,6 +111,8 @@ make O=<out> ARCH=arm olddefconfig
 
 补丁 `0035`（2026-11-26）：eMMC 重新改回 High Speed SDR（`0034` 的寄存器恢复保留）。DDR52 在寄存器写回后，单次 6 分钟深度休眠没出错，但反复休眠唤醒后仍出现 171 次 CRC 读错误；SystemUI 因此 SIGBUS 崩溃，重启时正赶上休眠、启动超时被杀，没有 SystemUI 后 KeyguardController 一直认为锁屏在显示，唤醒后屏幕停在睡眠图（Jump 50）。
 
+补丁 `0036`（2026-11-26）：eMMC 回到 DDR52，全程按 1.8 V 处理，深度休眠唤醒后先自检再放行读写。`0035` 的 SDR 醒着就出错（Jump 53：开机 31 秒起 response CRC，48 秒起 `Timeout waiting for hardware interrupt`，每次卡 10 秒），DDR52 醒着无错，它的错只出在深度休眠唤醒后的头几十毫秒。改动：拒绝 3.3 V 信号（`SDHCI_QUIRK2_PW4_FIXED_1_8_V`），probe、复位、`HOST_CONTROL2` 写入三处都保持 `VSELECT`；`esdhc_set_uhs_signaling` 补上 Legacy/HS 分支，回退时清掉 `DDR_EN`；挂起时先停卡时钟；唤醒时先写回厂商寄存器，再走一遍和醒着时相同的 runtime suspend/resume 流程；mmc 核心在唤醒后读一次 EXT_CSD，核对总线宽度、时序和分区（卡不复位时可能停在 boot/RPMB 分区），失败则 10 ms 后重试，再失败就重新初始化卡。计数器在 `/sys/module/sdhci_esdhc_imx/parameters/pw4_resume*` 和 `/sys/module/mmc_core/parameters/pw4_resume_*`，`pw4_ddr_max_hz` 可限制 DDR 卡时钟。设备上跑过（Jump 54）：醒着读写校验 12 轮无错；RTC 唤醒的休眠 100 次、其中 91 次 uSDHC 确实掉电，每次唤醒立即读 64 MiB 校验，md5 失败 0、内核存储错误 0、自检失败 0；以前每次开机第一次初始化的 `-110` 也不再出现。深度休眠后出错的确切机制没有定位；长时间休眠还没测。
+
 补丁 `0028`–`0032` 是蓝牙（BCM4343 的蓝牙半边，走 UART3 `ttymxc2`，电源驱动是原厂的 `bt_pwr_ctrl`）要的内核改动，2026-11-26 在设备上跑过（Jump 44 只换内核，Jump 45/46 加安卓蓝牙协议栈）：rfkill 开关 10 次，UART1、UART3 的中断计数都不动；HCI 复位在 115200、921600、3 Mbaud 下都无失败；能加载原厂 btd 用的 `BCM4343A1_001.002.009.0152.0515.hcd`（固件只在设备侧，不进仓库）；微信读书听书从配对的 Bose 耳机出声。经过见 `../android.md` 的蓝牙一节。
 
 补丁 `0028`（2026-11-26）：`bt_pwr_ctrl` 不再写 UART1 的 `UCR2`。原厂代码里叫 `UART3_UCR2` 的地址 `0x02020084` 实际是 UART1 的 `UCR2`，bluesleep 走 proto=0 时会在串口驱动背后清掉 UART1 的 `RXEN`/`TXEN`，而那时 UART1 的时钟可能是关的（和 `0022` 同一类问题）。UART3 的 RTS/CTS 流控由 tty 的 `CRTSCTS` 管，两个流控函数改成空函数，去掉 ioremap；没有改成 UART3 的真实地址，因为 tty 和时钟都关着时去写同样危险。
