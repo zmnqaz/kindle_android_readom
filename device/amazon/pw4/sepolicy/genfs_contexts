@@ -9,3 +9,10 @@ genfscon sysfs /devices/soc0/soc/2100000.aips-bus/21a0000.i2c/i2c-0/0-004b/bd718
 # Goodix touch lock (gt9xx /proc/touch): the power HAL writes lock/unlock at
 # screen off/on so that touches do not abort autosuspend.
 genfscon proc /touch u:object_r:pw4_proc_touch:s0
+# Bluetooth power (kernel bt-prep 0005: rfkill switch of bt_pwr_ctrl). The HAL
+# writes rfkillN/state (system/sepolicy/public/hal_bluetooth.te:19-20).
+genfscon sysfs /devices/soc0/bt_pwr_ctrl/rfkill u:object_r:sysfs_bluetooth_writable:s0
+# The stock driver's /proc/bluetooth (btenable, sleep/{uart_clk,proto,btwake}),
+# unused by libbt; labelled so that a later LPM step can use it
+# (public/hal_bluetooth.te:27).
+genfscon proc /bluetooth u:object_r:proc_bluetooth_writable:s0

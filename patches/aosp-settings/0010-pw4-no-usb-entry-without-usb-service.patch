@@ -1,0 +1,50 @@
+From: PW3 Android port
+Subject: [PW4] Settings: no USB entry without UsbService
+
+With android.hardware.bluetooth declared (PW4 Bluetooth), Settings shows the
+Connected devices page, whose USB entry builds a UsbBackend and calls
+UsbManager.getPorts(). This system has no "usb" service, so getSystemService
+returns null and the page crashed on opening (NullPointerException in
+UsbBackend.<init>, 2026-11-26, Jump 45). UsbBackend now stops at a missing
+UsbManager and says so, and the USB entry is unavailable then.
+
+Not run on the device yet when this patch was written.
+
+--- a/src/com/android/settings/deviceinfo/UsbBackend.java
++++ b/src/com/android/settings/deviceinfo/UsbBackend.java
+@@ -61,6 +61,10 @@
+         mRestrictedBySystem = userRestrictionUtil.isUsbFileTransferRestrictedBySystem();
+         mMidi = context.getPackageManager().hasSystemFeature(PackageManager.FEATURE_MIDI);
+ 
++        // PW4: no UsbService on this device (no "usb" system service).
++        if (mUsbManager == null) {
++            return;
++        }
+         UsbPort[] ports = mUsbManager.getPorts();
+         if (ports == null) {
+             return;
+@@ -78,6 +82,11 @@
+         }
+     }
+ 
++    /** PW4: false when the device has no UsbService. */
++    public boolean hasUsbManager() {
++        return mUsbManager != null;
++    }
++
+     public int getCurrentMode() {
+         if (mPort != null) {
+             int power = mPortStatus.getCurrentPowerRole() == UsbPort.POWER_ROLE_SOURCE
+--- a/src/com/android/settings/connecteddevice/UsbModePreferenceController.java
++++ b/src/com/android/settings/connecteddevice/UsbModePreferenceController.java
+@@ -61,7 +61,9 @@
+ 
+     @Override
+     public boolean isAvailable() {
+-        return true;
++        // PW4: the Bluetooth feature shows this page; without UsbService the
++        // USB entry has nothing to show and its backend cannot be asked.
++        return mUsbBackend.hasUsbManager();
+     }
+ 
+     @Override

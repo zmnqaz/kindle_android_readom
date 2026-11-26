@@ -105,6 +105,18 @@ make O=<out> ARCH=arm olddefconfig
 
 补丁 `0027`（2026-11-25）：挂起时不再发多余的 `EV_SYN`（同上游 `00159f19a505`）。4.1 的 `input_dev_release_keys()` 不管有没有按键松开都发 `SYN_REPORT`，系统每次挂起都送到 evdev，占住安卓给触摸屏开的 evdev 唤醒锁（`event2`），自动挂起每次都被中止（Jump 41：27 次全失败）。
 
+补丁 `0028`–`0032` 是蓝牙（BCM4343 的蓝牙半边，走 UART3 `ttymxc2`，电源驱动是原厂的 `bt_pwr_ctrl`）要的内核改动，2026-11-26 在设备上跑过（Jump 44 只换内核，Jump 45/46 加安卓蓝牙协议栈）：rfkill 开关 10 次，UART1、UART3 的中断计数都不动；HCI 复位在 115200、921600、3 Mbaud 下都无失败；能加载原厂 btd 用的 `BCM4343A1_001.002.009.0152.0515.hcd`（固件只在设备侧，不进仓库）；微信读书听书从配对的 Bose 耳机出声。经过见 `../android.md` 的蓝牙一节。
+
+补丁 `0028`（2026-11-26）：`bt_pwr_ctrl` 不再写 UART1 的 `UCR2`。原厂代码里叫 `UART3_UCR2` 的地址 `0x02020084` 实际是 UART1 的 `UCR2`，bluesleep 走 proto=0 时会在串口驱动背后清掉 UART1 的 `RXEN`/`TXEN`，而那时 UART1 的时钟可能是关的（和 `0022` 同一类问题）。UART3 的 RTS/CTS 流控由 tty 的 `CRTSCTS` 管，两个流控函数改成空函数，去掉 ioremap；没有改成 UART3 的真实地址，因为 tty 和时钟都关着时去写同样危险。
+
+补丁 `0029`（2026-11-26）：打开的 `ttymxc2` 处理自己的中断，关着的不会形成风暴。原来 `g_BTstatus` 跟着 `/proc` 里的 `uart_clk` 开关走，用户空间写它之前，已打开的 `ttymxc2` 来了中断 `imx_int()` 什么都不清就返回，电平中断反复进入。现在在 `imx_startup()` 里置 1，在 `imx_shutdown()` 里屏蔽蓝牙口全部中断源后清 0；关着时若仍来中断，把这条中断线停放（`disable_irq_nosync`，限速打印 `stray irq … parked`），下次打开再启用。`UCR3_AWAKEN` 在 shutdown 里不动，原厂靠它做蓝牙唤醒。
+
+补丁 `0030`（2026-11-26）：UART 时钟切换不碰关着的 UART1。i.MX6SLL 的 5 个 UART 共用一个时钟源，蓝牙上电时要从 4 MHz（`uart_at_4m`）切到 PLL3 80 MHz，原厂的 `uart_sleep_and_switch_parent()` 在切换前后对 UART1 做 `serial_imx_suspend/resume`：安卓命令行没有串口控制台，UART1 关着、ipg 时钟门控，这会读写 `UCR3` 并置 `UCR3_AWAKEN`，正是 `0022` 那次中断风暴的寄存器。现在只有 UART1 真打开时才这样做；切换后刷新所有端口缓存的 `uartclk`（原来一直是 probe 时的 4 MHz，波特率上限 250 k，3 Mbaud 设不上去），并打印 `pw4: uart clock N Hz (bt k)`。
+
+补丁 `0031`（2026-11-26）：蓝牙 UART 的 DMA 开关 `imx.bt_dma`。安卓里没有 SDMA 的 RAM 脚本，UART3 能不能走 DMA 原先没把握；命令行 `imx.bt_dma=0` 或打开 tty 前写 `/sys/module/imx/parameters/bt_dma` 就改用 PIO，不用重编内核就能对比。默认值不变（走 DMA），Jump 45/46 的协议栈就是用默认值跑的。
+
+补丁 `0032`（2026-11-26）：`bt_pwr_ctrl` 注册蓝牙 rfkill 开关（`/sys/devices/soc0/bt_pwr_ctrl/rfkill/rfkill0`，名字 `bt_pwr_ctrl`）。安卓的 libbt-vendor 通过 `/sys/class/rfkill` 给芯片上电（`upio.c`），原来内核没有 rfkill，芯片根本上不了电。注册即"阻断且 persistent"，开机不上电；解除阻断时持有 `BUS_FREQ_HIGH`、UART 时钟切 PLL3 80 MHz、拉低 `bt_dev_wake`、拉高 `bt_rst`（BT_REG_ON）后等 100 ms，阻断时反过来。顺带把未初始化的 `rw_lock` 改成 `DEFINE_SPINLOCK`。需要配置 `CONFIG_RFKILL=y`（`RFKILL_INPUT`、`RFKILL_GPIO` 关，见 `android-4.1-draft.config`）；预编译的 `bcmdhd.ko` 等模块的符号 CRC 不受影响，不用重编。
+
 **编译参数（2026-11-23 补）**：安卓内核要带 `KCFLAGS="-fno-pic -fno-pie"`，和 Readom 的 `tools/build-kernel.sh`、交接模块一样。AOSP 的 gcc 4.9 默认生成位置无关代码，不带这个参数时内核本身还能启动，但模块里会引用 `_GLOBAL_OFFSET_TABLE_`，加载时报 `Unknown symbol _GLOBAL_OFFSET_TABLE_`（第十次交接时 EPDC 驱动就是这样没加载上）。
 
 ## 五、第 0 阶段分类的修正

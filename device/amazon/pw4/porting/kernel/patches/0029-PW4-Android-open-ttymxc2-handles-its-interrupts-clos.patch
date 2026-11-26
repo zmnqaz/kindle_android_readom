@@ -1,0 +1,139 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: pw4-port <pw4-port@localhost>
+Date: Wed, 25 Nov 2026 18:52:19 +0800
+Subject: [PATCH 29/32] PW4 Android: open ttymxc2 handles its interrupts,
+ closed one cannot storm
+
+g_BTstatus followed the uart_clk proc switch, so imx_int() returned
+without clearing anything on an opened ttymxc2 until user space wrote
+uart_clk: a level interrupt re-entering forever. Set it in imx_startup()
+and clear it in imx_shutdown() after masking the BT port's sources; a
+stray interrupt on the closed port parks the line until the next open.
+---
+ drivers/tty/serial/imx.c | 64 +++++++++++++++++++++++++++++++++++-----
+ 1 file changed, 56 insertions(+), 8 deletions(-)
+
+diff --git a/drivers/tty/serial/imx.c b/drivers/tty/serial/imx.c
+index 8da27670..933c5b36 100644
+--- a/drivers/tty/serial/imx.c
++++ b/drivers/tty/serial/imx.c
+@@ -179,8 +179,15 @@
+ #define DRIVER_NAME "IMX-uart"
+ 
+ #ifdef CONFIG_LAB126
++/*
++ * PW4 Android: g_BTstatus is 1 while the Bluetooth port (UART3) is open,
++ * set by imx_startup()/imx_shutdown(). The stock kernel tied it to the
++ * /proc/bluetooth/sleep/uart_clk switch, so an opened ttymxc2 had its
++ * interrupts swallowed (never cleared) until user space wrote uart_clk.
++ */
+ static int g_BTstatus = 0;
+ static unsigned int g_BTirq = 0;
++static bool g_BTirq_parked;
+ #endif
+ 
+ #define UART_NR 8
+@@ -739,13 +746,19 @@ static irqreturn_t imx_int(int irq, void *dev_id)
+ 	unsigned int sts2;
+ 
+ #ifdef CONFIG_LAB126
+-	/* When BT is turned off, we switch uart clk source back to low speed clock to save power.
+-	 * The serial_imx_resume resume both console uart and BT uart.
+-	 * Therefore if there are linger data activities on the BT uart bus, it would trigger interrupt when BT is actually off.
+-	 * This would cause watchdog. Therefore it is necessary to ignore the interrupt from BT when BT is off.
++	/*
++	 * An interrupt from the Bluetooth port while it is closed: its
++	 * sources are masked and its clocks may be off, so it cannot be
++	 * cleared here. Returning without clearing (the stock behaviour)
++	 * re-enters forever on a level interrupt; park the line instead
++	 * until the next imx_startup() of this port.
+ 	 */
+-	if (g_BTstatus == 0 && sport->port.irq == g_BTirq)
++	if (g_BTstatus == 0 && sport->port.irq == g_BTirq) {
++		disable_irq_nosync(irq);
++		g_BTirq_parked = true;
++		pr_warn_ratelimited("imx-uart: stray irq %d on closed BT port, parked\n", irq);
+ 		return IRQ_HANDLED;
++	}
+ #endif
+ 
+ 	sts = readl(sport->port.membase + USR1);
+@@ -1130,6 +1143,7 @@ static int imx_startup(struct uart_port *port)
+ 	struct imx_port *sport = (struct imx_port *)port;
+ 	int retval, i;
+ 	unsigned long flags, temp;
++	bool unpark = false;
+ 
+ 	retval = clk_prepare_enable(sport->clk_per);
+ 	if (retval)
+@@ -1173,6 +1187,14 @@ static int imx_startup(struct uart_port *port)
+ 
+ 	spin_lock_irqsave(&sport->port.lock, flags);
+ 
++#ifdef CONFIG_LAB126
++	if (sport->port.irq == g_BTirq) {
++		g_BTstatus = 1;
++		unpark = g_BTirq_parked;
++		g_BTirq_parked = false;
++	}
++#endif
++
+ 	/*
+ 	 * Finally, clear and enable interrupts
+ 	 */
+@@ -1209,6 +1231,9 @@ static int imx_startup(struct uart_port *port)
+ 	imx_enable_ms(&sport->port);
+ 	spin_unlock_irqrestore(&sport->port.lock, flags);
+ 
++	if (unpark)
++		enable_irq(sport->port.irq);
++
+ 	return 0;
+ }
+ 
+@@ -1262,6 +1287,32 @@ static void imx_shutdown(struct uart_port *port)
+ 	temp &= ~(UCR1_TXMPTYEN | UCR1_RRDYEN | UCR1_RTSDEN | UCR1_UARTEN);
+ 
+ 	writel(temp, sport->port.membase + UCR1);
++#ifdef CONFIG_LAB126
++	if (sport->port.irq == g_BTirq) {
++		/*
++		 * Leave nothing armed on the closed BT port (as at probe).
++		 * UCR3_AWAKEN is left alone: serial_imx_suspend() sets it
++		 * before uart_suspend_port() calls us, to wake on BT RX.
++		 */
++		temp = readl(sport->port.membase + UCR1);
++		temp &= ~(UCR1_ADEN | UCR1_TRDYEN | UCR1_IDEN);
++		writel(temp, sport->port.membase + UCR1);
++		temp = readl(sport->port.membase + UCR2);
++		temp &= ~UCR2_ATEN;
++		writel(temp, sport->port.membase + UCR2);
++		temp = readl(sport->port.membase + UCR3);
++		temp &= ~(UCR3_AIRINTEN | UCR3_RXDSEN | UCR3_DTREN |
++			  UCR3_PARERREN | UCR3_FRAERREN);
++		writel(temp, sport->port.membase + UCR3);
++		temp = readl(sport->port.membase + UCR4);
++		temp &= ~(UCR4_ENIRI | UCR4_WKEN | UCR4_TCEN | UCR4_BKEN |
++			  UCR4_OREN | UCR4_DREN);
++		writel(temp, sport->port.membase + UCR4);
++		writel(USR1_RTSD | USR1_AGTIM, sport->port.membase + USR1);
++		writel(USR2_ORE, sport->port.membase + USR2);
++		g_BTstatus = 0;
++	}
++#endif
+ 	spin_unlock_irqrestore(&sport->port.lock, flags);
+ 
+ 	clk_disable_unprepare(sport->clk_per);
+@@ -2147,9 +2198,6 @@ void uart_sleep_and_switch_parent(int k)
+ 	pm_message_t m;
+ 
+ 	serial_imx_suspend(g_pdev, m);
+-#ifdef CONFIG_LAB126
+-	g_BTstatus = k;
+-#endif
+ 	msleep(100);
+ 	bt_uart_switch_parent(k);
+ 	msleep(100);
+-- 
+2.53.0
+

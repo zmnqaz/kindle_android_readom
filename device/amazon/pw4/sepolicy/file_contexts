@@ -1,0 +1,3 @@
+# PW4 Bluetooth: the BCM43430A1 HCI UART. hci_attach_dev is the AOSP type the
+# HAL may read and write (system/sepolicy/public/hal_bluetooth.te:16).
+/dev/ttymxc2            u:object_r:hci_attach_dev:s0

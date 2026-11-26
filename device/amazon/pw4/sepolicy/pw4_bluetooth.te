@@ -1,0 +1,7 @@
+# PW4 Bluetooth HAL (android.hardware.bluetooth@1.0-service with
+# libbt-vendor): reads the stock patch RAM file from /firmware/bluetooth, the
+# device's own file like the Wi-Fi firmware (pw4_hardware.te). The tty
+# (hci_attach_dev), rfkill state (sysfs_bluetooth_writable) and wake locks
+# are already allowed by AOSP's public/hal_bluetooth.te.
+allow hal_bluetooth_default pw3_private_firmware_file:dir r_dir_perms;
+allow hal_bluetooth_default pw3_private_firmware_file:file r_file_perms;

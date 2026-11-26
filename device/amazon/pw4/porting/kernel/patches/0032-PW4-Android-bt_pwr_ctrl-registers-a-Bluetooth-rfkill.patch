@@ -1,0 +1,155 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: pw4-port <pw4-port@localhost>
+Date: Wed, 25 Nov 2026 18:55:25 +0800
+Subject: [PATCH 32/32] PW4 Android: bt_pwr_ctrl registers a Bluetooth rfkill
+ switch
+
+libbt-vendor powers the chip through /sys/class/rfkill (upio.c). Unblock
+holds BUS_FREQ_HIGH, moves the UART clock to PLL3 80 MHz, asserts BT_WAKE
+and raises bt_rst; block reverses it. Registered blocked and persistent,
+so nothing powers up at boot. Needs CONFIG_RFKILL=y (RFKILL_INPUT off).
+Also initialise rw_lock with DEFINE_SPINLOCK.
+---
+ drivers/misc/bt_pwr_ctrl.c | 98 +++++++++++++++++++++++++++++++++++++-
+ 1 file changed, 97 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/misc/bt_pwr_ctrl.c b/drivers/misc/bt_pwr_ctrl.c
+index 9ffce1d6..4a2dc596 100644
+--- a/drivers/misc/bt_pwr_ctrl.c
++++ b/drivers/misc/bt_pwr_ctrl.c
+@@ -44,6 +44,7 @@
+ #include <linux/proc_fs.h>
+ #include <linux/seq_file.h>
+ #include <linux/busfreq-imx.h>
++#include <linux/rfkill.h>
+ #include <asm/uaccess.h>
+ #include <net/bluetooth/bt_pwr_ctrl.h>
+ #include <linux/cpufreq.h>
+@@ -125,7 +126,7 @@ int has_ext_wake;
+ static DEFINE_MUTEX(bt_uart_switch_lock);
+ 
+ /* Lock for state transitions */
+-static spinlock_t rw_lock;
++static DEFINE_SPINLOCK(rw_lock);
+ 
+ /* module usage */
+ static atomic_t open_count = ATOMIC_INIT(1);
+@@ -578,6 +579,98 @@ ssize_t read_proc_asleep(struct file *filp, char *buf, size_t count, loff_t *off
+ 
+ extern void uart_sleep_and_switch_parent(int k);
+ 
++#if IS_ENABLED(CONFIG_RFKILL)
++/*
++ * PW4 Android: a Bluetooth rfkill switch for libbt-vendor (upio.c writes
++ * /sys/class/rfkill/rfkillN/state). Unblock does what the stock bsa_server
++ * did through /proc: hold the high bus frequency (PLL3 must run), move the
++ * UART clock to PLL3 80 MHz, keep BT_WAKE asserted and raise BT_REG_ON
++ * (bt_rst). Block undoes it. libbt powers on before opening ttymxc2 and
++ * closes it before powering off, so the clock never moves under an open
++ * port. Registered blocked and persistent: nothing powers up at boot.
++ */
++static struct rfkill *bt_rfkill;
++static bool bt_rfkill_on;
++
++#define BT_REG_ON_SETTLE_MS	100
++#define BT_REG_OFF_HOLD_MS	20
++
++static void bt_set_dev_wake(int val)
++{
++	unsigned long irq_flags;
++
++	spin_lock_irqsave(&rw_lock, irq_flags);
++	gp_privdata->dev_wake = val;
++	gpio_set_value(gp_privdata->pdata->bt_dev_wake, val);
++	spin_unlock_irqrestore(&rw_lock, irq_flags);
++}
++
++static int bt_rfkill_set_block(void *data, bool blocked)
++{
++	struct bt_pwr_data *pdata = data;
++
++	mutex_lock(&bt_uart_switch_lock);
++	if (!blocked && !bt_rfkill_on) {
++		request_bus_freq(BUS_FREQ_HIGH);
++		uart_sleep_and_switch_parent(1);
++		bt_set_dev_wake(BT_WAKE_ASSERT);
++		gp_privdata->enable = 1;
++		gpio_set_value(pdata->bt_rst, 1);
++		bt_rfkill_on = true;
++		printk(KERN_INFO "Turning BT chip ON (rfkill)\n");
++		msleep(BT_REG_ON_SETTLE_MS);
++	} else if (blocked && bt_rfkill_on) {
++		bluesleep_stop();
++		gp_privdata->enable = 0;
++		gpio_set_value(pdata->bt_rst, 0);
++		bt_set_dev_wake(BT_WAKE_DEASSERT);
++		msleep(BT_REG_OFF_HOLD_MS);
++		uart_sleep_and_switch_parent(0);
++		release_bus_freq(BUS_FREQ_HIGH);
++		bt_rfkill_on = false;
++		printk(KERN_INFO "Turning BT chip OFF (rfkill)\n");
++	}
++	mutex_unlock(&bt_uart_switch_lock);
++
++	return 0;
++}
++
++static const struct rfkill_ops bt_rfkill_ops = {
++	.set_block = bt_rfkill_set_block,
++};
++
++static void bt_rfkill_init(struct platform_device *pdev, struct bt_pwr_data *pdata)
++{
++	int ret;
++
++	bt_rfkill = rfkill_alloc("bt_pwr_ctrl", &pdev->dev, RFKILL_TYPE_BLUETOOTH,
++				 &bt_rfkill_ops, pdata);
++	if (!bt_rfkill) {
++		dev_err(&pdev->dev, "rfkill_alloc failed\n");
++		return;
++	}
++	rfkill_init_sw_state(bt_rfkill, true);
++	ret = rfkill_register(bt_rfkill);
++	if (ret) {
++		dev_err(&pdev->dev, "rfkill_register failed: %d\n", ret);
++		rfkill_destroy(bt_rfkill);
++		bt_rfkill = NULL;
++	}
++}
++
++static void bt_rfkill_exit(void)
++{
++	if (bt_rfkill) {
++		rfkill_unregister(bt_rfkill);
++		rfkill_destroy(bt_rfkill);
++		bt_rfkill = NULL;
++	}
++}
++#else
++static inline void bt_rfkill_init(struct platform_device *pdev, struct bt_pwr_data *pdata) {}
++static inline void bt_rfkill_exit(void) {}
++#endif
++
+ ssize_t write_proc_uart_clk(struct file *filp, const char *buf, size_t count,
+ 		loff_t *offp)
+ {
+@@ -806,6 +899,8 @@ static int bt_pwrctrl_probe(struct platform_device *pdev)
+ 	gp_privdata->state = 0;
+ 	set_bit(BT_ASLEEP, &gp_privdata->state);
+ 
++	bt_rfkill_init(pdev, pdata);
++
+ 	printk(KERN_INFO "%s probe successful", __func__);
+ 	return 0;
+ 
+@@ -832,6 +927,7 @@ err1:
+ 
+ static int bt_pwrctrl_remove(struct platform_device *pdev)
+ {
++	bt_rfkill_exit();
+ 	device_remove_file(&pdev->dev, &dev_attr_btenable);
+ 	remove_proc_entry("asleep", gp_privdata->sleep_dir);
+ 	remove_proc_entry("proto", gp_privdata->sleep_dir);
+-- 
+2.53.0
+

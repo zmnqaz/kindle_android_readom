@@ -1,0 +1,86 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: pw4-port <pw4-port@localhost>
+Date: Wed, 25 Nov 2026 18:52:49 +0800
+Subject: [PATCH 30/32] PW4 Android: UART clock switch leaves a closed UART1
+ alone
+
+uart_sleep_and_switch_parent() suspended/resumed UART1 around the
+OSC<->PLL3 switch: with no console that touches UCR3 with ipg gated and
+sets UCR3_AWAKEN. Do it only when UART1 is open, and refresh every
+port's cached uartclk so ttymxc2 can be set above 250 kbaud.
+---
+ drivers/tty/serial/imx.c | 54 ++++++++++++++++++++++++++++++++++++----
+ 1 file changed, 49 insertions(+), 5 deletions(-)
+
+diff --git a/drivers/tty/serial/imx.c b/drivers/tty/serial/imx.c
+index 933c5b36..58c7df2e 100644
+--- a/drivers/tty/serial/imx.c
++++ b/drivers/tty/serial/imx.c
+@@ -2193,15 +2193,59 @@ static int serial_imx_remove(struct platform_device *pdev)
+ }
+ 
+ extern void bt_uart_switch_parent(int on);
++
++static bool imx_port_is_open(struct imx_port *sport)
++{
++	return sport && sport->port.state &&
++		(sport->port.state->port.flags & ASYNC_INITIALIZED);
++}
++
++/*
++ * Switch the clock shared by all UARTs (uart_sel/uart_podf) between OSC
++ * 4 MHz (uart_at_4m) and PLL3 80 MHz, for Bluetooth above 250 kbaud.
++ *
++ * PW4 Android: the stock code ran serial_imx_suspend()/resume() on UART1
++ * (its console) around the switch. On Android UART1 is closed with its
++ * clocks off: that suspend touches UCR3 with ipg gated and sets
++ * UCR3_AWAKEN, the source of the USB-plug interrupt storm. Only do that
++ * dance when UART1 is really open. Refresh every port's cached uartclk so
++ * the next set_termios (e.g. libbt opening ttymxc2) programs the right
++ * divider; the stock driver kept the 4 MHz value from probe.
++ */
+ void uart_sleep_and_switch_parent(int k)
+ {
+-	pm_message_t m;
++	pm_message_t m = PMSG_SUSPEND;
++	struct imx_port *con = g_pdev ? platform_get_drvdata(g_pdev) : NULL;
++	bool dance = imx_port_is_open(con);
++	int i;
+ 
+-	serial_imx_suspend(g_pdev, m);
+-	msleep(100);
++	for (i = 0; i < UART_NR; i++) {
++		struct imx_port *sport = imx_ports[i];
++
++		if (sport && sport != con && imx_port_is_open(sport))
++			dev_warn(sport->port.dev,
++				 "UART clock switched while open; reopen to fix baud\n");
++	}
++
++	if (dance) {
++		serial_imx_suspend(g_pdev, m);
++		msleep(100);
++	}
+ 	bt_uart_switch_parent(k);
+-	msleep(100);
+-	serial_imx_resume(g_pdev);
++	for (i = 0; i < UART_NR; i++)
++		if (imx_ports[i])
++			imx_ports[i]->port.uartclk =
++				clk_get_rate(imx_ports[i]->clk_per);
++	if (dance) {
++		msleep(100);
++		serial_imx_resume(g_pdev);
++	}
++#ifdef CONFIG_LAB126
++	for (i = 0; i < UART_NR; i++)
++		if (imx_ports[i] && imx_ports[i]->port.irq == g_BTirq)
++			dev_info(imx_ports[i]->port.dev, "pw4: uart clock %u Hz (bt %d)\n",
++				 imx_ports[i]->port.uartclk, k);
++#endif
+ }
+ EXPORT_SYMBOL(uart_sleep_and_switch_parent);
+ 
+-- 
+2.53.0
+
