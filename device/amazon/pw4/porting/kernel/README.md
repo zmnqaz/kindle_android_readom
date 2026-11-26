@@ -105,6 +105,8 @@ make O=<out> ARCH=arm olddefconfig
 
 补丁 `0027`（2026-11-25）：挂起时不再发多余的 `EV_SYN`（同上游 `00159f19a505`）。4.1 的 `input_dev_release_keys()` 不管有没有按键松开都发 `SYN_REPORT`，系统每次挂起都送到 evdev，占住安卓给触摸屏开的 evdev 唤醒锁（`event2`），自动挂起每次都被中止（Jump 41：27 次全失败）。
 
+补丁 `0033`（2026-11-26）：eMMC 改跑 High Speed SDR，不用 DDR52。深度休眠后控制器从复位状态回来，只恢复通用的总线设置（`HOST_OFF_CARD_ON`）；DDR52 下第一次读就出了一千多次 CRC 错误（-84）和"没有数据操作却来了数据中断"，system_server 因此崩溃、安卓框架重启了一次（Jump 46，13:27:56 电源键唤醒后）。SDR 不需要额外设置。顺序读从约 80 MB/s 降到约 40 MB/s。
+
 补丁 `0028`–`0032` 是蓝牙（BCM4343 的蓝牙半边，走 UART3 `ttymxc2`，电源驱动是原厂的 `bt_pwr_ctrl`）要的内核改动，2026-11-26 在设备上跑过（Jump 44 只换内核，Jump 45/46 加安卓蓝牙协议栈）：rfkill 开关 10 次，UART1、UART3 的中断计数都不动；HCI 复位在 115200、921600、3 Mbaud 下都无失败；能加载原厂 btd 用的 `BCM4343A1_001.002.009.0152.0515.hcd`（固件只在设备侧，不进仓库）；微信读书听书从配对的 Bose 耳机出声。经过见 `../android.md` 的蓝牙一节。
 
 补丁 `0028`（2026-11-26）：`bt_pwr_ctrl` 不再写 UART1 的 `UCR2`。原厂代码里叫 `UART3_UCR2` 的地址 `0x02020084` 实际是 UART1 的 `UCR2`，bluesleep 走 proto=0 时会在串口驱动背后清掉 UART1 的 `RXEN`/`TXEN`，而那时 UART1 的时钟可能是关的（和 `0022` 同一类问题）。UART3 的 RTS/CTS 流控由 tty 的 `CRTSCTS` 管，两个流控函数改成空函数，去掉 ioremap；没有改成 UART3 的真实地址，因为 tty 和时钟都关着时去写同样危险。

@@ -1,0 +1,37 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: pw4-port <pw4-port@localhost>
+Date: Thu, 26 Nov 2026 13:32:02 +0800
+Subject: [PATCH] PW4 Android: the eMMC runs High Speed SDR, not DDR52
+
+After a deep sleep the controller comes back from reset and only the
+generic bus settings are put back (HOST_OFF_CARD_ON). At DDR52 the first
+reads failed with over a thousand CRC errors and system_server died on
+them (Jump 46). High Speed SDR needs nothing beyond those settings.
+---
+ drivers/mmc/host/sdhci-esdhc-imx.c | 10 ++++++++++
+ 1 file changed, 10 insertions(+)
+
+diff --git a/drivers/mmc/host/sdhci-esdhc-imx.c b/drivers/mmc/host/sdhci-esdhc-imx.c
+index 1076dd83..465b6c9c 100644
+--- a/drivers/mmc/host/sdhci-esdhc-imx.c
++++ b/drivers/mmc/host/sdhci-esdhc-imx.c
+@@ -1367,6 +1367,16 @@ static int sdhci_esdhc_imx_probe(struct platform_device *pdev)
+ 			host->mmc->pm_caps |= MMC_PM_KEEP_POWER;
+ 			host->mmc->pm_flags |= MMC_PM_KEEP_POWER;
+ 			host->mmc->caps2 |= MMC_CAP2_PW4_KEEP_AWAKE;
++			/*
++			 * And SDR, not DDR52: after a deep sleep the controller
++			 * comes back from reset and only the generic bus settings
++			 * are put back; at DDR52 that gave over a thousand CRC
++			 * errors (-84) and "data interrupt with no data operation"
++			 * on the first reads, and system_server died on them
++			 * (Jump 46, 2026-11-26). High Speed SDR needs nothing more.
++			 */
++			host->mmc->caps &= ~(MMC_CAP_1_8V_DDR | MMC_CAP_1_2V_DDR |
++					     MMC_CAP_UHS_DDR50);
+ 		}
+ #endif
+ 
+-- 
+2.53.0
+
