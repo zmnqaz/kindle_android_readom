@@ -18,7 +18,7 @@
 | 上机检查 | `installer/probe/` | 量出安装器能依赖原厂系统的哪些能力 |
 
 - **入口不含任何设备数据**：屏幕波形、Wi‑Fi 校准、ATAGs、存储布局、数据镜像 UUID，都在每次启动时从原厂系统现场生成（`boot/devicedata/`）。2026-10-15 在 PW3 上实测：现场生成的文件与此前私有入口里的逐字节相同。
-- **入口只有一种，就是装发行版的那一种**。它不带测试脚手架：没有测试专用的 init rc、常驻的 logcat 采集、诊断开关、"放行框架启动"的闸门或保持唤醒的开关。没人看着的设备，不该带只有被看着时才用得上的东西。内核命令行在原厂那一段之后，只追加 `loglevel=1`、`panic=5`、`rdinit=` 和 `androidboot.hardware`、`androidboot.init_rc` 两个键（`build_entry.py` 的 `CMDLINE_ANDROID`）。
+- **入口只有一种，就是装发行版的那一种**。它不带测试脚手架：没有测试专用的 init rc、常驻的 logcat 采集、诊断开关、"放行框架启动"的闸门或保持唤醒的开关。没人看着的设备，不该带只有被看着时才用得上的东西。内核命令行在原厂那一段之后，只追加 `loglevel=1`、`panic=5`、`rdinit=` 和 `androidboot.hardware`、`androidboot.init_rc` 两个键（机型配置 `boot/profiles/<机型>.json` 的 `entry.cmdline_android`，理由写在 `build_entry.py` 里；PW4 的 `panic=5` 已在原厂那一段里）。
 - **存储入口**：每次启动先比对系统镜像的记录（大小、修改时间、在 FAT 上的每一段位置）；对得上就不再通读，镜像变了才通读一次核对 SHA256（`device/amazon/pw3/preinit/SystemStamp.h`）。
 
 ## 发行载荷
@@ -125,7 +125,7 @@ android=<处理过的那一份>                报告区的 Android 启动计数
 
 安装期间阻止原厂进入屏保（`lipc-set-prop com.lab126.powerd preventScreenSaver 1`），结束后恢复原值。屏幕提示见"安装画面"。
 
-**下载时开 Wi‑Fi 不会让原厂固件被升级**：亚马逊已不再给 PW3 发固件；越狱后 jb.sh 会停用并改名 OTA 守护进程。支持其他机型时，要在各自的机型档案里重新确认。
+**下载时开 Wi‑Fi 不会让原厂固件被升级**：亚马逊已不再给 PW3 发固件；越狱后 jb.sh 会停用并改名 OTA 守护进程。支持其他机型时，要在各自的机型档案里重新确认。PW4（`device/amazon/pw4/porting/release.md`）还没确认：它的原厂内核编于 2026-05，可能仍在收固件更新，而交接锁定了这一版内核的函数哈希。
 
 ### 错误码（屏幕上同时显示中英文说明）
 

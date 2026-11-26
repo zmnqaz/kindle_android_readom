@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-2.0-only
-"""The PW4 public initramfs, as boot/build_entry.py makes the PW3 one.
+"""The PW4 public initramfs, as boot/build_entry.py makes the PW3 one -- for
+development jumps only. boot/build_entry.py --profile boot/profiles/pw4-5.18.1.1.1.json
+now makes the release one (device/amazon/pw4/porting/release.md), without the switches below.
 
 From this build's ramdisk: the storage table for image files (fstab.pw3 is
 fstab.pw3-testfile), the storage entry renamed to pw3-testfile-init.real with

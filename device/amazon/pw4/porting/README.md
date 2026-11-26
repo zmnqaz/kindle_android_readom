@@ -188,6 +188,8 @@ eMMC `mmcblk1`，7 634 944 KiB（约 7.3 GiB），另有 `boot0`/`boot1` 各 4 M
 
 ## 八、还没做的
 
+（2026-11-26 补：一键安装入口的 PW4 版见 [release.md](release.md)。）
+
 上机能读的基本读完了。剩下的在机外：
 
 - 下载亚马逊 PW4 5.18.1.1.1 的 GPL 源码包，确认里面有没有 `bcmdhd`、`mxc_epdc_v2_fb`、`gt9xx`、`bd71827`、`fp9929`、`lm3695`、`falcon` 的源码，以及哪个 defconfig 对应 rex；用它和 `config.txt` 编出 vermagic 一致的交接模块。

@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-2.0-only
-"""The device half of the PW4 initramfs, for development jumps.
+"""The device half of the PW4 initramfs, for development jumps. Superseded by the
+release entry, which makes it on the device (boot/devicedata, dd_tree_archive;
+device/amazon/pw4/porting/release.md); kept as the record of what the jumps ran with.
 
 On the PW3 this half is made on the device by the launcher; for the PW4 port
 it is still put together on the computer, from files read off the device
