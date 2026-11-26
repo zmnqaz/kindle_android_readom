@@ -1,4 +1,4 @@
-# The host tests (tools/run-tests.py) on every push to main and every pull
+# The host tests (tools/run-tests.py) on every push to main or kpw4 and every pull
 # request. Linux, so the tests that need its headers run; the zstd release the
 # installer links against, so the installer's own tests run. What still needs
 # the build VM, a built image or the device is listed as skipped, with why.
@@ -6,7 +6,7 @@ name: tests
 
 on:
   push:
-    branches: [main]
+    branches: [main, kpw4]
   pull_request:
 
 permissions:

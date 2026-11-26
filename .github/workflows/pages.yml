@@ -1,12 +1,12 @@
 # The project website for the Kindle 10th generation port: the static files in
 # site/, published as they are to GitHub Pages. No build step, nothing fetched.
-# Runs only for pushes to pw4 that touch the site or this file, or by hand.
+# Runs only for pushes to kpw4 that touch the site or this file, or by hand.
 # Needs Settings > Pages > Build and deployment > Source: "GitHub Actions".
 name: pages
 
 on:
   push:
-    branches: [pw4]
+    branches: [kpw4]
     paths:
       - 'site/**'
       - '.github/workflows/pages.yml'
