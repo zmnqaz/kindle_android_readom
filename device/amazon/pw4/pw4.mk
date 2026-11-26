@@ -23,8 +23,16 @@ $(call inherit-product, device/amazon/pw3/pw3.mk)
 
 PRODUCT_NAME := pw4
 PRODUCT_DEVICE := pw4
+# As the PW3 (pw3.mk): a release is "Readom" on the model's own name, which
+# Windows shows for the MTP device; test builds keep the names the test
+# device's logged-in apps have known.
+ifeq ($(TARGET_BUILD_VARIANT),user)
+PRODUCT_BRAND := Readom
+PRODUCT_MODEL := Kindle Paperwhite 4
+else
 PRODUCT_BRAND := PW4LocalPort
 PRODUCT_MODEL := Kindle Paperwhite 4 development port
+endif
 PRODUCT_MANUFACTURER := Amazon
 
 # Wi-Fi off at screen off (frameworks/opt/net/wifi patch 0005): bcmdhd is
