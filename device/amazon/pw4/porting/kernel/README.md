@@ -107,7 +107,7 @@ make O=<out> ARCH=arm olddefconfig
 
 补丁 `0033`（2026-11-26）：eMMC 改跑 High Speed SDR，不用 DDR52。深度休眠后控制器从复位状态回来，只恢复通用的总线设置（`HOST_OFF_CARD_ON`）；DDR52 下第一次读就出了一千多次 CRC 错误（-84）和"没有数据操作却来了数据中断"，system_server 因此崩溃、安卓框架重启了一次（Jump 46，13:27:56 电源键唤醒后）。SDR 不需要额外设置。顺序读从约 80 MB/s 降到约 40 MB/s。（已被 `0034` 取代：`0034` 撤回这一处，eMMC 回到 DDR52。）
 
-补丁 `0034`（2026-11-26）：深度休眠时 uSDHC 随 M/F mix 断电，恢复后寄存器都回到复位值；`sdhci_resume_host()` 只恢复标准寄存器。挂起前保存 i.MX 自己的那些（突发长度、水位、DLL、ERR004536、VSELECT 即 1.8 V 信号、VEND_SPEC2、调谐控制），恢复后把丢了的打印出来（`pw4: resume reg ... was ... now ...`）并写回。eMMC 恢复 DDR52（撤回 `0033`）。Jump 48，待上机验证。
+补丁 `0034`（2026-11-26）：深度休眠时 uSDHC 随 M/F mix 断电，恢复后寄存器都回到复位值；`sdhci_resume_host()` 只恢复标准寄存器。挂起前保存 i.MX 自己的那些（突发长度、水位、DLL、ERR004536、VSELECT 即 1.8 V 信号、VEND_SPEC2、调谐控制），恢复后把丢了的打印出来（`pw4: resume reg ... was ... now ...`）并写回。eMMC 恢复 DDR52（撤回 `0033`）。Jump 48 上机（2026-11-26）：深度休眠 6 分钟后唤醒，eMMC（2194000）丢了 VEND_SPEC 的 VSELECT（0x3000790b → 0x30007909，即回到 3.3 V 信号）和 0x6c 的 bit 7，Wi-Fi 那路（2190000）丢了水位和 0x6c bit 7；写回后 eMMC 仍是 DDR52，读写错误 0，无崩溃。
 
 补丁 `0028`–`0032` 是蓝牙（BCM4343 的蓝牙半边，走 UART3 `ttymxc2`，电源驱动是原厂的 `bt_pwr_ctrl`）要的内核改动，2026-11-26 在设备上跑过（Jump 44 只换内核，Jump 45/46 加安卓蓝牙协议栈）：rfkill 开关 10 次，UART1、UART3 的中断计数都不动；HCI 复位在 115200、921600、3 Mbaud 下都无失败；能加载原厂 btd 用的 `BCM4343A1_001.002.009.0152.0515.hcd`（固件只在设备侧，不进仓库）；微信读书听书从配对的 Bose 耳机出声。经过见 `../android.md` 的蓝牙一节。
 
