@@ -73,6 +73,26 @@ struct Device {
     uint32_t greySlot = 3;
     uint64_t presents = 0, sent[4] = {}, settles = 0, failures = 0, prepareUs = 0, sendUs = 0, changedPixels = 0,
              replacedAreas = 0, recoveries = 0;
+    // Frames taken note of and not sent (Panel::present, `hold`); both rules
+    // are off unless their property is set (readPolicy).
+    //
+    // coalesceNs: a page-sized change on an idle panel waits this long for the
+    // frames that follow it -- a reader draws the page and, a frame or two
+    // later, its progress line or a highlight -- and all of them leave as one
+    // update. deferBusy: a frame that touches an area the panel is still
+    // drawing is kept until the panel is idle; the driver would hold such an
+    // update back as a collision anyway and send it again when the first one
+    // ends, one waveform per frame, while MXCFB_SEND_UPDATE waits for the
+    // driver's queue lock in the meantime.
+    //
+    // holding: held frames are owed; everything is held until settleLocked()
+    // has sent them, at holdDueNs or when the panel is idle, whichever is later.
+    int64_t coalesceNs = 0, holdDueNs = 0;
+    bool deferBusy = false, holding = false;
+    uint64_t held = 0;
+    // The updates the driver has taken and the settle thread has not seen end.
+    struct Flight { uint32_t marker; pw3::Rect rect; };
+    std::vector<Flight> inflight;
     std::atomic<unsigned> reportedErrors{0};
     bool reportedFirst = false;
     ~Device() {
@@ -150,6 +170,9 @@ void readPolicy(Device* d) {
     property_get("debug.pw3.epdc.pw4_grey", grey, "gl16");
     d->greySlot = !strcmp(grey, "reagld") ? 5 : !strcmp(grey, "reagl") ? 4 : 3;
 #endif
+    const int32_t window = property_get_int32("debug.pw3.epdc.coalesce_ms", 0);
+    d->coalesceNs = int64_t(window < 0 ? 0 : window > 500 ? 500 : window) * 1000000;
+    d->deferBusy = property_get_bool("debug.pw3.epdc.defer_busy", false);
     const int32_t ms = property_get_int32("debug.pw3.epdc.settle_ms", 350);
     d->settleNs = int64_t(ms < 50 ? 50 : ms > 5000 ? 5000 : ms) * 1000000;
 }
@@ -210,9 +233,19 @@ int send(Device* d, const pw3::PanelUpdate& plan) {
     }
     if (rc < 0) return -errno;
     d->marker = marker;
+    // Bounded for a device whose settle thread is not there to take them off.
+    if (d->inflight.size() >= 64) d->inflight.erase(d->inflight.begin());
+    d->inflight.push_back({marker, plan.rect});
     ++d->sent[counter(plan.waveform)];
     d->changedPixels += uint64_t(pw3::area(plan.rect));
     return 0;
+}
+// Whether the frame touches an area the panel is still drawing. Caller holds the lock.
+bool touchesFlight(const Device* d, const pw3::Rect* damage, size_t count) {
+    for (const auto& flight : d->inflight)
+        for (size_t r = 0; r < count; ++r)
+            if (!pw3::isEmpty(pw3::intersect(flight.rect, damage[r]))) return true;
+    return false;
 }
 // Caller holds the lock.
 int presentLocked(Device* d, const pw3::Rect* damage, size_t count) {
@@ -225,7 +258,20 @@ int presentLocked(Device* d, const pw3::Rect* damage, size_t count) {
     d->recover = false;
     const int64_t began = nanoseconds();
     d->updates.clear();
-    d->panel->present(damage, count, visiblePixels(d), d->fixed.line_length, &d->updates, d->finished == d->marker);
+    const bool idle = d->finished == d->marker;
+    // While frames are held, every frame is: an update sent past them would
+    // show a later picture around an earlier one.
+    bool hold = d->holding;
+    if (!hold && !d->panel->needsFull()) {
+        if (idle) hold = d->coalesceNs > 0 && !d->panel->pending() && d->panel->spansPage(damage, count);
+        else hold = d->deferBusy && touchesFlight(d, damage, count);
+        if (hold) d->holdDueNs = began + (idle ? d->coalesceNs : 0);
+    }
+    d->panel->present(damage, count, visiblePixels(d), d->fixed.line_length, &d->updates, idle, hold);
+    if (hold) ++d->held;
+    // A held frame that changed nothing owes nothing, and neither does one the
+    // panel repainted the screen for instead.
+    d->holding = hold && d->panel->pending();
     const int64_t prepared = nanoseconds();
     int result = 0;
     for (const auto& update : d->updates) {
@@ -271,6 +317,7 @@ bool waitFor(Device* d, uint32_t marker) {
 // Caller holds the lock.
 void settleLocked(Device* d) {
     pw3::PanelUpdate update{};
+    d->holding = false;
     if (!d->panel->settle(visiblePixels(d), d->fixed.line_length, &update)) return;
     ++d->settles;
     if (send(d, update)) { ++d->failures; d->panel->invalidate(); d->recover = !d->asleep; }
@@ -332,11 +379,15 @@ void* settleLoop(void* pointer) {
                 d->recoveriesLeft = 1;
             }
             d->finished = next;
+            for (auto it = d->inflight.begin(); it != d->inflight.end();)
+                it = it->marker == next ? d->inflight.erase(it) : it + 1;
             if (d->finished == d->marker) pthread_cond_broadcast(&d->wake);  // opsSleep may be waiting
             continue;
         }
         if (!d->panel->pending() && !d->recover) { pthread_cond_wait(&d->wake, &d->lock); continue; }
-        const int64_t due = d->lastUpdateNs + d->settleNs;
+        // Held frames are not a picture that is still moving: they leave when
+        // their window ends, without the settle period on top.
+        const int64_t due = d->holding ? d->holdDueNs : d->lastUpdateNs + d->settleNs;
         if (nanoseconds() < due) {
             const timespec until{time_t(due / 1000000000), long(due % 1000000000)};
             pthread_cond_timedwait(&d->wake, &d->lock, &until);
@@ -451,6 +502,9 @@ void opsSleep(framebuffer_device_t* api) {
     // complete frame.
     d->asleep = true;
     d->recover = false;
+    // Frames still held are not shown first: with a picture it replaces them,
+    // without one settleLocked() below shows them.
+    d->holding = false;
     const bool chinese = chineseSystem();
     FILE* picture = pw3::openPicture(chinese ? "/system/usr/share/pw3/sleep-zh.pgm" : "/system/usr/share/pw3/sleep-en.pgm",
                                                                d->panel->width(), d->panel->height());
@@ -503,14 +557,15 @@ void opsDescribe(framebuffer_device_t* api, char* text, int size) {
     // either can be read from a release (open-items, 2026-10-28).
     snprintf(text, size_t(size), "PW3 panel: presents=%llu a2=%llu du=%llu gl16=%llu gc16=%llu settles=%llu failures=%llu"
              " recoveries=%llu prepare_us_total=%llu send_us_total=%llu update_pixels_total=%llu replaced_areas=%llu"
-             " pending=%d idle=%d unknown=%d\n",
+             " pending=%d idle=%d unknown=%d held=%llu\n",
              (unsigned long long)d->presents, (unsigned long long)d->sent[0], (unsigned long long)d->sent[1],
              (unsigned long long)d->sent[2], (unsigned long long)d->sent[3],
              (unsigned long long)d->settles,
              (unsigned long long)d->failures, (unsigned long long)d->recoveries,
              (unsigned long long)d->prepareUs, (unsigned long long)d->sendUs,
              (unsigned long long)d->changedPixels, (unsigned long long)d->replacedAreas,
-             d->panel->pending() ? 1 : 0, d->finished == d->marker ? 1 : 0, d->panel->unknown() ? 1 : 0);
+             d->panel->pending() ? 1 : 0, d->finished == d->marker ? 1 : 0, d->panel->unknown() ? 1 : 0,
+             (unsigned long long)d->held);
 }
 const Pw3PanelOps PanelOps = {Pw3PanelOpsMagic, 3, opsCanvas, opsNeedsFull, opsPresent, opsSleep, opsDescribe,
                               opsReplaced};

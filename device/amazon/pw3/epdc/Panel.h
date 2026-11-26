@@ -149,8 +149,20 @@ public:
     // panel has to change now into `fb` and appends the updates to send.
     // `idle`: every update sent so far has finished, i.e. this is not one
     // frame among many.
+    // `hold`: the frame is only taken note of. The canvas inside `damage`
+    // becomes the picture asked for, nothing is written to `fb` and no update
+    // is appended; what differs from the screen is owed (pending()) and
+    // settle() shows it, as one update, whatever number of frames were held
+    // in between. For a frame that would only queue behind an update the
+    // panel is still drawing, and for a page whose drawing the application
+    // has not finished (framebuffer.cpp, presentLocked). A panel whose content
+    // is unknown repaints at once all the same.
     void present(const Rect* damage, size_t count, uint8_t* fb, size_t fbStride, std::vector<PanelUpdate>* updates,
-                 bool idle = false);
+                 bool idle = false, bool hold = false);
+    // Whether the canvas inside one of these areas changes as much of the
+    // picture as a page does (pagePercent). Reads the canvas: for the thread
+    // that composed it, before present().
+    bool spansPage(const Rect* damage, size_t count);
     // True while a second pass is due: pixels show the first pass instead of
     // their grey level, or were moved away from grey by one.
     bool pending() const { return !isEmpty(pending_) || !isEmpty(touched_); }
