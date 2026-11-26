@@ -68,6 +68,9 @@ struct Device {
     // losing or has lost power, and an update must not be sent at all -- the
     // picture is meant to stay, and the screen is repainted on the way back up.
     bool asleep = false;
+    // PW4 only: the slot of the panel's waveform file that shows a 16-level
+    // change (selector(), below). debug.pw3.epdc.pw4_grey.
+    uint32_t greySlot = 3;
     uint64_t presents = 0, sent[4] = {}, settles = 0, failures = 0, prepareUs = 0, sendUs = 0, changedPixels = 0,
              replacedAreas = 0, recoveries = 0;
     std::atomic<unsigned> reportedErrors{0};
@@ -138,6 +141,15 @@ void readPolicy(Device* d) {
     const int32_t every = property_get_int32("debug.pw3.epdc.full_every", policy.exact == pw3::Waveform::Gl16 ? int32_t(policy.fullEvery) : 0);
     policy.fullEvery = every > 0 ? unsigned(every) : 0;
     d->panel->setPolicy(policy);
+#ifdef PREINIT_BOARD_PW4
+    // gl16 is what Panel.h means by GL16. reagld is what every build before
+    // this one sent in its place without knowing (selector()), kept so that the
+    // two can be looked at side by side on the device; reagl is the stock
+    // system's waveform for a page.
+    char grey[PROPERTY_VALUE_MAX];
+    property_get("debug.pw3.epdc.pw4_grey", grey, "gl16");
+    d->greySlot = !strcmp(grey, "reagld") ? 5 : !strcmp(grey, "reagl") ? 4 : 3;
+#endif
     const int32_t ms = property_get_int32("debug.pw3.epdc.settle_ms", 350);
     d->settleNs = int64_t(ms < 50 ? 50 : ms > 5000 ? 5000 : ms) * 1000000;
 }
@@ -149,6 +161,30 @@ size_t counter(pw3::Waveform w) {
         default: return 3;
     }
 }
+// The number MXCFB_SEND_UPDATE takes for a waveform.
+//
+// pw3::Waveform holds Lab126's logical selectors, and the PW3's 3.0.35 driver
+// maps them into the slots of the loaded file (5 becomes slot 3, gl16 --
+// docs/open-items.md, "which waveform the panel executes"). The PW4's 4.1.15
+// driver has that mapping compiled out (mxc_epdc_v2_fb.c, the "#if 0" around
+// get_waveform_by_type in mxc_epdc_fb_send_single_update) and takes the number
+// as the slot itself, and its slots are (include/uapi/linux/mxcfb.h) DU 1,
+// GC16 2, GL16 3, GLR16/REAGL 4, GLD16/REAGLD 5, A2 6. Sent unchanged, the
+// PW3's "GL16" (5) is REAGLD there -- two more passes through the PxP for
+// every update and the kernel's "Algorithm processing needed 2" line -- and
+// its "A2" (4) is REAGL, a 16-level waveform where the fastest one was meant.
+uint32_t selector(const Device* d, pw3::Waveform waveform) {
+#ifdef PREINIT_BOARD_PW4
+    switch (waveform) {
+        case pw3::Waveform::A2: return 6;
+        case pw3::Waveform::Gl16: return d->greySlot;
+        default: break;
+    }
+#else
+    (void)d;
+#endif
+    return uint32_t(waveform);
+}
 // Queues one update; the driver's queue-and-merge path orders overlapping
 // updates itself, so nothing here waits for the waveform. The two waveforms
 // the driver may choose between when it sends again what collided with a
@@ -157,7 +193,7 @@ int send(Device* d, const pw3::PanelUpdate& plan) {
     pw3::EpdcUpdate update{};
     update.region = {uint32_t(plan.rect.top), uint32_t(plan.rect.left),
                      uint32_t(plan.rect.right - plan.rect.left), uint32_t(plan.rect.bottom - plan.rect.top)};
-    update.waveform = update.bwWaveform = update.grayWaveform = uint32_t(plan.waveform);
+    update.waveform = update.bwWaveform = update.grayWaveform = selector(d, plan.waveform);
     update.mode = plan.full ? 1 : 0;
     update.temperature = pw3::TempUseAuto;
     // The marker counts updates the driver took. Were it moved before the call,
