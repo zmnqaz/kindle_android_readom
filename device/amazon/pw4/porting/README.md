@@ -90,8 +90,8 @@ eMMC `mmcblk1`，7 634 944 KiB（约 7.3 GiB），另有 `boot0`/`boot1` 各 4 M
 | 霍尔传感器 | `amzn,rex_hall`，GPIO 中断 | `/rex_hall`、interrupts | `wario_hall` 补丁要换 |
 | Wi‑Fi | **Broadcom BCM43430（4343W）**，SDIO 接在 `usdhc@2190000`（mmc0）；驱动是博通的 **bcmdhd**（模块，`CONFIG_BCMDHD=m`），主线的 `brcmfmac` 没开；芯片固件 7.45.102.16 | 模块、DT `/wifi_brcm`、dmesg | 和移植文档第六、七节的 Oasis 1 同一颗芯片；但 PW4 原厂用的是 bcmdhd，不是 brcmfmac。要确认 GPL 包里有没有这份 bcmdhd 源码 |
 | Wi‑Fi 固件 / 校准 | 实际用的是 `/opt/brcm_4343w/wifi/firmware/fw_bcmdhd_sr.bin`（369 119 字节）和 `/opt/brcm_4343w/wifi/nvram/nvram_wfo.txt`（1166 字节，仅 Wi‑Fi 版；另有 `nvram_wan.txt` 给 3G 版、`fw_bcmdhd_mfg.bin` 是产线用的）。内核配置里写的 `nvram.txt` 不存在，是模块参数覆盖的。驱动版本 1.363.110.23，芯片 `a9a6 Rev 1` | config、`/sys/module/bcmdhd/parameters` | 都在根分区上，按项目规矩从这台机器现场读，不打包 |
-| 蓝牙固件 | `/opt/brcm_4343w/bluetooth/firmware/BCM4343A1_*.hcd`，11 个版本 | 目录清单 | 本项目不用 |
-| 蓝牙 | 同一颗芯片，`bt_pwr_ctrl`，有 `BT hostwake` 中断 | DT、interrupts | 本项目没用蓝牙，可不管 |
+| 蓝牙固件 | `/opt/brcm_4343w/bluetooth/firmware/BCM4343A1_*.hcd`，11 个版本 | 目录清单 | 用原厂 btd 选的 `0152.0515`，装机时拷进设备那半（不进仓库），见 `android.md` 蓝牙一节 |
+| 蓝牙 | 同一颗芯片，`bt_pwr_ctrl`，有 `BT hostwake` 中断 | DT、interrupts | 2026-11-26 已接通（内核 `0028`–`0032`），A2DP 耳机听书可用 |
 | USB 设备控制器 | **ChipIdea**（`ci_hdrc`，`usb@02184000`） | iomem、drivers | PW3 的 `arcotg_udc` 8 个补丁作废；好在 4.1 自带 configfs gadget，且原厂已开 `CONFIG_USB_CONFIGFS_F_FS`、`CONFIG_USB_CONFIGFS_F_MTP` |
 | 显示控制器 | EPDC **v2 驱动**（`imx_epdc_v2_fb`，`compatible = "fsl,imx6sll-epdc", "fsl,imx7d-epdc"`），**编成模块**，由 initrd 加载；PXP 是 `imx-pxp-v3` | dmesg、DT | EPDC/PXP 的 9 个补丁要对着 v2 驱动重写 |
 | 屏幕 | `mxc_epdc_fb`，1072×1448，8 bpp，虚拟尺寸 1088×6144（行跨度 1088）；`rotate = 3`，即 `FB_ROTATE_CCW` | fb0 | 分辨率**和旋转方向**都与 PW3 相同（`EpdcContract.h` 写的也是 1072×1448 + `FB_ROTATE_CCW`），尺寸、位图、密度都能沿用；行跨度是 1088 而不是 1072，要确认合成器按 stride 写 |
