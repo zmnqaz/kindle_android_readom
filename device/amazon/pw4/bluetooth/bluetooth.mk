@@ -25,6 +25,7 @@ PRODUCT_PACKAGES += \
 PW4_BT := device/amazon/pw4/bluetooth
 PRODUCT_COPY_FILES += \
     frameworks/native/data/etc/android.hardware.bluetooth.xml:system/etc/permissions/android.hardware.bluetooth.xml \
+    frameworks/native/data/etc/android.hardware.bluetooth_le.xml:system/etc/permissions/android.hardware.bluetooth_le.xml \
     $(PW4_BT)/bt_vendor.conf:system/etc/bluetooth/bt_vendor.conf \
     $(PW4_BT)/init.pw4.bluetooth.rc:$(TARGET_COPY_OUT_VENDOR)/etc/init/init.pw4.bluetooth.rc \
     $(PW4_BT)/ueventd.rc:$(TARGET_COPY_OUT_VENDOR)/ueventd.rc \
@@ -39,6 +40,9 @@ PRODUCT_COPY_FILES += \
     device/amazon/pw4/media/media_codecs.xml:system/vendor/etc/media_codecs.xml \
     frameworks/av/media/libstagefright/data/media_codecs_google_audio.xml:system/vendor/etc/media_codecs_google_audio.xml
 
+# bluetooth_le: BluetoothManagerService binds GattService on BLE_ON only when
+# FEATURE_BLUETOOTH_LE is declared; without it enabling stops at BLE_ON
+# (Jump 45, 2026-11-26).
 # Only A2DP source (and GATT, which the enable path goes through); the rest
 # of the profiles stay compiled but are not started.
 DEVICE_PACKAGE_OVERLAYS += device/amazon/pw4/overlay

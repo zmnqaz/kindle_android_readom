@@ -3,12 +3,8 @@
 # (class hal, user bluetooth). /data/misc/bluedroid and /data/misc/bluetooth
 # are made by device/amazon/pw3/rootdir/init.pw3-main.rc:416-421.
 on post-fs-data
-    # The stock patch RAM file, put there by the device side
-    # (porting/make-device-archive.py); the HAL reads it as bluetooth.
-    chown root bluetooth /firmware/bluetooth
-    chmod 0750 /firmware/bluetooth
-    chown root bluetooth /firmware/bluetooth/BCM4343A1.hcd
-    chmod 0640 /firmware/bluetooth/BCM4343A1.hcd
+    # The stock patch RAM file is world-readable in the device archive
+    # (porting/make-device-archive.py): the root is read-only here.
     # Fallback if ueventd's sysfs rule (vendor/ueventd.rc) does not match the
     # real path: the built-in bt_pwr_ctrl registers before any wlan phy, so
     # it is rfkill0.

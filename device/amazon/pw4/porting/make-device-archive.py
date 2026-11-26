@@ -56,8 +56,11 @@ def main():
     if bt.is_file():
         if not any(n == 'firmware' for n, _, _ in files):
             files += [('firmware', D, b'')]
-        files += [('firmware/bluetooth', 0o40750, b''),
-                  ('firmware/bluetooth/BCM4343A1.hcd', 0o100640, bt.read_bytes())]
+        # Readable by all: the root file system is read-only by the time
+        # init.pw4.bluetooth.rc could give it to group bluetooth, and the HAL
+        # runs as bluetooth (Jump 45). SELinux still limits who may read it.
+        files += [('firmware/bluetooth', 0o40755, b''),
+                  ('firmware/bluetooth/BCM4343A1.hcd', 0o100644, bt.read_bytes())]
     a.output.write_bytes(newc(files))
     for name, mode, data in files:
         print('%06o %8d %s' % (mode, len(data), name))
