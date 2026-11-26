@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <!-- 社交分享图的源文件；og.png 由它渲染（1200×630）。改了这里要重新导出 og.png。 -->
+  <defs>
+    <pattern id="lines" width="1200" height="36" patternUnits="userSpaceOnUse">
+      <rect width="1200" height="1" y="35" fill="#8c7350" fill-opacity=".07"/>
+    </pattern>
+    <linearGradient id="bezel" x1="0" y1="0" x2=".6" y2="1">
+      <stop offset="0" stop-color="#3a3632"/>
+      <stop offset=".3" stop-color="#1f1d1b"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="#f5efe3"/>
+  <rect width="1200" height="630" fill="url(#lines)"/>
+  <rect x="0" y="0" width="1200" height="8" fill="#b03a2e"/>
+
+  <g transform="translate(90 92)">
+    <rect width="64" height="64" rx="7" fill="#b03a2e"/>
+    <rect x="5" y="5" width="54" height="54" rx="4" fill="none" stroke="#fbf6ec" stroke-width="2.5"/>
+    <path d="M14 27.2 Q32 25.6 50 26.4 L50 30.6 Q32 30 14 31.2 Z" fill="#fbf6ec"/>
+    <path d="M29.4 14 L34.6 14.5 L34.2 51 L29.8 51.5 Z" fill="#fbf6ec"/>
+    <text x="84" y="30" font-family="Georgia, 'Noto Serif CJK SC', serif" font-size="30" font-weight="700" fill="#2a2520" letter-spacing="2">Readom</text>
+    <text x="84" y="58" font-family="'Noto Serif CJK SC', 'Songti SC', serif" font-size="20" fill="#74695c" letter-spacing="4">第十代移植版 · 社区非官方</text>
+  </g>
+
+  <g font-family="'Noto Serif CJK SC', 'Songti SC', serif" fill="#2a2520">
+    <text x="88" y="290" font-size="68" font-weight="700" letter-spacing="5">让 Kindle 第十代</text>
+    <text x="88" y="380" font-size="68" font-weight="700" letter-spacing="5">读上<tspan fill="#b03a2e">微信读书</tspan></text>
+    <text x="90" y="458" font-size="26" fill="#4a423a" letter-spacing="2">Android 8.1 · 墨水屏版微信读书 · 蓝牙耳机听书</text>
+    <text x="90" y="500" font-size="26" fill="#4a423a" letter-spacing="2">保留 Kindle 原厂系统</text>
+    <text x="90" y="568" font-size="20" fill="#74695c" letter-spacing="1.5">基于 hbyxabc 的 Readom（readom.app）· Kindle Paperwhite 4 / 2018</text>
+  </g>
+
+  <g transform="translate(838 70) rotate(3 150 245)">
+    <rect width="300" height="470" rx="30" fill="url(#bezel)"/>
+    <rect x="22" y="24" width="256" height="384" rx="3" fill="#ecebe6"/>
+    <g fill="#2a2520" fill-opacity=".72">
+      <rect x="46" y="58" width="120" height="9" rx="2" fill-opacity=".9"/>
+      <rect x="46" y="92" width="208" height="5" rx="2"/>
+      <rect x="46" y="112" width="208" height="5" rx="2"/>
+      <rect x="46" y="132" width="196" height="5" rx="2"/>
+      <rect x="46" y="152" width="208" height="5" rx="2"/>
+      <rect x="46" y="172" width="150" height="5" rx="2"/>
+      <rect x="46" y="204" width="208" height="5" rx="2"/>
+      <rect x="46" y="224" width="208" height="5" rx="2"/>
+      <rect x="46" y="244" width="200" height="5" rx="2"/>
+      <rect x="46" y="264" width="208" height="5" rx="2"/>
+      <rect x="46" y="284" width="208" height="5" rx="2"/>
+      <rect x="46" y="304" width="120" height="5" rx="2"/>
+      <rect x="46" y="336" width="208" height="5" rx="2"/>
+      <rect x="46" y="356" width="176" height="5" rx="2"/>
+    </g>
+    <rect x="128" y="436" width="44" height="3" rx="1.5" fill="#ffffff" fill-opacity=".12"/>
+  </g>
+</svg>
