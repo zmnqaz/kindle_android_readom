@@ -1,0 +1,129 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: pw4-port <pw4-port@localhost>
+Date: Thu, 26 Nov 2026 13:40:38 +0800
+Subject: [PATCH] PW4 Android: keep the uSDHC vendor registers across a deep
+ sleep
+
+The uSDHC loses power with the M/F mix; sdhci_resume_host() only puts back
+the standard registers. Save the i.MX ones (burst length, watermark, DLL,
+ERR004536, VSELECT, VEND_SPEC2, tuning control) at suspend, log what was
+lost and write them back on resume. The eMMC returns to DDR52 (undoes 0033).
+---
+ drivers/mmc/host/sdhci-esdhc-imx.c | 73 ++++++++++++++++++++++++++----
+ 1 file changed, 63 insertions(+), 10 deletions(-)
+
+diff --git a/drivers/mmc/host/sdhci-esdhc-imx.c b/drivers/mmc/host/sdhci-esdhc-imx.c
+index 465b6c9c..b2effeba 100644
+--- a/drivers/mmc/host/sdhci-esdhc-imx.c
++++ b/drivers/mmc/host/sdhci-esdhc-imx.c
+@@ -264,6 +264,9 @@ struct pltfm_imx_data {
+ 		WAIT_FOR_INT,        /* sent CMD12, waiting for response INT */
+ 	} multiblock_status;
+ 	u32 is_ddr;
++	/* PW4: vendor registers kept across a deep sleep (see the resume) */
++	u32 pw4_regs[8];
++	bool pw4_regs_saved;
+ };
+ 
+ static const struct platform_device_id imx_esdhc_devtype[] = {
+@@ -1367,16 +1370,6 @@ static int sdhci_esdhc_imx_probe(struct platform_device *pdev)
+ 			host->mmc->pm_caps |= MMC_PM_KEEP_POWER;
+ 			host->mmc->pm_flags |= MMC_PM_KEEP_POWER;
+ 			host->mmc->caps2 |= MMC_CAP2_PW4_KEEP_AWAKE;
+-			/*
+-			 * And SDR, not DDR52: after a deep sleep the controller
+-			 * comes back from reset and only the generic bus settings
+-			 * are put back; at DDR52 that gave over a thousand CRC
+-			 * errors (-84) and "data interrupt with no data operation"
+-			 * on the first reads, and system_server died on them
+-			 * (Jump 46, 2026-11-26). High Speed SDR needs nothing more.
+-			 */
+-			host->mmc->caps &= ~(MMC_CAP_1_8V_DDR | MMC_CAP_1_2V_DDR |
+-					     MMC_CAP_UHS_DDR50);
+ 		}
+ #endif
+ 
+@@ -1458,6 +1451,60 @@ static int sdhci_esdhc_imx_remove(struct platform_device *pdev)
+ }
+ 
+ #ifdef CONFIG_PM_SLEEP
++/*
++ * PW4 Android: in a deep sleep the M/F mix, and the uSDHC in it, loses power;
++ * on resume every register is back at its reset value. sdhci_resume_host()
++ * puts back the standard ones (and with HOST_OFF_CARD_ON the bus settings),
++ * not the i.MX vendor ones the probe and the signal-voltage switch wrote:
++ * with the eMMC at DDR52 the first reads after a deep sleep failed with over
++ * a thousand CRC errors and system_server died (Jump 46, 2026-11-26). Keep
++ * them across the sleep, say which ones were lost, and write them back.
++ */
++static const u16 pw4_usdhc_regs[] = {
++	SDHCI_HOST_CONTROL,	/* burst length enable (bit 27) */
++	ESDHC_WTMK_LVL, ESDHC_MIX_CTRL, ESDHC_DLL_CTRL,
++	0x6c,			/* ERR004536 bit 7 */
++	ESDHC_VENDOR_SPEC,	/* VSELECT: 1.8 V signalling */
++	0xc8,			/* VEND_SPEC2 */
++	ESDHC_TUNING_CTRL,
++};
++
++static void pw4_usdhc_save(struct sdhci_host *host, struct pltfm_imx_data *imx)
++{
++	int i;
++
++	for (i = 0; i < ARRAY_SIZE(pw4_usdhc_regs); i++)
++		imx->pw4_regs[i] = readl(host->ioaddr + pw4_usdhc_regs[i]);
++	imx->pw4_regs_saved = true;
++}
++
++static void pw4_usdhc_restore(struct sdhci_host *host, struct pltfm_imx_data *imx)
++{
++	u32 v;
++	int i;
++
++	if (!imx->pw4_regs_saved)
++		return;
++	for (i = 0; i < ARRAY_SIZE(pw4_usdhc_regs); i++) {
++		v = readl(host->ioaddr + pw4_usdhc_regs[i]);
++		if (v != imx->pw4_regs[i])
++			dev_info(mmc_dev(host->mmc), "pw4: resume reg %#x was %#x now %#x\n",
++				 pw4_usdhc_regs[i], imx->pw4_regs[i], v);
++	}
++	/* What set_ios does not write: whole registers, or the probe's bits */
++	writel((readl(host->ioaddr + SDHCI_HOST_CONTROL) & ~ESDHC_BURST_LEN_EN_INCR) |
++	       (imx->pw4_regs[0] & ESDHC_BURST_LEN_EN_INCR), host->ioaddr + SDHCI_HOST_CONTROL);
++	writel(imx->pw4_regs[1], host->ioaddr + ESDHC_WTMK_LVL);
++	writel(imx->pw4_regs[3], host->ioaddr + ESDHC_DLL_CTRL);
++	writel((readl(host->ioaddr + 0x6c) & ~BIT(7)) | (imx->pw4_regs[4] & BIT(7)),
++	       host->ioaddr + 0x6c);
++	writel((readl(host->ioaddr + ESDHC_VENDOR_SPEC) & ~ESDHC_VENDOR_SPEC_VSELECT) |
++	       (imx->pw4_regs[5] & ESDHC_VENDOR_SPEC_VSELECT), host->ioaddr + ESDHC_VENDOR_SPEC);
++	writel(imx->pw4_regs[6], host->ioaddr + 0xc8);
++	writel(imx->pw4_regs[7], host->ioaddr + ESDHC_TUNING_CTRL);
++	imx->pw4_regs_saved = false;
++}
++
+ int sdhci_esdhc_suspend(struct device *dev)
+ {
+ 	struct sdhci_host *host = dev_get_drvdata(dev);
+@@ -1474,6 +1521,9 @@ int sdhci_esdhc_suspend(struct device *dev)
+ 		mmc_retune_needed(host->mmc);
+ 	}
+ 
++	if (esdhc_is_usdhc(imx_data))
++		pw4_usdhc_save(host, imx_data);
++
+ 	return sdhci_pltfm_suspend(dev);
+ }
+ 
+@@ -1496,6 +1546,9 @@ static int sdhci_esdhc_resume(struct device *dev)
+ 
+ 	ret = sdhci_pltfm_resume(dev);
+ 
++	if (esdhc_is_usdhc(imx_data))
++		pw4_usdhc_restore(host, imx_data);
++
+ #ifdef CONFIG_PM
+ 	pm_runtime_mark_last_busy(host->mmc->parent);
+ 	pm_runtime_put_autosuspend(host->mmc->parent);
+-- 
+2.53.0
+
