@@ -1,0 +1,45 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: pw4-port <pw4-port@localhost>
+Date: Wed, 25 Nov 2026 18:53:00 +0800
+Subject: [PATCH 31/32] PW4 Android: imx.bt_dma switch for the Bluetooth UART
+
+SDMA has no RAM script on Android; let the device test choose PIO for
+ttymxc2 (imx.bt_dma=0 or /sys/module/imx/parameters/bt_dma) without a
+rebuild. Default unchanged (DMA).
+---
+ drivers/tty/serial/imx.c | 12 ++++++++++++
+ 1 file changed, 12 insertions(+)
+
+diff --git a/drivers/tty/serial/imx.c b/drivers/tty/serial/imx.c
+index 58c7df2e..974f24ca 100644
+--- a/drivers/tty/serial/imx.c
++++ b/drivers/tty/serial/imx.c
+@@ -188,6 +188,15 @@
+ static int g_BTstatus = 0;
+ static unsigned int g_BTirq = 0;
+ static bool g_BTirq_parked;
++
++/*
++ * PW4 Android: SDMA runs without its RAM script (no sdma-imx6q.bin), so
++ * UART DMA on the BT port is unproven. imx.bt_dma=0 on the command line,
++ * or /sys/module/imx/parameters/bt_dma before opening ttymxc2, uses PIO.
++ */
++static bool bt_dma = true;
++module_param(bt_dma, bool, 0644);
++MODULE_PARM_DESC(bt_dma, "Use SDMA on the Bluetooth UART (applies at next open)");
+ #endif
+ 
+ #define UART_NR 8
+@@ -1179,6 +1188,9 @@ static int imx_startup(struct uart_port *port)
+ 
+ 	/* Can we enable the DMA support? */
+ 	if (is_imx6q_uart(sport) && !uart_console(port)
++#ifdef CONFIG_LAB126
++		&& (bt_dma || sport->port.irq != g_BTirq)
++#endif
+ 		&& !sport->dma_is_inited)
+ 		imx_uart_dma_init(sport);
+ 
+-- 
+2.53.0
+

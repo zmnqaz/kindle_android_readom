@@ -1,0 +1,100 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: pw4-port <pw4-port@localhost>
+Date: Wed, 25 Nov 2026 18:51:27 +0800
+Subject: [PATCH 28/32] PW4 Android: bt_pwr_ctrl stops writing UART1's UCR2
+
+UART3_UCR2 was 0x02020084, UART1's UCR2: bluesleep proto=0 cleared
+RXEN/TXEN of UART1 behind the serial driver, with its clocks possibly off.
+Flow control of UART3 belongs to the tty (CRTSCTS); make both helpers
+no-ops and drop the ioremap.
+---
+ drivers/misc/bt_pwr_ctrl.c | 50 +++++++++-----------------------------
+ 1 file changed, 11 insertions(+), 39 deletions(-)
+
+diff --git a/drivers/misc/bt_pwr_ctrl.c b/drivers/misc/bt_pwr_ctrl.c
+index 3089cc46..9ffce1d6 100644
+--- a/drivers/misc/bt_pwr_ctrl.c
++++ b/drivers/misc/bt_pwr_ctrl.c
+@@ -55,15 +55,13 @@
+ #define BT_DEV_WAKE	0x08
+ #define BT_SUSPEND	0x10
+ 
+-#define UART3_UCR2	0x2020084
+-#define UCR2_RXEN	(0x1 << 1)		/* Receiver enabled */
+-#define UCR2_TXEN	(0x1 << 2)		/* Transmitter enabled */
+-#define UCR2_WS	(0x1 << 5)		/* Word size */
+-#define UCR2_CTS	(0x1 << 12)		/* Clear to send */
+-#define UCR2_CTSC	(0x1 << 13)		/* CTS pin control */
+-
+-/* uart register & prototypes */
+-static void __iomem *uart3_ucr2 = NULL;
++/*
++ * PW4 Android: the stock driver wrote UCR2 at 0x02020084 here, which is
++ * UART1's UCR2 (UART3 is at 0x02034000), from outside the serial driver
++ * and with UART1's clocks possibly gated. On Android UART1 has no console
++ * and is closed; UART3's RTS/CTS and RXEN/TXEN are owned by the imx tty
++ * driver (CRTSCTS in termios). These helpers are no-ops.
++ */
+ static void uart_hw_flow_control_en(int en);
+ static void uart_hw_cts_control_en(int en) ;
+ 
+@@ -372,32 +370,12 @@ btpwrctrl_enable_store(struct device* dev,
+ }
+ static DEVICE_ATTR(btenable, 0644, btpwrctrl_enable_show, btpwrctrl_enable_store);
+ 
+-static void uart_hw_flow_control_en(int en) {
+-	u32 reg;
+-
+-	reg = readl(uart3_ucr2);
+-
+-	if (en) {
+-		reg |= (UCR2_RXEN | UCR2_TXEN | UCR2_WS |UCR2_CTSC) ;
+-	} else {
+-		reg &= ~(UCR2_RXEN | UCR2_TXEN | UCR2_WS | UCR2_CTSC);
+-	}
+-
+-	writel(reg, uart3_ucr2);
++static void uart_hw_flow_control_en(int en)
++{
+ }
+ 
+-static void uart_hw_cts_control_en(int en) {
+-	u32 reg;
+-
+-	reg = readl(uart3_ucr2);
+-
+-	if (en) {
+-		reg |= UCR2_CTSC;
+-	} else {
+-		reg &= ~(UCR2_CTS | UCR2_CTSC);;
+-	}
+-
+-	writel(reg, uart3_ucr2);
++static void uart_hw_cts_control_en(int en)
++{
+ }
+ 
+ /* Read, write proc entries */
+@@ -828,9 +806,6 @@ static int bt_pwrctrl_probe(struct platform_device *pdev)
+ 	gp_privdata->state = 0;
+ 	set_bit(BT_ASLEEP, &gp_privdata->state);
+ 
+-	/* ioremap uart3_ucr2 register */
+-	uart3_ucr2 = ioremap(UART3_UCR2, 1);
+-
+ 	printk(KERN_INFO "%s probe successful", __func__);
+ 	return 0;
+ 
+@@ -871,9 +846,6 @@ static int bt_pwrctrl_remove(struct platform_device *pdev)
+ 	if (bt_pwr_ctrl_wq)
+ 		destroy_workqueue(bt_pwr_ctrl_wq);
+ 
+-	if (uart3_ucr2)
+-		iounmap(uart3_ucr2);
+-
+ 	return 0;
+ }
+ 
+-- 
+2.53.0
+
