@@ -76,27 +76,27 @@
   "stock_files": {
     "eips": {
       "path": "/usr/sbin/eips",
-      "bytes": null,
-      "sha256": null
+      "bytes": 62180,
+      "sha256": "24602555fb39ad171c0cf628b7751ab2e6385292c6e8542fe8dfaf26b09b735c"
     },
     "original_boot": [
       {
         "path": "/sbin/init",
-        "bytes": null,
-        "sha256": null
+        "bytes": 1247,
+        "sha256": "629a5b1c2d108f35d87c2ef9090f1775ab4ea6fcf62414029773f39c736590cd"
       },
       {
         "path": "/etc/upstart/init.sh",
-        "bytes": null,
-        "sha256": null
+        "bytes": 1247,
+        "sha256": "629a5b1c2d108f35d87c2ef9090f1775ab4ea6fcf62414029773f39c736590cd"
       },
       {
         "path": "/sbin/init.exe",
-        "bytes": null,
-        "sha256": null
+        "bytes": 111816,
+        "sha256": "ad68c81824ec00ade982ea9fbe088405c9337aa148219a69c1b034fd487106ef"
       }
     ]
   },
-  "stock_files_why": "as the PW3 profile's. NOT READ YET: no PW4 probe hashed these files, and which of the three boot files exist on 5.18.1.1.1 is not known either (on PW3 /sbin/init is a script that runs /sbin/init.exe). Read them on the device (sha256sum and stat -c %s) and fill them in, dropping a path the device does not have; build_launcher.py refuses a release while any is null, and --dev-unpinned builds a development entry that prints what it finds instead",
+  "stock_files_why": "as the PW3 profile's. Read on the owner's PW4, 5.18.1.1.1, on 2026-11-26 (stat -c %s and sha256sum over SSH): all four are regular files; /sbin/init and /etc/upstart/init.sh are the same 1247-byte script, which runs /sbin/init.exe as on the PW3",
   "entry_data_why": "data_format and data_bytes: the PW4's own data image, 2 GiB (device/amazon/pw4/BoardConfig.mk, the owner's decision of 2026-11-26), numbered apart from the PW3's format 1 -- 41, the PW4's first -- so that a manifest says which model's data it means. Format numbers only meet within one model (a Kindle of another model stops at E101 before its data is looked at); the number is distinct anyway, because it costs nothing, and a payload built with the other model's is then refused by build_launcher.py rather than installed"
 }
