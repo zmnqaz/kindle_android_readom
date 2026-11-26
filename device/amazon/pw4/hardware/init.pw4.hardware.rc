@@ -20,3 +20,14 @@ on property:vendor.pw3.wifi.modules=load
 
 on property:vendor.pw3.wifi.modules=unload
     rmmod bcmdhd
+
+# Once booted. The eMMC queue runs deadline, not cfq: there is no seek to
+# plan for on flash, and cfq's idling holds page-fault reads back behind
+# writes. extra_free_kbytes: ActivityManager asks for about 18 MB of extra
+# free memory from the screen size (1072x1448); with 512 MB and an
+# application that needs 300 MB that kept 21 MB empty while code pages were
+# evicted and read back (58000 major faults in 8 minutes, Jump 54). 4 MB
+# leaves kswapd its margin. Neither value has been measured on its own yet.
+on property:sys.boot_completed=1
+    write /sys/block/mmcblk1/queue/scheduler deadline
+    write /proc/sys/vm/extra_free_kbytes 4096

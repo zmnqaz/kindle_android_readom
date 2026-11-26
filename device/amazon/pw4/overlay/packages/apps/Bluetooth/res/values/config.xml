@@ -21,4 +21,13 @@
     <bool name="profile_supported_pbapclient">false</bool>
     <bool name="profile_supported_mapmce">false</bool>
     <bool name="profile_supported_hidd">false</bool>
+    <!-- SBC only (-1 disables a codec). The single 1 GHz core has no room
+         for the AAC encoder while the reader also draws pages: with audio
+         playing, page turns took 0.5 to 4 s and some taps got no answer
+         within 5 s (Jump 55, 2026-11-26). For spoken books SBC is enough. -->
+    <integer name="a2dp_source_codec_priority_sbc">1001</integer>
+    <integer name="a2dp_source_codec_priority_aac">-1</integer>
+    <integer name="a2dp_source_codec_priority_aptx">-1</integer>
+    <integer name="a2dp_source_codec_priority_aptx_hd">-1</integer>
+    <integer name="a2dp_source_codec_priority_ldac">-1</integer>
 </resources>
