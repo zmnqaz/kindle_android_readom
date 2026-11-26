@@ -2,6 +2,15 @@
 #include "pm-logic.h"
 #define SYSFS_MAGIC 0x62656572
 static char log_before[131073],log_after[131073];
+#if CHECK_PROFILE == 3
+/* The PW4 runs the cycle more than once when the stock system was busy
+ * (pw4_handover in helper.c). Which try this is names the files the cycle
+ * writes, and what it found is the outcome the caller decides on. */
+enum pw4_outcome { PW4_READY, PW4_RETRY, PW4_USB };
+static unsigned cycle_attempt=1;
+static enum pw4_outcome cycle_outcome;
+static const char *cycle_reason="";
+#endif
 static int read_pm(const char *path,char *text,size_t size) {
     int fd=open(path,O_RDONLY|O_NOFOLLOW|O_CLOEXEC);struct statfs fs;
     if(fd<0)return 0;
@@ -27,9 +36,19 @@ static void preflight_pm(void) {
     require(read_pm("/sys/power/pm_test",text,sizeof(text)),"pm_test_sysfs_available");
     require(selected_level(text,"none") && token_present(text,"core"),"native_pm_modes_and_original_none");
     require(read_pm("/sys/power/state",text,sizeof(text)) && token_present(text,"mem"),"mem_suspend_supported");
+#if CHECK_PROFILE == 3
+    /* The PW4's stock gadget is g_mass_storage (filesystems_userstore.conf
+     * loads it with file=""). An array of charp prints "(null)" for an entry
+     * never set, which is as empty as an empty one. */
+    int fd=open("/sys/module/g_mass_storage/parameters/file",O_RDONLY|O_NOFOLLOW|O_CLOEXEC);
+    if(fd>=0){ssize_t n=read(fd,text,sizeof(text)-1);close(fd);require(n>=0 && (size_t)n<sizeof(text)-1,"usb_backing_read");text[n]=0;
+        for(char *at=text;*at;){if(!strncmp(at,"(null)",6)){at+=6;continue;}require(*at=='\n'||*at==' '||*at==',',"no_exported_usb_backing_store");at++;}}
+    else require(errno==ENOENT,"usb_backing_absent_or_empty");
+#else
     int fd=open("/sys/module/g_file_storage/parameters/file",O_RDONLY|O_NOFOLLOW|O_CLOEXEC);
     if(fd>=0){ssize_t n=read(fd,text,sizeof(text)-1);close(fd);require(n>=0 && (size_t)n<sizeof(text)-1,"usb_backing_read");text[n]=0;for(ssize_t i=0;i<n;i++)require(text[i]=='\n'||text[i]==' '||text[i]==',',"no_exported_usb_backing_store");}
     else require(errno==ENOENT,"usb_backing_absent_or_empty");
+#endif
 }
 static void pm_test_level(const char *level) {
     char text[256];
@@ -47,6 +66,10 @@ static long long elapsed_ms(const struct timespec *begin,const struct timespec *
 static void run_native_cycle(int commit) {
     const char *phase=commit?"commit":"core";char filename[80],record[4096],mode[256];struct timespec begin,end;
     struct pws_native_report r={0};
+#if CHECK_PROFILE == 3
+    char phase_name[16];
+    if(cycle_attempt>1){snprintf(phase_name,sizeof(phase_name),"%s-%u",phase,cycle_attempt);phase=phase_name;}
+#endif
     pm_test_level("core");
     snprintf(filename,sizeof(filename),"%s-attempt.txt",phase);
     write_result(filename,commit?"phase=commit\nnew_kernel_success_unproven=1\n":"phase=core-roundtrip\nnew_kernel_attempted=0\n");
@@ -88,11 +111,52 @@ static void run_native_cycle(int commit) {
             k=snprintf(record+n,sizeof(record)-(size_t)n,"usb_%u_id=%u\nusb_%u_cap=%u\nusb_%u_dciversion=%u\nusb_%u_dccparams=%u\nusb_%u_command=%u\nusb_%u_status=%u\nusb_%u_mode=%u\nusb_%u_prime=%u\nusb_%u_flush=%u\nusb_%u_endpoints=%u\n",i,r.usb[i].id,i,r.usb[i].cap,i,r.usb[i].dciversion,i,r.usb[i].dccparams,i,r.usb[i].command,i,r.usb[i].status,i,r.usb[i].mode,i,r.usb[i].prime,i,r.usb[i].flush,i,r.usb[i].endpoints);require(k>0 && k<(int)(sizeof(record)-(size_t)n),"usb_report_capacity");n+=k;
         }
     }
+#if CHECK_PROFILE == 3
+    /* The PW4's rules for the engines are the module's (native-handoff-pw4.h:
+     * its USB controllers' revision, the Wi-Fi's SDIO host, its DCP), and it
+     * says what it concluded: the store is ready to commit or it is not. That
+     * verdict is read rather than the rules restated here. */
+    char ready_text[8];int ready=!commit && read_pm("/sys/module/pw3_first_kernel/parameters/probe_ready",ready_text,sizeof(ready_text)) && !strcmp(ready_text,"1\n");
+    {int k=snprintf(record+n,sizeof(record)-(size_t)n,"usb_idle_observed=%u\ndcp_idle_observed=%u\nmodule_ready=%d\nbackend_check_performed=%u\nattempt=%u\n",r.usb_idle_observed,r.dcp_idle_observed,ready,r.backend_check_performed,cycle_attempt);require(k>0 && k<(int)(sizeof(record)-(size_t)n),"guard_report_capacity");n+=k;}
+#else
     {int k=snprintf(record+n,sizeof(record)-(size_t)n,"usb_idle_observed=%u\ndcp_idle_observed=%u\nengine_guard_passed=%d\nbackend_check_performed=%u\n",r.usb_idle_observed,r.dcp_idle_observed,pws_engine_fields_ok(&r),r.backend_check_performed);require(k>0 && k<(int)(sizeof(record)-(size_t)n),"guard_report_capacity");n+=k;}
+#endif
     snprintf(filename,sizeof(filename),"%s-return.txt",phase);write_result(filename,record);
+#if CHECK_PROFILE == 3
+    /* What a run can wait out, as the development jumps learned it
+     * (device/amazon/pw4/porting/probe/ReadomJump57.sh), and what it cannot:
+     *   - the suspend refused before the callback ran (pm_result -EBUSY, no
+     *     suspend sample): a stock task delaying the freezer, the library
+     *     indexer waiting on its FUSE mount among them;
+     *   - the module would not let a commit through (a clock still on: the
+     *     Wi-Fi going down, a screen update finishing) -- unless it is the USB
+     *     controllers, which is a cable, and no wait changes that;
+     *   - the callback refused at commit (-EBUSY): the same, one cycle later.
+     * Everything else stops the run as before. */
+    require(restored,"restore_pm_none");
+    require(report_ok && r.version==5 && r.profile==CHECK_PROFILE && r.commit_requested==(unsigned)commit && r.pm_called==1 && r.returned_to_caller,"native_report");
+    cycle_outcome=PW4_RETRY;
+    if(commit){
+        require(rc && saved==EBUSY,"commit_returned_without_new_kernel");
+        cycle_reason="busy at commit";return;
+    }
+    if(rc){
+        require(saved==EBUSY && r.pm_result==-EBUSY && !r.suspend_samples,"native_core_cycle_return");
+        cycle_reason="suspend busy";return;
+    }
+    require(clock_ok && ms>=0,"native_core_clock_read");
+    const char *added=new_log_suffix(log_before,log_after);require(added && strstr(added,"suspend debug: Waiting for 5 second(s).") && !pm_log_has_error(added),"native_core_checkpoint_and_no_reported_error");
+    if(!ready){
+        if(r.gate[9] && !r.usb_idle_observed){cycle_outcome=PW4_USB;cycle_reason="usb";return;}
+        cycle_reason="refused";return;
+    }
+    require(r.suspend_samples==1 && r.resume_samples==1 && r.irq_fiq_masked && r.cpu_profile_valid && r.registers_valid && r.hardware_sampled==1 && !r.callback_rejected && !r.pm_result && !r.backend_result && r.backend_check_performed==1,"hardware_core_preflight_pass");
+    cycle_outcome=PW4_READY;cycle_reason="ready";return;
+#else
     require(restored,"restore_pm_none");require(!commit,"commit_returned_without_new_kernel");require(rc==0 && report_ok,"native_core_cycle_return");
     require(clock_ok && ms>=0,"native_core_clock_read"); /* Monotonic excludes time spent in syscore suspend. */
     const char *added=new_log_suffix(log_before,log_after);require(added && strstr(added,"suspend debug: Waiting for 5 seconds.") && !pm_log_has_error(added),"native_core_checkpoint_and_no_reported_error");
     require(r.version==4 && r.profile==CHECK_PROFILE && !r.commit_requested && r.pm_called==1 && r.suspend_samples==1 && r.resume_samples==1 && r.irq_fiq_masked && r.cpu_profile_valid && r.registers_valid && r.hardware_sampled==1 && !r.callback_rejected && r.returned_to_caller && !r.pm_result && !r.backend_result && r.backend_check_performed==1 && r.diagnostic_only==0 && pws_engine_fields_ok(&r),"hardware_core_preflight_pass");
+#endif
 
 }

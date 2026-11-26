@@ -52,4 +52,14 @@ void kindle_hold_screen(volatile sig_atomic_t *stop);
  * does nothing once taken, and asks again while a finger is down. */
 void kindle_take_touch(void);
 
+#if CHECK_PROFILE == 3
+/* PW4: the stock wireless switch (com.lab126.cmd wirelessEnable). The handover
+ * needs the Wi-Fi card's SDIO host idle in the suspend it runs from
+ * (device/amazon/pw4/porting/handoff.md, the first device PROBE), and the
+ * stock bcmdhd keeps it powered while Wi-Fi is on. 0, or -1 when the stock
+ * tool did not answer. */
+int kindle_wireless(int *on);
+int kindle_set_wireless(int on);
+#endif
+
 #endif

@@ -297,7 +297,7 @@ static void show(void *ctx, enum inst_step step, uint64_t done, uint64_t total)
 	 * own dialogs, a quick-settings panel opened before the touch screen was
 	 * taken), and a download standing at 0% would otherwise never paint it
 	 * back: 2026-11-05, a white screen for minutes. */
-#if CHECK_PROFILE == 1
+#if CHECK_PROFILE == 1 || CHECK_PROFILE == 3
 	kindle_take_touch();
 #endif
 	if ((int)id == k->shown_screen && t - k->shown_at < REPAINT_MS &&
@@ -366,6 +366,21 @@ void kindle_restore_awake(struct kindle *k)
 		printf("PW3_INSTALL cannot restore preventScreenSaver=%s\n", k->awake_before);
 	k->awake_changed = 0;
 }
+
+#if CHECK_PROFILE == 3
+/* The stock system's wireless switch, the one its own settings turn (lipc
+ * com.lab126.cmd wirelessEnable), as the PW4 development jumps used it. */
+int kindle_wireless(int *on)
+{
+	return lipc_number("com.lab126.cmd", "wirelessEnable", on);
+}
+
+int kindle_set_wireless(int on)
+{
+	char *argv[] = { LIPC_SET, "com.lab126.cmd", "wirelessEnable", on ? "1" : "0", NULL };
+	return run(argv, NULL, 0);
+}
+#endif
 
 int kindle_show_error(struct kindle *k, const struct inst_result *r)
 {
