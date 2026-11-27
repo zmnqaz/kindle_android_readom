@@ -19,6 +19,13 @@ $(call inherit-product, device/amazon/pw4/bluetooth/bluetooth.mk)
 # by porting/stage-pw4-hardware.py).
 -include vendor/amazon/pw4-hardware/pw4-hardware.mk
 
+# USB at first boot: MTP and adb together on every build, the release too (the
+# maintainer's choice, 2026-11-27), where the PW3 release has MTP alone until
+# developer options turn adb on. adb still needs each computer authorised on
+# the Kindle (ro.adb.secure=1) and has no TCP transport. Before the
+# inheritance: of two values for one key the first is kept.
+PRODUCT_DEFAULT_PROPERTY_OVERRIDES += persist.sys.usb.config=mtp,adb
+
 $(call inherit-product, device/amazon/pw3/pw3.mk)
 
 PRODUCT_NAME := pw4
