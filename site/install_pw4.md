@@ -3,7 +3,7 @@
 这份文档写给**替使用者给 Kindle 第十代越狱、装上 Readom 第十代移植版的 AI 助手**。
 人读的介绍在 <https://zmnqaz.github.io/kindle_android_readom/#install>。
 
-> 当前版本 **v1.0.0**（2026-11-27）。第 1 节的下载地址返回 404 时，如实告诉使用者这一版的文件不在了，
+> 当前版本 **v1.0.1**（2026-11-27）。第 1 节的下载地址返回 404 时，如实告诉使用者这一版的文件不在了，
 > 请到 <https://github.com/zmnqaz/kindle_android_readom/releases> 看最新版本，**不要去别处找替代文件**。
 
 几个前提先说清楚：
@@ -24,14 +24,14 @@
 
 | | |
 |---|---|
-| 版本 | v1.0.0 |
-| 安装文件 | `Readom.sh`，约 13 MB，https://github.com/zmnqaz/kindle_android_readom/releases/download/v1.0.0/Readom.sh |
-| 校验值（SHA-256） | https://github.com/zmnqaz/kindle_android_readom/releases/download/v1.0.0/SHA256SUMS 里 `Readom.sh` 那一行 |
-| 发布页 | https://github.com/zmnqaz/kindle_android_readom/releases/tag/v1.0.0（系统包 `readom-system-v1.0.0.img.zst` 约 194 MB 也在这里，见第 5 节） |
+| 版本 | v1.0.1 |
+| 安装文件 | `Readom.sh`，约 13 MB，https://github.com/zmnqaz/kindle_android_readom/releases/download/v1.0.1/Readom.sh |
+| 校验值（SHA-256） | https://github.com/zmnqaz/kindle_android_readom/releases/download/v1.0.1/SHA256SUMS 里 `Readom.sh` 那一行 |
+| 发布页 | https://github.com/zmnqaz/kindle_android_readom/releases/tag/v1.0.1（系统包 `readom-system-v1.0.0.img.zst` 约 194 MB 也在这里，见第 5 节） |
 | 书库里的条目名 | `Readom`（封面是一台屏幕上有小机器人的阅读器） |
 | 需要的空闲空间 | 首次安装至少 **2.8 GB**（系统 512 MiB + 数据 2 GiB + 余量；越狱时填进去的文件必须先删掉，否则一定不够） |
 | 电量 | 40% 以上（低于时屏幕显示 E102 并停下） |
-| 支持的原厂系统版本 | 只有 `5.18.1.1.1`。别的版本安装器显示 E101 并停下，不改动任何文件 |
+| 支持的原厂系统版本 | 不限。`5.18.1.1.1` 实测通过；其他版本没测过，装不上时安装器显示 E101 停下，或 Kindle 自己重启回原厂系统，原厂分区都不会被改动 |
 
 下载返回 404，说明这一版的文件还没传上去：如实告诉使用者，**不要去别处找替代文件**。
 
@@ -157,15 +157,15 @@
 
    ```sh
    # macOS / Linux
-   curl -fL -o ~/Downloads/Readom.sh https://github.com/zmnqaz/kindle_android_readom/releases/download/v1.0.0/Readom.sh
-   curl -fL -o ~/Downloads/SHA256SUMS https://github.com/zmnqaz/kindle_android_readom/releases/download/v1.0.0/SHA256SUMS
+   curl -fL -o ~/Downloads/Readom.sh https://github.com/zmnqaz/kindle_android_readom/releases/download/v1.0.1/Readom.sh
+   curl -fL -o ~/Downloads/SHA256SUMS https://github.com/zmnqaz/kindle_android_readom/releases/download/v1.0.1/SHA256SUMS
    shasum -a 256 ~/Downloads/Readom.sh     # Linux 用 sha256sum，和 SHA256SUMS 里 Readom.sh 那一行比对
    ```
 
    ```powershell
    # Windows PowerShell
-   Invoke-WebRequest https://github.com/zmnqaz/kindle_android_readom/releases/download/v1.0.0/Readom.sh -OutFile $HOME\Downloads\Readom.sh
-   Invoke-WebRequest https://github.com/zmnqaz/kindle_android_readom/releases/download/v1.0.0/SHA256SUMS -OutFile $HOME\Downloads\SHA256SUMS
+   Invoke-WebRequest https://github.com/zmnqaz/kindle_android_readom/releases/download/v1.0.1/Readom.sh -OutFile $HOME\Downloads\Readom.sh
+   Invoke-WebRequest https://github.com/zmnqaz/kindle_android_readom/releases/download/v1.0.1/SHA256SUMS -OutFile $HOME\Downloads\SHA256SUMS
    Get-FileHash $HOME\Downloads\Readom.sh -Algorithm SHA256
    ```
 
@@ -197,7 +197,7 @@
 
 | 代码 | 意思 | 怎么办 |
 |---|---|---|
-| E101 | 型号或原厂系统版本不受支持 | 只支持 Kindle 第十代、`5.18.1.1.1`；没有改动任何文件 |
+| E101 | 型号不受支持，或这个原厂系统版本装不上 | 只支持 Kindle 第十代（KPW4）；原厂系统除 `5.18.1.1.1` 外都没测过。没有改动任何文件 |
 | E102 | 电量低于 40% | 充电后再点 |
 | E103 | 上一次安装还在进行 | 等它完成 |
 | E104 | 连着电脑 | 拔掉数据线再点（接充电器没关系） |

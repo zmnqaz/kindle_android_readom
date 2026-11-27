@@ -377,6 +377,24 @@ def stock_files_header(profile, unpinned):
     return '\n'.join(lines), not missing, None if any_firmware else files['eips']['sha256']
 
 
+# The PW4 stock files an entry can carry, by the owner's decision of 2026-11-27,
+# as a fallback for a firmware that lacks one: the device's own copy is used
+# whenever it has one (the Wi-Fi NVRAM can be per device). C name, size cap.
+BUNDLED_FIRMWARE = {'epdc_ED060KC4.fw': ('pw4_bundled_epdc', 8 << 20), 'fw_bcmdhd_sr.bin': ('pw4_bundled_wifi', 8 << 20),
+                    'nvram_wfo.txt': ('pw4_bundled_nvram', 64 << 10), 'BCM4343A1.hcd': ('pw4_bundled_bt', 1 << 20)}
+
+
+def bundled_firmware(directory):
+    blobs, receipt = {}, {}
+    for name, (symbol, cap) in BUNDLED_FIRMWARE.items():
+        data = (directory / name).read_bytes()
+        if not 0 < len(data) <= cap:
+            sys.exit('--bundled-firmware: %s is empty or larger than %d bytes' % (name, cap))
+        blobs[symbol] = data
+        receipt[name] = {'bytes': len(data), 'sha256': sha(data)}
+    return blobs, receipt
+
+
 def main():
     global HOST
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -393,6 +411,9 @@ def main():
     ap.add_argument('--title', required=True)
     ap.add_argument('--icon', type=Path,
                     help='a PNG or JPEG shown as the entry\'s cover in the library (sh_integration "# Icon:")')
+    ap.add_argument('--bundled-firmware', type=Path,
+                    help='PW4: a directory with ' + ', '.join(BUNDLED_FIRMWARE) + ', carried in the entry and used '
+                         'for each one the device does not have (devicedata.h, struct dd_bundled)')
     a = ap.parse_args()
     HOST = build_host.load('Run as the builder in the build VM.')
     if not re.fullmatch(r'[A-Za-z0-9._-]+\.sh', a.name) or not re.fullmatch(r'[A-Za-z0-9 ._-]+', a.title):
@@ -448,7 +469,10 @@ def main():
     os.umask(0o022)
     out = a.output
     out.mkdir(parents=True, exist_ok=False)
-    blobs = {'module_payload': module, 'kernel_payload': kernel, 'public_initramfs_payload': public, **installer_blobs}
+    if a.bundled_firmware and profile.get('any_firmware') is not True:
+        sys.exit('--bundled-firmware is for a profile with any_firmware')
+    bundled_blobs, bundled_receipt = bundled_firmware(a.bundled_firmware) if a.bundled_firmware else ({}, None)
+    blobs = {'module_payload': module, 'kernel_payload': kernel, 'public_initramfs_payload': public, **installer_blobs, **bundled_blobs}
     header = ['#include <stdint.h>', '#define MODULE_BYTES %du' % len(module), '#define KERNEL_BYTES %du' % len(kernel),
               '#define PUBLIC_INITRAMFS_BYTES %du' % len(public), '#define INITRD_START %#xu' % INITRD_START]
     asm = '.section .rodata.pw3_inputs,"a",%progbits\n'
@@ -464,6 +488,8 @@ def main():
                '#define BUILD_CMDLINE %s' % c_string(cmdline), '#define BUILD_PREINIT_CONF %s' % c_string(conf),
                '#define BUILD_DATA_PATH %s' % (c_string(data_path) if data_path else 'NULL'),
                '#define BUILD_DATA_SIZE %du' % data_size]
+    if bundled_blobs:
+        header.append('#define PW_BUNDLED_FIRMWARE 1')
     (out / 'payload.h').write_text('#pragma once\n' + '\n'.join(header) + '\n')
     (out / 'stock-files.h').write_text(stock_h)
     (out / 'payload.S').write_text(asm)
@@ -610,7 +636,7 @@ def main():
               'helper_sha256': sha(helper.read_bytes()), 'module_receipt_sha256': sha((a.module / 'build-result.json').read_bytes()),
               'kernel_sha256': sha(kernel), 'public_initramfs_sha256': sha(public), 'cmdline': cmdline,
               'data_path': data_path, 'data_size': data_size, 'installer': installer_receipt,
-              'profile': a.profile.name, 'stock_pins_complete': pins_complete, 'any_firmware': eips_sha is None and pins_complete, 'icon_sha256': icon_sha,
+              'profile': a.profile.name, 'stock_pins_complete': pins_complete, 'bundled_firmware': bundled_receipt, 'any_firmware': eips_sha is None and pins_complete, 'icon_sha256': icon_sha,
               'contains_device_data': False}
     (out / 'build-result.json').write_text(json.dumps(result, indent=2) + '\n')
     print(json.dumps(result, indent=1))

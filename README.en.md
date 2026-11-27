@@ -1,6 +1,6 @@
 <h1 align="center">Readom for the Kindle 10th generation</h1>
 
-<p align="center"><b>WeRead on a Kindle Paperwhite 4.</b><br><b>KPW4 only</b> (Kindle Paperwhite 10th generation, 2018, stock firmware 5.18.1.1.1); no other model is supported. For the Kindle Paperwhite 3, use the original, <a href="https://readom.app">readom.app</a>.<br>Readom's Android 8.1, ported to the Kindle Paperwhite 4 (10th generation, 2018). The Kindle's own system stays as it is.</p>
+<p align="center"><b>WeRead on a Kindle Paperwhite 4.</b><br><b>KPW4 only</b> (Kindle Paperwhite 10th generation, 2018; tested on stock firmware 5.18.1.1.1, other versions install but are untested); no other model is supported. For the Kindle Paperwhite 3, use the original, <a href="https://readom.app">readom.app</a>.<br>Readom's Android 8.1, ported to the Kindle Paperwhite 4 (10th generation, 2018). The Kindle's own system stays as it is.</p>
 
 <p align="center">
   <a href="https://github.com/zmnqaz/kindle_android_readom/actions/workflows/tests.yml"><img src="https://github.com/zmnqaz/kindle_android_readom/actions/workflows/tests.yml/badge.svg?branch=kpw4" alt="Tests"></a>
@@ -8,7 +8,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/zmnqaz/kindle_android_readom/releases/tag/v1.0.0">Download v1.0.0</a> ·
+  <a href="https://github.com/zmnqaz/kindle_android_readom/releases/tag/v1.0.1">Download v1.0.1</a> ·
   <a href="https://zmnqaz.github.io/kindle_android_readom/en/"><b>Website of this port</b></a> ·
   <a href="https://zmnqaz.github.io/kindle_android_readom/install_pw4.md">Install guide for an AI assistant</a> ·
   <a href="https://github.com/zmnqaz/kindle_android_readom/issues">Report a problem</a> ·
@@ -19,9 +19,9 @@
 > This repository is a community fork that ports it to the Kindle 10th generation. Almost all of the system's design and code comes from the original project.
 > **On a Kindle Paperwhite 3, go to the original website, [readom.app](https://readom.app)**: downloads, guides and support for the original are there; **for this port, open an issue here, not there.**
 
-## Installing (v1.0.0)
+## Installing (v1.0.1)
 
-Download: [`Readom.sh`](https://github.com/zmnqaz/kindle_android_readom/releases/download/v1.0.0/Readom.sh) (about 13 MB) · [release page](https://github.com/zmnqaz/kindle_android_readom/releases/tag/v1.0.0). Stock firmware 5.18.1.1.1 only. A first install needs 2.8 GB free and at least 40% battery; the 194 MB system package is downloaded by the Kindle itself.
+Download: [`Readom.sh`](https://github.com/zmnqaz/kindle_android_readom/releases/download/v1.0.1/Readom.sh) (about 13 MB) · [release page](https://github.com/zmnqaz/kindle_android_readom/releases/tag/v1.0.1). Tested on stock firmware 5.18.1.1.1; other versions are untested. A first install needs 2.8 GB free and at least 40% battery; the 194 MB system package is downloaded by the Kindle itself.
 
 - **Let an AI assistant do it**: send it the text below. It does the computer's part following the [install guide](https://zmnqaz.github.io/kindle_android_readom/install_pw4.md); you plug and unplug the cable and tap on the Kindle.
 

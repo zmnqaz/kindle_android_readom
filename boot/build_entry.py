@@ -160,6 +160,7 @@ def main():
     for name in ['installer', 'screens', 'ca-bundle', 'zstd-archive']:
         ap.add_argument('--' + name, type=Path, required=True)
     ap.add_argument('--icon', type=Path, help='the library cover (build_launcher.py --icon)')
+    ap.add_argument('--bundled-firmware', type=Path, help='PW4 stock files carried as a fallback (build_launcher.py --bundled-firmware)')
     ap.add_argument('--release-url', action='append', default=[], required=True,
                     help='the directory the payload sits in; repeat it for a second origin, in the order the installer tries them')
     a = ap.parse_args()
@@ -314,6 +315,7 @@ def main():
          '--public-initramfs', str(out / 'public-initramfs.cpio.gz'), '--cmdline', str(out / 'cmdline.txt'),
          '--preinit-conf', str(out / 'pw3-preinit.conf'), '--data', a.data, '--name', a.name, '--title', a.title,
          *(['--icon', str(a.icon)] if a.icon else []),
+         *(['--bundled-firmware', str(a.bundled_firmware)] if a.bundled_firmware else []),
          '--output', str(out / 'launcher'),
          '--installer', str(a.installer), '--screens', str(a.screens),
          *[arg for u in a.release_url for arg in ('--release-url', u)],

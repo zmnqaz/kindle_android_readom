@@ -59,7 +59,16 @@
  * device tree on the PW4, the ATAGs on the PW3. */
 #if CHECK_PROFILE == 3
 #define DD_MATCHES(why) dd_tree_device_matches("/", &dd_pw4_rex_5_18_1_1_1, why)
+#ifdef PW_BUNDLED_FIRMWARE
+/* The stock files the entry carries (build_launcher.py --bundled-firmware),
+ * each used only where the device has none of its own. */
+static const struct dd_bundled bundled_firmware = {
+    pw4_bundled_epdc, pw4_bundled_wifi, pw4_bundled_nvram, pw4_bundled_bt,
+    sizeof(pw4_bundled_epdc), sizeof(pw4_bundled_wifi), sizeof(pw4_bundled_nvram), sizeof(pw4_bundled_bt)};
+#define DD_ARCHIVE(build, out, why) dd_tree_archive_bundled("/", &dd_pw4_rex_5_18_1_1_1, build, &bundled_firmware, out, why)
+#else
 #define DD_ARCHIVE(build, out, why) dd_tree_archive("/", &dd_pw4_rex_5_18_1_1_1, build, out, why)
+#endif
 #define DD_BOOT_PARAMS(cmdline, start, bytes, out, why) \
     dd_fdt_firmware("/", dd_pw4_rex_5_18_1_1_1.base, dd_pw4_rex_5_18_1_1_1.any_firmware, cmdline, start, bytes, out, why)
 #else

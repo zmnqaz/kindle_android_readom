@@ -697,8 +697,10 @@ int dd_tree_device_matches(const char *root, const struct dd_tree_profile *profi
     size_t first = b.size ? strnlen((const char *)b.data, b.size) : 0;
     int rc = first == b.size || first != strlen(profile->compatible) || memcmp(b.data, profile->compatible, first)
              ? fail_other_device(why, "not this model's board") : 0;
+    /* Any firmware: the stock files are not who this is, and one that is
+     * missing can come from the entry (dd_tree_archive_bundled). */
     const struct dd_pin *pins[] = {&profile->epdc_firmware, &profile->wifi_firmware, &profile->bt_firmware};
-    for (unsigned i = 0; i < 3 && !rc; ++i) rc = pinned(root, pins[i], &b, why, 1, profile->any_firmware);
+    for (unsigned i = 0; i < 3 && !rc && !profile->any_firmware; ++i) rc = pinned(root, pins[i], &b, why, 1, 0);
     dd_free(&b);
     return rc;
 }
@@ -796,15 +798,38 @@ static int tree_storage_lines(const char *root, const struct dd_tree_profile *pr
  *                                            by the time an rc could give it a group (Jump 45)
  *   pw3-preinit.conf, pw3-testdata.conf      the storage entry's, as on the PW3
  * The modes are the ones those jumps ran with. */
+/* The device's file, or with any firmware and when the device has none
+ * usable, the entry's copy. */
+static int stock_or_bundled(const char *root, const struct dd_pin *pin, struct dd_buf *out, struct dd_why *why, int any,
+                            const unsigned char *copy, size_t copy_size) {
+    if (!pinned(root, pin, out, why, 0, any)) return 0;
+    if (!any || !copy || !copy_size) return -1;
+    out->size = 0;
+    if (append(out, copy, copy_size)) return fail(why, "out of memory");
+    why->text[0] = 0;
+    return 0;
+}
 int dd_tree_archive(const char *root, const struct dd_tree_profile *profile, const struct dd_build *build,
                     struct dd_buf *out, struct dd_why *why) {
+    return dd_tree_archive_bundled(root, profile, build, NULL, out, why);
+}
+int dd_tree_archive_bundled(const char *root, const struct dd_tree_profile *profile, const struct dd_build *build,
+                            const struct dd_bundled *bundled, struct dd_buf *out, struct dd_why *why) {
+    static const struct dd_bundled none;
+    if (!bundled) bundled = &none;
     struct dd_buf epdc = {0}, wifi = {0}, nvram = {0}, bt = {0}, conf = {0}, data = {0};
     int rc = -1;
     out->size = 0;
     int any = profile->any_firmware;
-    if (pinned(root, &profile->epdc_firmware, &epdc, why, 0, any) || pinned(root, &profile->wifi_firmware, &wifi, why, 0, any) ||
-        pinned(root, &profile->bt_firmware, &bt, why, 0, any)) goto done;
-    if (read_file(root, profile->base->wifi_board, profile->nvram_max, &nvram, why)) goto done;
+    if (stock_or_bundled(root, &profile->epdc_firmware, &epdc, why, any, bundled->epdc, bundled->epdc_size) ||
+        stock_or_bundled(root, &profile->wifi_firmware, &wifi, why, any, bundled->wifi, bundled->wifi_size) ||
+        stock_or_bundled(root, &profile->bt_firmware, &bt, why, any, bundled->bt, bundled->bt_size)) goto done;
+    if (read_file(root, profile->base->wifi_board, profile->nvram_max, &nvram, why) || !nvram.size) {
+        if (!any || !bundled->nvram || !bundled->nvram_size) { if (!why->text[0]) fail(why, "Wi-Fi NVRAM is empty"); goto done; }
+        nvram.size = 0;
+        if (append(&nvram, bundled->nvram, bundled->nvram_size)) { fail(why, "out of memory"); goto done; }
+        why->text[0] = 0;
+    }
     if (!nvram.size || memchr(nvram.data, 0, nvram.size)) { fail(why, "Wi-Fi NVRAM is not a text file"); goto done; }
     if (append(&conf, build->preinit_conf, strlen(build->preinit_conf)) || tree_storage_lines(root, profile, &conf, why)) {
         if (!why->text[0]) fail(why, "out of memory");

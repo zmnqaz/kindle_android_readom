@@ -113,6 +113,16 @@ extern const struct dd_tree_profile dd_pw4_rex_5_18_1_1_1;
 int dd_tree_device_matches(const char *root, const struct dd_tree_profile *profile, struct dd_why *why);
 int dd_tree_archive(const char *root, const struct dd_tree_profile *profile, const struct dd_build *build,
                     struct dd_buf *out, struct dd_why *why);
+/* Copies of the stock files the entry carries (build_launcher.py
+ * --bundled-firmware), for a profile with any_firmware: each one is used only
+ * when the device's own file is missing, empty or too large. A NULL pointer:
+ * none carried for that file. */
+struct dd_bundled {
+    const unsigned char *epdc, *wifi, *nvram, *bt;
+    size_t epdc_size, wifi_size, nvram_size, bt_size;
+};
+int dd_tree_archive_bundled(const char *root, const struct dd_tree_profile *profile, const struct dd_build *build,
+                            const struct dd_bundled *bundled, struct dd_buf *out, struct dd_why *why);
 #endif
 int dd_archive(const char *root, const struct dd_profile *profile, const struct dd_build *build,
                struct dd_buf *out, struct dd_why *why);

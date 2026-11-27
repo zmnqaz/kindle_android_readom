@@ -134,9 +134,10 @@ static void test_profile(void) {
 static void test_matches(void) {
     struct dd_why why = {{0}, 0};
     CHECK(dd_tree_device_matches(root, &test, &why) == 0);
-    /* The release profile on this invented device: the files are not the pinned ones. */
+    /* The release profile on this invented device: its files are not the
+     * pinned ones, and for any firmware that is no stop -- the board is right. */
     memset(&why, 0, sizeof(why));
-    CHECK(dd_tree_device_matches(root, &dd_pw4_rex_5_18_1_1_1, &why) == -1);
+    CHECK(dd_tree_device_matches(root, &dd_pw4_rex_5_18_1_1_1, &why) == 0);
 
     /* Another board on the same SoC, and a root node whose compatible is
      * only the SoC: not this model. */
@@ -219,9 +220,38 @@ static void test_any_firmware(void) {
     memset(&why, 0, sizeof(why));
     CHECK(dd_tree_device_matches(root, &any, &why) == -1 && why.other_device);
     restore("/sys/firmware/devicetree/base/compatible");
+    /* A stock file the device lacks: no stop at the identity check; the
+     * archive stops without a copy from the entry and takes the copy with one.
+     * A file the device has is the device's, copy or not. */
+    static const unsigned char copy_bt[] = "bundled bt", copy_wifi[] = "bundled wifi",
+                               copy_nvram[] = "# bundled nvram\n";
+    const struct dd_bundled bundled = {NULL, copy_wifi, copy_nvram, copy_bt, 0, sizeof(copy_wifi), sizeof(copy_nvram) - 1, sizeof(copy_bt)};
     swap(BT, "", 0);
     memset(&why, 0, sizeof(why));
-    CHECK(dd_tree_device_matches(root, &any, &why) == -1 && why.text[0]);
+    CHECK(dd_tree_device_matches(root, &any, &why) == 0);
+    CHECK(dd_tree_archive(root, &any, &build, &a, &why) == -1 && why.text[0] && a.size == 0);
+    memset(&why, 0, sizeof(why));
+    CHECK(dd_tree_archive_bundled(root, &any, &build, &bundled, &a, &why) == 0 && !why.text[0]);
+    n = parse(&a, e, 32);
+    f = find(e, n, "firmware/bluetooth/BCM4343A1.hcd");
+    CHECK(f && f->size == sizeof(copy_bt) && !memcmp(f->data, copy_bt, sizeof(copy_bt)));
+    f = find(e, n, "firmware/bcmdhd/fw_bcmdhd_sr.bin");
+    CHECK(f && f->size == sizeof(wifi) && !memcmp(f->data, wifi, sizeof(wifi)));
+    f = find(e, n, "firmware/bcmdhd/nvram_wfo.txt");
+    CHECK(f && f->size > 10 && !memcmp(f->data, "# invented", 10));
+    dd_free(&a);
+    restore(BT);
+    swap("/opt/brcm_4343w/wifi/nvram/nvram_wfo.txt", "", 0);
+    CHECK(dd_tree_archive(root, &any, &build, &a, &why) == -1 && a.size == 0);
+    CHECK(dd_tree_archive_bundled(root, &any, &build, &bundled, &a, &why) == 0);
+    n = parse(&a, e, 32);
+    f = find(e, n, "firmware/bcmdhd/nvram_wfo.txt");
+    CHECK(f && f->size == sizeof(copy_nvram) - 1 && !memcmp(f->data, copy_nvram, f->size));
+    dd_free(&a);
+    restore("/opt/brcm_4343w/wifi/nvram/nvram_wfo.txt");
+    /* Pinned (any_firmware 0): a copy from the entry is never used. */
+    swap(BT, "", 0);
+    CHECK(dd_tree_archive_bundled(root, &test, &build, &bundled, &a, &why) == -1 && a.size == 0);
     restore(BT);
     CHECK(dd_tree_device_matches(root, &any, &why) == 0);
 }
