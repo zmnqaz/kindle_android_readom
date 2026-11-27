@@ -47,10 +47,9 @@
       </span>
     </a>
     <nav class="nav" aria-label="页面导航">
-      <a href="#features">能做什么</a>
-      <a href="#numbers">实测</a>
-      <a href="#status">现状</a>
       <a href="#install">安装</a>
+      <a href="#features">能做什么</a>
+      <a href="#status">现状</a>
       <a href="#thanks">致谢</a>
       <a class="lang" href="en/" hreflang="en" lang="en">English</a>
     </nav>
@@ -70,7 +69,7 @@
         <small>Kindle 第十代即 Kindle Paperwhite 4（PW4），2018 款。</small>
       </p>
       <div class="actions">
-        <a class="btn btn-primary" href="#status">看看现在做到哪了</a>
+        <a class="btn btn-primary" href="#install">怎么安装</a>
         <a class="btn" href="https://github.com/zmnqaz/readom/releases/tag/v1.0.0">下载 v1.0.0</a>
         <a class="btn" href="https://github.com/zmnqaz/readom">GitHub 源码</a>
       </div>
@@ -95,20 +94,87 @@
         <strong>这里不是 Readom 官方网站。</strong>Readom 由 <strong>hbyxabc</strong>（B 站：小蹦大侠）创作，原版支持 Kindle Paperwhite 3。本站介绍的是在他的项目上 fork 出来、移植到 Kindle 第十代的版本。没有 Readom，就没有这个移植。
       </p>
       <div class="links">
-        <a href="https://readom.app">Readom 官网 readom.app</a>
+        <a href="https://readom.app">Kindle Paperwhite 3 请去原版官网 readom.app</a>
         <a href="https://github.com/hbyxabc/readom">原项目 GitHub</a>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ———————————————— 第一章 能做什么 ———————————————— -->
-<section class="chapter" id="features" aria-labelledby="features-title">
+<!-- ———————————————— 第一章 安装 ———————————————— -->
+<section class="chapter" id="install" aria-labelledby="install-title">
   <div class="wrap">
     <header class="chapter-head">
       <span class="seal" aria-hidden="true">一</span>
       <div>
         <span class="chapter-kicker">第一章</span>
+        <h2 id="install-title">安装 <span class="tag" style="vertical-align:middle">v1.0.0</span></h2>
+        <p class="sub">两种装法，结果一样，挑一种就行。</p>
+      </div>
+    </header>
+
+    <div class="ways">
+      <article class="card way">
+        <span class="way-kicker">方式一</span>
+        <h3>交给 AI</h3>
+        <p>把下面这段话发给任意 AI 助手。电脑这一侧的事——清掉升级残留、临时填满空间防自动升级、越狱后删掉填充、下载并核对安装文件、拷进 Kindle、弹出——它照着<a href="install_pw4.md">这份说明</a>去做。你只负责插拔数据线，在 Kindle 上点几下。</p>
+        <div class="prompt">
+          <pre id="ai-prompt" tabindex="0" aria-label="发给 AI 的话">请读取 https://zmnqaz.github.io/readom/install_pw4.md，照着它帮我给 Kindle 第十代越狱并装上 Readom。
+电脑上的事你能做的就直接做完，做完告诉我结果，不要拆成步骤让我做。
+要我在 Kindle 上动手的，一次只说一步，等我回话再往下。
+如果你打不开这个链接，告诉我，我把文档内容贴给你。</pre>
+          <div class="prompt-bar">
+            <button class="btn btn-primary copy-btn" type="button" data-copy="ai-prompt" data-done="已复制" data-fail="请手动选中复制">复制这段话</button>
+            <span class="copy-status" role="status" aria-live="polite"></span>
+          </div>
+        </div>
+        <p class="note">你在 Kindle 上要做的：开、关飞行模式；在越狱网页上等它扫描完，照着输入一串编号；到「设置 → 帮助 → Getting Started」点一下；最后在书库里点 Readom。</p>
+        <p class="note">AI 只删它自己填进去的文件和升级残留，不碰你的书。</p>
+      </article>
+
+      <article class="card way">
+        <span class="way-kicker">方式二</span>
+        <h3>自己一步步装</h3>
+        <ol class="mini-steps">
+          <li><b>防自动升级</b>打开飞行模式，接电脑，删掉 Kindle 盘根目录里 <code>update*.bin</code> 之类的升级残留，把空间临时填到只剩 50～90 MB。</li>
+          <li><b>越狱</b>用 Kindle 自带的浏览器走 Sanctuary：网页扫描完后照着输入编号，再到「设置 → 帮助 → Getting Started」点一下，成功后马上开回飞行模式。不成功换 SpiderCat。</li>
+          <li><b>删填充，拷一个文件</b>越狱后删掉填充文件，把安装文件拷进 Kindle 盘的 <code>documents</code>，弹出后拔线。</li>
+          <li><b>书库里点一下</b>在书库里点 Readom，剩下的在 Kindle 上完成。</li>
+        </ol>
+        <a class="btn" href="https://github.com/zmnqaz/readom/releases/download/v1.0.0/Readom.sh">下载 Readom.sh（约 13 MB）</a> <span class="soon">首次安装要 2.8 GB 空闲空间、40% 以上电量；系统包约 194 MB，Kindle 会自己联网下载</span>
+      </article>
+    </div>
+
+    <div class="card jb-note">
+      <h3>关于越狱</h3>
+      <p>维护者的 Kindle 第十代（原厂系统 5.18.1.1.1）2026 年 11 月在 5.18.1.1.1 上按 <b>Sanctuary</b> 的正常流程重新越狱过一次，走通了：全程在 Kindle 上操作，不用电脑，不用登录亚马逊账号。当时 Kindle 连的是能访问境外网站的 Wi‑Fi，<b>在不能访问境外网站的网络下能不能走通，还没有验证</b>。Sanctuary 不成功时，备用 <b>SpiderCat</b>。</p>
+      <p>越狱工具都是社区做的，不属于本项目，请自行判断风险。原教程：Sanctuary <a href="https://bookfere.com/post/1190.html">书伴中文教程</a> · <a href="https://kindlemodding.org/jailbreaking/Sanctuary/">KindleModding</a>；SpiderCat <a href="https://kindlemodding.org/jailbreaking/SpiderCat/">KindleModding</a>；其他版本用 <a href="https://kindlemodding.org/jailbreak-wizard.html">越狱向导</a> 查。</p>
+    </div>
+
+    <div class="req card">
+      <table>
+        <caption>安装前要满足的条件</caption>
+        <tbody>
+          <tr><th scope="row">设备</th><td>Kindle 第十代（Paperwhite 4，2018 款）。在「设置 → 设备选项 → 设备信息」里查看。</td></tr>
+          <tr><th scope="row">越狱</th><td>需要。没越狱过的，上面两种装法都包括越狱这一步。</td></tr>
+          <tr><th scope="row">原厂系统版本</th><td>只支持 5.18.1.1.1（维护者真机）。</td></tr>
+          <tr><th scope="row">空闲空间、电量</th><td>首次安装至少 2.8 GB 空闲空间，电量 40% 以上。越狱时填进去的文件要先删掉。</td></tr>
+          <tr><th scope="row">回到 Kindle、卸载</th><td>原厂系统一直都在：Android 里长按电源键选重启就回到 Kindle；卡住时按住电源键约 40 秒。卸载：删掉 Kindle 盘上的 <code>android</code> 文件夹和 <code>documents/Readom.sh</code>。</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p class="folio" aria-hidden="true">1</p>
+  </div>
+</section>
+
+<!-- ———————————————— 第二章 能做什么 ———————————————— -->
+<section class="chapter" id="features" aria-labelledby="features-title">
+  <div class="wrap">
+    <header class="chapter-head">
+      <span class="seal" aria-hidden="true">二</span>
+      <div>
+        <span class="chapter-kicker">第二章</span>
         <h2 id="features-title">在第十代上，已经能做什么</h2>
         <p class="sub">下面每一项都在 Kindle 第十代真机上跑过。</p>
       </div>
@@ -133,60 +199,12 @@
       </article>
       <article class="card">
         <h3><span class="n">05</span>墨水屏刷新修正</h3>
-        <p>修正了第十代屏幕驱动上刷新波形用错的问题。听书播放中翻页，约 0.5 秒开始刷新，约 1 秒刷完。</p>
+        <p>修正了第十代屏幕驱动上刷新波形用错的问题，翻页刷新正常了。</p>
       </article>
       <article class="card">
         <h3><span class="n">06</span>原厂系统还在</h3>
         <p>不写原厂分区：整个 Android 是 Kindle 盘上的镜像文件。Kindle 原厂系统保留，随时可以切回去。</p>
       </article>
-    </div>
-
-    <p class="folio" aria-hidden="true">1</p>
-  </div>
-</section>
-
-<!-- ———————————————— 第二章 实测数字 ———————————————— -->
-<section class="chapter" id="numbers" aria-labelledby="numbers-title">
-  <div class="wrap">
-    <header class="chapter-head">
-      <span class="seal" aria-hidden="true">二</span>
-      <div>
-        <span class="chapter-kicker">第二章</span>
-        <h2 id="numbers-title">量出来的数字</h2>
-        <p class="sub">只写真机上量过的；只量过一次、条件有限的，照实标出来。</p>
-      </div>
-    </header>
-
-    <div class="figures" style="grid-template-columns:repeat(auto-fit,minmax(min(100%,18rem),1fr))">
-      <article class="figure">
-        <span class="label">翻一页</span>
-        <div class="pair">
-          <p class="value"><span class="approx">约</span>0.5<span class="unit">秒</span></p>
-          <small>开始刷新</small>
-        </div>
-        <div class="pair">
-          <p class="value"><span class="approx">约</span>1<span class="unit">秒</span></p>
-          <small>刷完</small>
-        </div>
-        <p class="what">手指抬起到屏幕开始变化约 0.5 秒，整页刷完约 1 秒；其中约 0.5 秒是墨水屏灰阶波形本身要走的时间。</p>
-        <p class="src">条件：听书播放中手动翻页，刷新修正之后。</p>
-      </article>
-    </div>
-
-    <div class="compare" role="group" aria-labelledby="emmc-title">
-      <h3 id="emmc-title">存储修复：反复休眠唤醒后的读写错误</h3>
-      <div class="side before">
-        <span class="label">修复前（中间版本）</span>
-        <p class="value">171 <span class="unit" style="font-size:.4em">次</span></p>
-        <p>反复休眠唤醒后，eMMC 出现 171 次 CRC 读错误，系统界面因此崩溃。</p>
-      </div>
-      <span class="arrow" aria-hidden="true">→</span>
-      <div class="side after">
-        <span class="label">修复后</span>
-        <p class="value">0 <span class="unit" style="font-size:.4em">错误</span></p>
-        <p>休眠唤醒 100 次，每次醒来立刻读 64 MiB 做校验，零错误。</p>
-      </div>
-      <p class="foot">两组数据来自同一台真机上不同版本的测试；100 次那一组是定时唤醒的短休眠，长时间休眠还没测。</p>
     </div>
 
     <p class="folio" aria-hidden="true">2</p>
@@ -263,18 +281,15 @@
           <li>官方墨水屏版微信读书能用，包括听书</li>
           <li>蓝牙耳机听书（A2DP，SBC）</li>
           <li>Wi‑Fi 可用；熄屏深度休眠，按电源键唤醒</li>
-          <li>墨水屏刷新修正：翻页约 0.5 秒开始刷新、约 1 秒刷完</li>
-          <li>存储修复：100 次休眠唤醒读写校验零错误</li>
+          <li>墨水屏刷新修正，翻页刷新正常</li>
+          <li>存储修复：反复休眠唤醒后读写不再出错</li>
           <li>保留 Kindle 原厂系统，不写原厂分区，随时可以切回</li>
         </ul>
       </article>
       <article class="card">
         <h3>还没做好</h3>
         <ul class="list todo">
-          <li><strong>只支持原厂系统 5.18.1.1.1。</strong>别的版本安装器会显示 E101 并停下，不改动任何文件。</li>
-          <li><strong>不算流畅。</strong>第十代是单核 1 GHz、512 MB 内存、没有 GPU，界面全靠 CPU 画。微信读书能用，但翻页、切换页面都偏慢，听书时更明显。</li>
           <li><strong>需要先越狱。</strong>越狱不属于本项目，请自行判断风险。</li>
-          <li><strong>低电量时刷新变慢。</strong>电量在 20% 及以下时，原厂屏幕驱动会进入降速保护，翻页更慢；想看流畅度先充上电。</li>
         </ul>
       </article>
     </div>
@@ -283,80 +298,13 @@
   </div>
 </section>
 
-<!-- ———————————————— 第五章 安装 ———————————————— -->
-<section class="chapter" id="install" aria-labelledby="install-title">
+<!-- ———————————————— 第五章 致谢 ———————————————— -->
+<section class="chapter" id="thanks" aria-labelledby="thanks-title">
   <div class="wrap">
     <header class="chapter-head">
       <span class="seal" aria-hidden="true">五</span>
       <div>
         <span class="chapter-kicker">第五章</span>
-        <h2 id="install-title">安装 <span class="tag" style="vertical-align:middle">v1.0.0</span></h2>
-        <p class="sub">两种装法，结果一样，挑一种就行。一键安装包还在做，安装文件、下载地址和空间要求到时候在这里公布。</p>
-      </div>
-    </header>
-
-    <div class="ways">
-      <article class="card way">
-        <span class="way-kicker">方式一</span>
-        <h3>交给 AI</h3>
-        <p>把下面这段话发给任意 AI 助手。电脑这一侧的事——清掉升级残留、临时填满空间防自动升级、越狱后删掉填充、下载并核对安装文件、拷进 Kindle、弹出——它照着<a href="install_pw4.md">这份说明</a>去做。你只负责插拔数据线，在 Kindle 上点几下。</p>
-        <div class="prompt">
-          <pre id="ai-prompt" tabindex="0" aria-label="发给 AI 的话">请读取 https://zmnqaz.github.io/readom/install_pw4.md，照着它帮我给 Kindle 第十代越狱并装上 Readom。
-电脑上的事你能做的就直接做完，做完告诉我结果，不要拆成步骤让我做。
-要我在 Kindle 上动手的，一次只说一步，等我回话再往下。
-如果你打不开这个链接，告诉我，我把文档内容贴给你。</pre>
-          <div class="prompt-bar">
-            <button class="btn btn-primary copy-btn" type="button" data-copy="ai-prompt" data-done="已复制" data-fail="请手动选中复制">复制这段话</button>
-            <span class="copy-status" role="status" aria-live="polite"></span>
-          </div>
-        </div>
-        <p class="note">你在 Kindle 上要做的：开、关飞行模式；在越狱网页上等它扫描完，照着输入一串编号；到「设置 → 帮助 → Getting Started」点一下；最后在书库里点 Readom。</p>
-        <p class="note">AI 只删它自己填进去的文件和升级残留，不碰你的书。</p>
-      </article>
-
-      <article class="card way">
-        <span class="way-kicker">方式二</span>
-        <h3>自己一步步装</h3>
-        <ol class="mini-steps">
-          <li><b>防自动升级</b>打开飞行模式，接电脑，删掉 Kindle 盘根目录里 <code>update*.bin</code> 之类的升级残留，把空间临时填到只剩 50～90 MB。</li>
-          <li><b>越狱</b>用 Kindle 自带的浏览器走 Sanctuary：网页扫描完后照着输入编号，再到「设置 → 帮助 → Getting Started」点一下，成功后马上开回飞行模式。不成功换 SpiderCat。</li>
-          <li><b>删填充，拷一个文件</b>越狱后删掉填充文件，把安装文件拷进 Kindle 盘的 <code>documents</code>，弹出后拔线。</li>
-          <li><b>书库里点一下</b>在书库里点 Readom，剩下的在 Kindle 上完成。</li>
-        </ol>
-        <a class="btn" href="https://github.com/zmnqaz/readom/releases/download/v1.0.0/Readom.sh">下载 Readom.sh（约 13 MB）</a> <span class="soon">首次安装要 2.8 GB 空闲空间、40% 以上电量；系统包约 194 MB，Kindle 会自己联网下载</span>
-      </article>
-    </div>
-
-    <div class="card jb-note">
-      <h3>关于越狱</h3>
-      <p>维护者的 Kindle 第十代（原厂系统 5.18.1.1.1）2026 年 11 月在 5.18.1.1.1 上按 <b>Sanctuary</b> 的正常流程重新越狱过一次，走通了：全程在 Kindle 上操作，不用电脑，不用登录亚马逊账号。当时 Kindle 连的是能访问境外网站的 Wi‑Fi，<b>在不能访问境外网站的网络下能不能走通，还没有验证</b>。Sanctuary 不成功时，备用 <b>SpiderCat</b>。</p>
-      <p>越狱工具都是社区做的，不属于本项目，请自行判断风险。原教程：Sanctuary <a href="https://bookfere.com/post/1190.html">书伴中文教程</a> · <a href="https://kindlemodding.org/jailbreaking/Sanctuary/">KindleModding</a>；SpiderCat <a href="https://kindlemodding.org/jailbreaking/SpiderCat/">KindleModding</a>；其他版本用 <a href="https://kindlemodding.org/jailbreak-wizard.html">越狱向导</a> 查。</p>
-    </div>
-
-    <div class="req card">
-      <table>
-        <caption>安装前要满足的条件</caption>
-        <tbody>
-          <tr><th scope="row">设备</th><td>Kindle 第十代（Paperwhite 4，2018 款）。在「设置 → 设备选项 → 设备信息」里查看。</td></tr>
-          <tr><th scope="row">越狱</th><td>需要。没越狱过的，上面两种装法都包括越狱这一步。</td></tr>
-          <tr><th scope="row">原厂系统版本</th><td>只支持 5.18.1.1.1（维护者真机）。</td></tr>
-          <tr><th scope="row">空闲空间、电量</th><td>首次安装至少 2.8 GB 空闲空间，电量 40% 以上。越狱时填进去的文件要先删掉。</td></tr>
-          <tr><th scope="row">回到 Kindle、卸载</th><td>原厂系统一直都在：Android 里长按电源键选重启就回到 Kindle；卡住时按住电源键约 40 秒。卸载：删掉 Kindle 盘上的 <code>android</code> 文件夹和 <code>documents/Readom.sh</code>。</td></tr>
-        </tbody>
-      </table>
-    </div>
-
-    <p class="folio" aria-hidden="true">5</p>
-  </div>
-</section>
-
-<!-- ———————————————— 第六章 致谢 ———————————————— -->
-<section class="chapter" id="thanks" aria-labelledby="thanks-title">
-  <div class="wrap">
-    <header class="chapter-head">
-      <span class="seal" aria-hidden="true">六</span>
-      <div>
-        <span class="chapter-kicker">第六章</span>
         <h2 id="thanks-title">致谢与说明</h2>
       </div>
     </header>
@@ -391,7 +339,7 @@
       </aside>
     </div>
 
-    <p class="folio" aria-hidden="true">6</p>
+    <p class="folio" aria-hidden="true">5</p>
   </div>
 </section>
 

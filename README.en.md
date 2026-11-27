@@ -9,7 +9,7 @@
 
 <p align="center">
   <a href="https://github.com/zmnqaz/readom/releases/tag/v1.0.0">Download v1.0.0</a> ·
-  <a href="https://zmnqaz.github.io/readom/en/">Website of this port</a> ·
+  <a href="https://zmnqaz.github.io/readom/en/"><b>Website of this port</b></a> ·
   <a href="https://zmnqaz.github.io/readom/install_pw4.md">Install guide for an AI assistant</a> ·
   <a href="https://github.com/zmnqaz/readom/issues">Report a problem</a> ·
   <a href="README.md">中文</a>
@@ -17,32 +17,11 @@
 
 > **This is not the official Readom repository.** Readom is made by [hbyxabc](https://github.com/hbyxabc/readom) and supports the Kindle Paperwhite 3; its website is [readom.app](https://readom.app).
 > This repository is a community fork that ports it to the Kindle 10th generation. Almost all of the system's design and code comes from the original project.
-> For the original Readom, go to the original project; **for this port, open an issue here, not there.**
-
-## Where it stands
-
-Each of these has run on a real Kindle Paperwhite 4:
-
-| | |
-|---|---|
-| System | Readom's Android 8.1 (AOSP) on the 10th generation's own 4.1 kernel; screen, touch, front light, power button and battery work |
-| WeRead | Tencent's official e-ink edition installs and works, for reading and for listening |
-| Bluetooth listening | New in this port: pair Bluetooth headphones and WeRead's audiobooks play through them (A2DP, SBC). The original Readom has no Bluetooth |
-| Wi‑Fi and sleep | Wi‑Fi works; the power button puts the Kindle into deep sleep and wakes it, and Wi‑Fi reconnects |
-| Page turns | The wrong refresh waveforms on the 10th generation's display driver are fixed: turning a page while audio plays, the refresh starts after about 0.5 s and is done after about 1 s |
-| Storage | The eMMC errors after repeated sleep and wake are fixed: 100 sleep/wake cycles, each followed at once by a 64 MiB read and check, no errors |
-| Stock system | No stock partition is written; Android is a pair of image files on the Kindle drive, and you can switch back to the Kindle at any time |
-
-Not done yet:
-
-- **Stock firmware 5.18.1.1.1 only.** On any other version the installer shows E101 and stops without changing a file.
-- **It is not smooth.** The 10th generation has one 1 GHz core, 512 MB of memory and no GPU. WeRead works, but page turns and screen changes are slow, more so while audio plays.
-- **Refreshes slow down on a low battery.** At 20% and below, the stock display driver throttles itself.
-- **The Kindle must be jailbroken.** Jailbreaking is not part of this project; judge the risk yourself.
+> **On a Kindle Paperwhite 3, go to the original website, [readom.app](https://readom.app)**: downloads, guides and support for the original are there; **for this port, open an issue here, not there.**
 
 ## Installing (v1.0.0)
 
-Download: [`Readom.sh`](https://github.com/zmnqaz/readom/releases/download/v1.0.0/Readom.sh) (about 13 MB) · [release page](https://github.com/zmnqaz/readom/releases/tag/v1.0.0). A first install needs 2.8 GB free and at least 40% battery; the 194 MB system package is downloaded by the Kindle itself.
+Download: [`Readom.sh`](https://github.com/zmnqaz/readom/releases/download/v1.0.0/Readom.sh) (about 13 MB) · [release page](https://github.com/zmnqaz/readom/releases/tag/v1.0.0). Stock firmware 5.18.1.1.1 only. A first install needs 2.8 GB free and at least 40% battery; the 194 MB system package is downloaded by the Kindle itself.
 
 - **Let an AI assistant do it**: send it the text below. It does the computer's part following the [install guide](https://zmnqaz.github.io/readom/install_pw4.md); you plug and unplug the cable and tap on the Kindle.
 
@@ -55,6 +34,24 @@ Download: [`Readom.sh`](https://github.com/zmnqaz/readom/releases/download/v1.0.
 - **Do it yourself**: airplane mode on, delete leftover updates, fill the drive for now so no update can download → jailbreak with [Sanctuary](https://kindlemodding.org/jailbreaking/Sanctuary/), or [SpiderCat](https://kindlemodding.org/jailbreaking/SpiderCat/) if that fails → delete the filler, copy `Readom.sh` into `documents` on the Kindle drive → tap "Readom" in the library. Step by step on the [website](https://zmnqaz.github.io/readom/en/#install).
 
 The maintainer's Kindle runs stock firmware `5.18.1.1.1` and was jailbroken with Sanctuary's normal steps in November 2026.
+
+## Where it stands
+
+Each of these has run on a real Kindle Paperwhite 4:
+
+| | |
+|---|---|
+| System | Readom's Android 8.1 (AOSP) on the 10th generation's own 4.1 kernel; screen, touch, front light, power button and battery work |
+| WeRead | Tencent's official e-ink edition installs and works, for reading and for listening |
+| Bluetooth listening | New in this port: pair Bluetooth headphones and WeRead's audiobooks play through them (A2DP, SBC). The original Readom has no Bluetooth |
+| Wi‑Fi and sleep | Wi‑Fi works; the power button puts the Kindle into deep sleep and wakes it, and Wi‑Fi reconnects |
+| Page turns | The wrong refresh waveforms on the 10th generation's display driver are fixed |
+| Storage | The eMMC errors after repeated sleep and wake are fixed |
+| Stock system | No stock partition is written; Android is a pair of image files on the Kindle drive, and you can switch back to the Kindle at any time |
+
+Not done yet:
+
+- **The Kindle must be jailbroken.** Jailbreaking is not part of this project; judge the risk yourself.
 
 ## How it differs from the original
 

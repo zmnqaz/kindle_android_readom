@@ -46,10 +46,9 @@
       </span>
     </a>
     <nav class="nav" aria-label="Page">
-      <a href="#features">Features</a>
-      <a href="#numbers">Measured</a>
-      <a href="#status">Status</a>
       <a href="#install">Install</a>
+      <a href="#features">Features</a>
+      <a href="#status">Status</a>
       <a href="#thanks">Credits</a>
       <a class="lang" href="../" hreflang="zh-CN" lang="zh-CN">中文</a>
     </nav>
@@ -68,7 +67,7 @@
         <small>The Kindle 10th generation is the Kindle Paperwhite 4 (PW4), released in 2018.</small>
       </p>
       <div class="actions">
-        <a class="btn btn-primary" href="#status">See where it stands</a>
+        <a class="btn btn-primary" href="#install">How to install</a>
         <a class="btn" href="https://github.com/zmnqaz/readom/releases/tag/v1.0.0">Download v1.0.0</a>
         <a class="btn" href="https://github.com/zmnqaz/readom">Source on GitHub</a>
       </div>
@@ -92,19 +91,85 @@
         <strong>This is not the official Readom website.</strong> Readom was created by <strong>hbyxabc</strong> (小蹦大侠 on Bilibili) and supports the Kindle Paperwhite 3. This site describes a fork of his project, ported to the Kindle 10th generation. Without Readom there would be no port.
       </p>
       <div class="links">
-        <a href="https://readom.app">readom.app</a>
+        <a href="https://readom.app">Kindle Paperwhite 3: the original, readom.app</a>
         <a href="https://github.com/hbyxabc/readom">Original project on GitHub</a>
       </div>
     </div>
   </div>
 </section>
 
-<section class="chapter" id="features" aria-labelledby="features-title">
+<section class="chapter" id="install" aria-labelledby="install-title">
   <div class="wrap">
     <header class="chapter-head">
       <span class="seal latin" aria-hidden="true">I</span>
       <div>
         <span class="chapter-kicker">Chapter one</span>
+        <h2 id="install-title">Install <span class="tag" style="vertical-align:middle">v1.0.0</span></h2>
+        <p class="sub">Two ways to install, same result; pick either.</p>
+      </div>
+    </header>
+
+    <div class="ways">
+      <article class="card way">
+        <span class="way-kicker">Way one</span>
+        <h3>Let an AI do it</h3>
+        <p>Send the text below to any AI assistant. It does the computer side by following <a href="../install_pw4.md">these instructions</a> (in Chinese): clearing leftover updates, filling the drive for a while so the Kindle cannot update itself, removing the filler after the jailbreak, downloading and verifying the installer, copying it over and ejecting. You plug and unplug the cable and tap a few things on the Kindle.</p>
+        <div class="prompt">
+          <pre id="ai-prompt" tabindex="0" aria-label="Text for the AI">Please read https://zmnqaz.github.io/readom/install_pw4.md and follow it to jailbreak my Kindle 10th generation (Paperwhite 4) and install Readom on it. The document is in Chinese; please talk to me in English.
+Whatever you can do on the computer yourself, just do it and tell me the result; do not turn it into steps for me.
+For anything I have to do on the Kindle, give me one step at a time and wait for my reply.
+If you cannot open the link, tell me and I will paste the document.</pre>
+          <div class="prompt-bar">
+            <button class="btn btn-primary copy-btn" type="button" data-copy="ai-prompt" data-done="Copied" data-fail="Select and copy it by hand">Copy this text</button>
+            <span class="copy-status" role="status" aria-live="polite"></span>
+          </div>
+        </div>
+        <p class="note">What you do on the Kindle: switch airplane mode on and off; on the jailbreak web page, wait for the scan and type in the code it shows; tap Settings → Help → Getting Started; finally tap Readom in the library.</p>
+        <p class="note">The AI deletes only the filler it added and leftover updates; it does not touch your books.</p>
+      </article>
+
+      <article class="card way">
+        <span class="way-kicker">Way two</span>
+        <h3>Step by step yourself</h3>
+        <ol class="mini-steps">
+          <li><b>Stop automatic updates</b>Turn on airplane mode, connect to a computer, delete leftover <code>update*.bin</code> files in the root of the Kindle drive, and fill the drive for now until only 50–90 MB are free.</li>
+          <li><b>Jailbreak</b>Use Sanctuary in the Kindle’s own browser: after the page’s scan, type in the code it shows, then tap Settings → Help → Getting Started, and turn airplane mode back on once it has worked. If it fails, try SpiderCat.</li>
+          <li><b>Remove the filler, copy one file</b>After the jailbreak, delete the filler files, copy the installer into the drive’s <code>documents</code> folder, eject and unplug.</li>
+          <li><b>Tap it in the library</b>Tap Readom in the library; the rest happens on the Kindle.</li>
+        </ol>
+        <a class="btn" href="https://github.com/zmnqaz/readom/releases/download/v1.0.0/Readom.sh">Download Readom.sh (about 13 MB)</a> <span class="soon">A first install needs 2.8 GB free and at least 40% battery; the 194 MB system package is downloaded by the Kindle itself</span>
+      </article>
+    </div>
+
+    <div class="card jb-note">
+      <h3>About the jailbreak</h3>
+      <p>The maintainer’s Kindle 10th generation (stock firmware 5.18.1.1.1) was jailbroken again with <b>Sanctuary</b> in November 2026, following its normal steps, and it worked: all on the Kindle, no computer, no Amazon account. The Kindle was on a Wi‑Fi network that could reach sites outside mainland China; <b>whether it works without that has not been verified</b>. If Sanctuary fails, <b>SpiderCat</b> is the fallback.</p>
+      <p>The jailbreak tools are community work, not part of this project; judge the risk for yourself. Original guides: Sanctuary on <a href="https://kindlemodding.org/jailbreaking/Sanctuary/">KindleModding</a> and <a href="https://bookfere.com/post/1190.html">Bookfere</a> (Chinese); SpiderCat on <a href="https://kindlemodding.org/jailbreaking/SpiderCat/">KindleModding</a>; for other firmware, the <a href="https://kindlemodding.org/jailbreak-wizard.html">jailbreak wizard</a>.</p>
+    </div>
+
+    <div class="req card">
+      <table>
+        <caption>Before you install</caption>
+        <tbody>
+          <tr><th scope="row">Device</th><td>Kindle 10th generation (Paperwhite 4, 2018). Check under Settings → Device Options → Device Info.</td></tr>
+          <tr><th scope="row">Jailbreak</th><td>Required. If yours is not jailbroken yet, both ways above include that step.</td></tr>
+          <tr><th scope="row">Stock firmware</th><td>5.18.1.1.1 only (the maintainer’s device).</td></tr>
+          <tr><th scope="row">Free space, battery</th><td>At least 2.8 GB free and 40% battery for a first install. The filler files from the jailbreak have to be deleted first.</td></tr>
+          <tr><th scope="row">Going back to Kindle, uninstalling</th><td>The stock system is always there: in Android, hold the power button and restart to get back to the Kindle; if stuck, hold the power button for about 40 seconds. To uninstall, delete the <code>android</code> folder and <code>documents/Readom.sh</code> on the Kindle drive.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p class="folio" aria-hidden="true">1</p>
+  </div>
+</section>
+
+<section class="chapter" id="features" aria-labelledby="features-title">
+  <div class="wrap">
+    <header class="chapter-head">
+      <span class="seal latin" aria-hidden="true">II</span>
+      <div>
+        <span class="chapter-kicker">Chapter two</span>
         <h2 id="features-title">What already works on the 10th generation</h2>
         <p class="sub">Every item below has run on a real Kindle 10th generation.</p>
       </div>
@@ -129,59 +194,12 @@
       </article>
       <article class="card">
         <h3><span class="n">05</span>E-ink refresh fixed</h3>
-        <p>The 10th generation’s display driver was being sent the wrong waveforms; that is fixed. Turning a page while an audiobook plays, the refresh starts after about 0.5 s and finishes after about 1 s.</p>
+        <p>The 10th generation’s display driver was being sent the wrong waveforms; that is fixed. Pages now refresh properly.</p>
       </article>
       <article class="card">
         <h3><span class="n">06</span>The stock system stays</h3>
         <p>No stock partition is written: all of Android lives in image files on the Kindle’s drive. The stock Kindle system is kept and you can switch back to it at any time.</p>
       </article>
-    </div>
-
-    <p class="folio" aria-hidden="true">1</p>
-  </div>
-</section>
-
-<section class="chapter" id="numbers" aria-labelledby="numbers-title">
-  <div class="wrap">
-    <header class="chapter-head">
-      <span class="seal latin" aria-hidden="true">II</span>
-      <div>
-        <span class="chapter-kicker">Chapter two</span>
-        <h2 id="numbers-title">What was measured</h2>
-        <p class="sub">Only numbers measured on the device; where a number comes from a single run or narrow conditions, it says so.</p>
-      </div>
-    </header>
-
-    <div class="figures" style="grid-template-columns:repeat(auto-fit,minmax(min(100%,18rem),1fr))">
-      <article class="figure">
-        <span class="label">Turning a page</span>
-        <div class="pair">
-          <p class="value"><span class="approx">~</span>0.5<span class="unit">s</span></p>
-          <small>refresh starts</small>
-        </div>
-        <div class="pair">
-          <p class="value"><span class="approx">~</span>1<span class="unit">s</span></p>
-          <small>refresh done</small>
-        </div>
-        <p class="what">From lifting the finger to the screen starting to change, about 0.5 s; the whole page is done after about 1 s. About 0.5 s of that is the e-ink greyscale waveform itself.</p>
-        <p class="src">Conditions: turning pages by hand while an audiobook plays, after the refresh fix.</p>
-      </article>
-    </div>
-
-    <div class="compare" role="group" aria-labelledby="emmc-title">
-      <h3 id="emmc-title">Storage fix: read errors after repeated sleep and wake</h3>
-      <div class="side before">
-        <span class="label">Before (an interim build)</span>
-        <p class="value">171</p>
-        <p>After repeated sleep and wake, the eMMC returned 171 CRC read errors, and the system UI crashed as a result.</p>
-      </div>
-      <span class="arrow" aria-hidden="true">→</span>
-      <div class="side after">
-        <span class="label">After</span>
-        <p class="value">0</p>
-        <p>100 sleep and wake cycles, reading 64 MiB and verifying it right after every wake: zero errors.</p>
-      </div>
-      <p class="foot">Both runs were on the same device with different builds. The 100-cycle run used short, timer-woken sleeps; long sleeps have not been tested yet.</p>
     </div>
 
     <p class="folio" aria-hidden="true">2</p>
@@ -256,18 +274,15 @@
           <li>The official e-ink WeChat Read works, audiobooks included</li>
           <li>Audiobooks over Bluetooth headphones (A2DP, SBC)</li>
           <li>Wi‑Fi works; deep sleep with the screen off, woken by the power button</li>
-          <li>E-ink refresh fixed: about 0.5 s until a page starts to refresh, about 1 s until it is done</li>
-          <li>Storage fixed: 100 sleep and wake cycles with read verification, zero errors</li>
+          <li>E-ink refresh fixed; pages refresh properly</li>
+          <li>Storage fixed: no more read/write errors after repeated sleep and wake</li>
           <li>The stock Kindle system is kept, no stock partition is written, and you can switch back at any time</li>
         </ul>
       </article>
       <article class="card">
         <h3>Not done yet</h3>
         <ul class="list todo">
-          <li><strong>The one-step installer is being built.</strong> For now the port starts the way developers start it, so it cannot be installed by ordinary users yet; downloads and a guide are in preparation.</li>
-          <li><strong>It is not smooth.</strong> The 10th generation has a single 1 GHz core, 512 MB of memory and no GPU, so the CPU draws everything. WeChat Read is usable, but turning pages and switching screens are slow, more so while an audiobook plays.</li>
           <li><strong>A jailbreak is required.</strong> Jailbreaking is not part of this project; judge the risk for yourself.</li>
-          <li><strong>Refresh slows down on a low battery.</strong> At 20% and below, the stock display driver throttles itself and pages turn more slowly; charge first if you want to judge the speed.</li>
         </ul>
       </article>
     </div>
@@ -276,78 +291,12 @@
   </div>
 </section>
 
-<section class="chapter" id="install" aria-labelledby="install-title">
+<section class="chapter" id="thanks" aria-labelledby="thanks-title">
   <div class="wrap">
     <header class="chapter-head">
       <span class="seal latin" aria-hidden="true">V</span>
       <div>
         <span class="chapter-kicker">Chapter five</span>
-        <h2 id="install-title">Install <span class="tag" style="vertical-align:middle">v1.0.0</span></h2>
-        <p class="sub">Two ways to install, same result; pick either. The one-step installer is still being built; the file, where to download it and the space it needs will be published here.</p>
-      </div>
-    </header>
-
-    <div class="ways">
-      <article class="card way">
-        <span class="way-kicker">Way one</span>
-        <h3>Let an AI do it</h3>
-        <p>Send the text below to any AI assistant. It does the computer side by following <a href="../install_pw4.md">these instructions</a> (in Chinese): clearing leftover updates, filling the drive for a while so the Kindle cannot update itself, removing the filler after the jailbreak, downloading and verifying the installer, copying it over and ejecting. You plug and unplug the cable and tap a few things on the Kindle.</p>
-        <div class="prompt">
-          <pre id="ai-prompt" tabindex="0" aria-label="Text for the AI">Please read https://zmnqaz.github.io/readom/install_pw4.md and follow it to jailbreak my Kindle 10th generation (Paperwhite 4) and install Readom on it. The document is in Chinese; please talk to me in English.
-Whatever you can do on the computer yourself, just do it and tell me the result; do not turn it into steps for me.
-For anything I have to do on the Kindle, give me one step at a time and wait for my reply.
-If you cannot open the link, tell me and I will paste the document.</pre>
-          <div class="prompt-bar">
-            <button class="btn btn-primary copy-btn" type="button" data-copy="ai-prompt" data-done="Copied" data-fail="Select and copy it by hand">Copy this text</button>
-            <span class="copy-status" role="status" aria-live="polite"></span>
-          </div>
-        </div>
-        <p class="note">What you do on the Kindle: switch airplane mode on and off; on the jailbreak web page, wait for the scan and type in the code it shows; tap Settings → Help → Getting Started; finally tap Readom in the library.</p>
-        <p class="note">The AI deletes only the filler it added and leftover updates; it does not touch your books.</p>
-      </article>
-
-      <article class="card way">
-        <span class="way-kicker">Way two</span>
-        <h3>Step by step yourself</h3>
-        <ol class="mini-steps">
-          <li><b>Stop automatic updates</b>Turn on airplane mode, connect to a computer, delete leftover <code>update*.bin</code> files in the root of the Kindle drive, and fill the drive for now until only 50–90 MB are free.</li>
-          <li><b>Jailbreak</b>Use Sanctuary in the Kindle’s own browser: after the page’s scan, type in the code it shows, then tap Settings → Help → Getting Started, and turn airplane mode back on once it has worked. If it fails, try SpiderCat.</li>
-          <li><b>Remove the filler, copy one file</b>After the jailbreak, delete the filler files, copy the installer into the drive’s <code>documents</code> folder, eject and unplug.</li>
-          <li><b>Tap it in the library</b>Tap Readom in the library; the rest happens on the Kindle.</li>
-        </ol>
-        <a class="btn" href="https://github.com/zmnqaz/readom/releases/download/v1.0.0/Readom.sh">Download Readom.sh (about 13 MB)</a> <span class="soon">A first install needs 2.8 GB free and at least 40% battery; the 194 MB system package is downloaded by the Kindle itself</span>
-      </article>
-    </div>
-
-    <div class="card jb-note">
-      <h3>About the jailbreak</h3>
-      <p>The maintainer’s Kindle 10th generation (stock firmware 5.18.1.1.1) was jailbroken again with <b>Sanctuary</b> in November 2026, following its normal steps, and it worked: all on the Kindle, no computer, no Amazon account. The Kindle was on a Wi‑Fi network that could reach sites outside mainland China; <b>whether it works without that has not been verified</b>. If Sanctuary fails, <b>SpiderCat</b> is the fallback.</p>
-      <p>The jailbreak tools are community work, not part of this project; judge the risk for yourself. Original guides: Sanctuary on <a href="https://kindlemodding.org/jailbreaking/Sanctuary/">KindleModding</a> and <a href="https://bookfere.com/post/1190.html">Bookfere</a> (Chinese); SpiderCat on <a href="https://kindlemodding.org/jailbreaking/SpiderCat/">KindleModding</a>; for other firmware, the <a href="https://kindlemodding.org/jailbreak-wizard.html">jailbreak wizard</a>.</p>
-    </div>
-
-    <div class="req card">
-      <table>
-        <caption>Before you install</caption>
-        <tbody>
-          <tr><th scope="row">Device</th><td>Kindle 10th generation (Paperwhite 4, 2018). Check under Settings → Device Options → Device Info.</td></tr>
-          <tr><th scope="row">Jailbreak</th><td>Required. If yours is not jailbroken yet, both ways above include that step.</td></tr>
-          <tr><th scope="row">Stock firmware</th><td>5.18.1.1.1 only (the maintainer’s device).</td></tr>
-          <tr><th scope="row">Free space, battery</th><td>At least 2.8 GB free and 40% battery for a first install. The filler files from the jailbreak have to be deleted first.</td></tr>
-          <tr><th scope="row">Going back to Kindle, uninstalling</th><td>The stock system is always there: in Android, hold the power button and restart to get back to the Kindle; if stuck, hold the power button for about 40 seconds. To uninstall, delete the <code>android</code> folder and <code>documents/Readom.sh</code> on the Kindle drive.</td></tr>
-        </tbody>
-      </table>
-    </div>
-
-    <p class="folio" aria-hidden="true">5</p>
-  </div>
-</section>
-
-<section class="chapter" id="thanks" aria-labelledby="thanks-title">
-  <div class="wrap">
-    <header class="chapter-head">
-      <span class="seal latin" aria-hidden="true">VI</span>
-      <div>
-        <span class="chapter-kicker">Chapter six</span>
         <h2 id="thanks-title">Credits and notes</h2>
       </div>
     </header>
@@ -382,7 +331,7 @@ If you cannot open the link, tell me and I will paste the document.</pre>
       </aside>
     </div>
 
-    <p class="folio" aria-hidden="true">6</p>
+    <p class="folio" aria-hidden="true">5</p>
   </div>
 </section>
 

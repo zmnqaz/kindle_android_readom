@@ -9,7 +9,7 @@
 
 <p align="center">
   <a href="https://github.com/zmnqaz/readom/releases/tag/v1.0.0">下载 v1.0.0</a> ·
-  <a href="https://zmnqaz.github.io/readom/">移植版网站</a> ·
+  <a href="https://zmnqaz.github.io/readom/"><b>移植版网站</b></a> ·
   <a href="https://zmnqaz.github.io/readom/install_pw4.md">交给 AI 安装的说明</a> ·
   <a href="https://github.com/zmnqaz/readom/issues">反馈问题</a> ·
   <a href="README.en.md">English</a>
@@ -17,32 +17,11 @@
 
 > **这里不是 Readom 官方仓库。** Readom 由 [hbyxabc](https://github.com/hbyxabc/readom)（B 站：小蹦大侠）创作，原版支持 Kindle Paperwhite 3，官网是 [readom.app](https://readom.app)。
 > 这个仓库是在他的项目上 fork 出来、移植到 Kindle 第十代的社区版本，系统里绝大部分的设计和代码都来自原项目。
-> 原版的下载、教程和问题请到原项目；**第十代移植版的问题请在本仓库提 Issue，不要打扰原作者。**
-
-## 现在做到哪了
-
-下面每一项都在 Kindle 第十代真机上跑过：
-
-| | |
-|---|---|
-| 系统 | Readom 的 Android 8.1（AOSP），换上第十代自己的 4.1 内核，屏幕、触摸、前光、电源键、电量都已接上 |
-| 微信读书 | 官方墨水屏版能装、能用，看书和听书都可以 |
-| 蓝牙听书 | 新加的：配对蓝牙耳机，听书从耳机出声（A2DP，SBC 编码）。原版 Readom 没有蓝牙 |
-| Wi‑Fi 与休眠 | Wi‑Fi 可用；按电源键熄屏进入深度休眠，再按唤醒，Wi‑Fi 自动重连 |
-| 翻页 | 修正了第十代屏幕驱动上刷新波形用错的问题：听书播放中翻页，约 0.5 秒开始刷新、约 1 秒刷完 |
-| 存储 | 修好了反复休眠唤醒后的 eMMC 读写错误：100 次休眠唤醒、每次醒来立刻读 64 MiB 校验，零错误 |
-| 原厂系统 | 不写原厂分区，整个 Android 是 Kindle 盘上的镜像文件，随时可以切回 Kindle |
-
-还没做好的：
-
-- **只支持原厂系统 5.18.1.1.1。** 别的版本安装器显示 E101 并停下，不改动任何文件。
-- **不算流畅。** 第十代是单核 1 GHz、512 MB 内存、没有 GPU，界面全靠 CPU 画。微信读书能用，但翻页、切换页面都偏慢，听书时更明显。
-- **低电量时刷新变慢。** 电量在 20% 及以下时，原厂屏幕驱动会降速保护，翻页更慢。
-- **需要先越狱。** 越狱不属于本项目，请自行判断风险。
+> **用 Kindle Paperwhite 3 的请去原版官网 [readom.app](https://readom.app)**，原版的下载、教程和问题都在那里；**第十代移植版的问题请在本仓库提 Issue，不要打扰原作者。**
 
 ## 安装（v1.0.0）
 
-下载：[`Readom.sh`](https://github.com/zmnqaz/readom/releases/download/v1.0.0/Readom.sh)（约 13 MB）· [发布页](https://github.com/zmnqaz/readom/releases/tag/v1.0.0)。首次安装要 2.8 GB 空闲空间、40% 以上电量；系统包约 194 MB，Kindle 会自己联网下载。
+下载：[`Readom.sh`](https://github.com/zmnqaz/readom/releases/download/v1.0.0/Readom.sh)（约 13 MB）· [发布页](https://github.com/zmnqaz/readom/releases/tag/v1.0.0)。只支持原厂系统 5.18.1.1.1；首次安装要 2.8 GB 空闲空间、40% 以上电量；系统包约 194 MB，Kindle 会自己联网下载。
 
 两种装法，结果一样：
 
@@ -57,6 +36,24 @@
 - **自己一步步装**：开飞行模式、删掉升级残留、把空间临时填满防自动升级 → 用 [Sanctuary](https://kindlemodding.org/jailbreaking/Sanctuary/)（[书伴中文教程](https://bookfere.com/post/1190.html)）越狱，不成功换 [SpiderCat](https://kindlemodding.org/jailbreaking/SpiderCat/) → 删掉填充，把 `Readom.sh` 拷进 Kindle 盘的 `documents` → 在书库里点「Readom」。图文步骤见[网站](https://zmnqaz.github.io/readom/#install)。
 
 维护者的 Kindle 第十代原厂系统是 `5.18.1.1.1`，2026 年 11 月按 Sanctuary 的正常流程越狱走通。
+
+## 现在做到哪了
+
+下面每一项都在 Kindle 第十代真机上跑过：
+
+| | |
+|---|---|
+| 系统 | Readom 的 Android 8.1（AOSP），换上第十代自己的 4.1 内核，屏幕、触摸、前光、电源键、电量都已接上 |
+| 微信读书 | 官方墨水屏版能装、能用，看书和听书都可以 |
+| 蓝牙听书 | 新加的：配对蓝牙耳机，听书从耳机出声（A2DP，SBC 编码）。原版 Readom 没有蓝牙 |
+| Wi‑Fi 与休眠 | Wi‑Fi 可用；按电源键熄屏进入深度休眠，再按唤醒，Wi‑Fi 自动重连 |
+| 翻页 | 修正了第十代屏幕驱动上刷新波形用错的问题 |
+| 存储 | 修好了反复休眠唤醒后的 eMMC 读写错误 |
+| 原厂系统 | 不写原厂分区，整个 Android 是 Kindle 盘上的镜像文件，随时可以切回 Kindle |
+
+还没做好的：
+
+- **需要先越狱。** 越狱不属于本项目，请自行判断风险。
 
 ## 和原版 Readom 的不同
 
