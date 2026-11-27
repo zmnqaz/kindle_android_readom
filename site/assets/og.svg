@@ -14,10 +14,19 @@
   <rect x="0" y="0" width="1200" height="8" fill="#b03a2e"/>
 
   <g transform="translate(90 92)">
-    <rect width="64" height="64" rx="7" fill="#b03a2e"/>
-    <rect x="5" y="5" width="54" height="54" rx="4" fill="none" stroke="#fbf6ec" stroke-width="2.5"/>
-    <path d="M14 27.2 Q32 25.6 50 26.4 L50 30.6 Q32 30 14 31.2 Z" fill="#fbf6ec"/>
-    <path d="M29.4 14 L34.6 14.5 L34.2 51 L29.8 51.5 Z" fill="#fbf6ec"/>
+    <g transform="translate(-4.571 -4.571) scale(1.142857)">
+      <rect x="4" y="4" width="56" height="56" rx="7" fill="#b03a2e"/>
+      <rect x="17" y="9.5" width="30" height="45" rx="4.5" fill="#fbf6ec"/>
+      <rect x="20.5" y="13" width="23" height="32" rx="1" fill="#b03a2e"/>
+      <g fill="#fbf6ec">
+        <rect x="24" y="17" width="12" height="2.4" rx="1"/>
+        <rect x="24" y="23" width="16" height="1.8" rx=".9"/>
+        <rect x="24" y="27.5" width="16" height="1.8" rx=".9"/>
+        <rect x="24" y="32" width="16" height="1.8" rx=".9"/>
+        <rect x="24" y="36.5" width="11" height="1.8" rx=".9"/>
+      </g>
+      <rect x="28.5" y="48.6" width="7" height="1.8" rx=".9" fill="#b03a2e"/>
+    </g>
     <text x="84" y="30" font-family="Georgia, 'Noto Serif CJK SC', serif" font-size="30" font-weight="700" fill="#2a2520" letter-spacing="2">Readom</text>
     <text x="84" y="58" font-family="'Noto Serif CJK SC', 'Songti SC', serif" font-size="20" fill="#74695c" letter-spacing="4">第十代移植版 · 社区非官方</text>
   </g>

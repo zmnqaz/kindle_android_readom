@@ -1,8 +1,15 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
   <title>Readom 第十代移植版</title>
-  <!-- 本站自己的标识：一方红印，印文是「十」（第十代）。不是 Readom 官方标志。 -->
+  <!-- 本站自己的标识：一方红底，里面是一台显示着文字的电子书阅读器。不是 Readom 官方标志。 -->
   <rect x="4" y="4" width="56" height="56" rx="7" fill="#b03a2e"/>
-  <rect x="9" y="9" width="46" height="46" rx="4" fill="none" stroke="#fbf6ec" stroke-width="2.5"/>
-  <path d="M14 27.2 Q32 25.6 50 26.4 L50 30.6 Q32 30 14 31.2 Z" fill="#fbf6ec"/>
-  <path d="M29.4 14 L34.6 14.5 L34.2 51 L29.8 51.5 Z" fill="#fbf6ec"/>
+  <rect x="17" y="9.5" width="30" height="45" rx="4.5" fill="#fbf6ec"/>
+  <rect x="20.5" y="13" width="23" height="32" rx="1" fill="#b03a2e"/>
+  <g fill="#fbf6ec">
+    <rect x="24" y="17" width="12" height="2.4" rx="1"/>
+    <rect x="24" y="23" width="16" height="1.8" rx=".9"/>
+    <rect x="24" y="27.5" width="16" height="1.8" rx=".9"/>
+    <rect x="24" y="32" width="16" height="1.8" rx=".9"/>
+    <rect x="24" y="36.5" width="11" height="1.8" rx=".9"/>
+  </g>
+  <rect x="28.5" y="48.6" width="7" height="1.8" rx=".9" fill="#b03a2e"/>
 </svg>
