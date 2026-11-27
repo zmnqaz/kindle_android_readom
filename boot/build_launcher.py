@@ -385,6 +385,8 @@ def main():
                     help='the directory the payload sits in; repeat it for a second origin')
     ap.add_argument('--name', required=True)
     ap.add_argument('--title', required=True)
+    ap.add_argument('--icon', type=Path,
+                    help='a PNG or JPEG shown as the entry\'s cover in the library (sh_integration "# Icon:")')
     a = ap.parse_args()
     HOST = build_host.load('Run as the builder in the build VM.')
     if not re.fullmatch(r'[A-Za-z0-9._-]+\.sh', a.name) or not re.fullmatch(r'[A-Za-z0-9 ._-]+', a.title):
@@ -561,7 +563,20 @@ def main():
     # The stock eips the launcher's own last line is drawn with, checked as the
     # helper checks it. A development build that has no hash for it yet draws
     # with whatever eips the device has (an empty hash compares equal to itself).
-    script = (template.replace(title_from, '# Name: ' + a.title)
+    # The cover: sh_integration (the jailbreak's .sh support) reads a
+    # "# Icon: data:image/...;base64," header line, writes the picture next to
+    # the entry (Readom.sh.sdr/icon.png) and gives it to the library as the
+    # thumbnail. One line, read with the rest of the header, so it is kept small.
+    title_line = '# Name: ' + a.title
+    icon_sha = None
+    if a.icon:
+        picture = a.icon.read_bytes()
+        kind = 'png' if picture[:8] == b'\x89PNG\r\n\x1a\n' else 'jpeg' if picture[:3] == b'\xff\xd8\xff' else None
+        if not kind or len(picture) > 65536:
+            sys.exit('--icon: a PNG or JPEG of at most 64 KiB')
+        title_line += '\n# Icon: data:image/%s;base64,%s' % (kind, base64.b64encode(picture).decode())
+        icon_sha = sha(picture)
+    script = (template.replace(title_from, title_line)
               .replace('@EIPS_SHA256@', eips_sha if pins_complete else '"$eips_hash"')
               .replace(self_from, 'SELF=/mnt/us/documents/' + a.name)
               .replace('@STOPPED_MESSAGE@', stopped)
@@ -589,7 +604,8 @@ def main():
               'helper_sha256': sha(helper.read_bytes()), 'module_receipt_sha256': sha((a.module / 'build-result.json').read_bytes()),
               'kernel_sha256': sha(kernel), 'public_initramfs_sha256': sha(public), 'cmdline': cmdline,
               'data_path': data_path, 'data_size': data_size, 'installer': installer_receipt,
-              'profile': a.profile.name, 'stock_pins_complete': pins_complete, 'contains_device_data': False}
+              'profile': a.profile.name, 'stock_pins_complete': pins_complete, 'icon_sha256': icon_sha,
+              'contains_device_data': False}
     (out / 'build-result.json').write_text(json.dumps(result, indent=2) + '\n')
     print(json.dumps(result, indent=1))
 
