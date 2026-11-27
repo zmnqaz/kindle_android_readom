@@ -31,17 +31,24 @@ bool Gadget(Platform& p) {
     return Udc(p) && p.ModuleLive("g_android") && p.AndroidUsb() && p.FunctionFs();
 }
 // The PW4's 4.1 kernel: ChipIdea (built in) and the configfs gadget, whose
-// modules init.pw3.usb.modules.rc loads (device/amazon/pw4).
-bool Configfs(Platform& p) {
-    return p.ModuleLive("configfs") && p.ModuleLive("libcomposite") &&
-           p.ModuleLive("usb_f_fs") && p.FunctionFs();
+// modules init.pw3.usb.modules.rc loads (device/amazon/pw4): configfs,
+// libcomposite and usb_f_fs live and functionfs known, checked one by one in
+// the configfs-serial stage below so that a failure names its check.
+// The check a stage stopped at, for the log: without it a failed stage said
+// only that it failed (PW4, every start through rc2: the serial step).
+const char* gFailure = "";
+bool Fail(Platform& p, const char* why = "unnamed check") {
+    gFailure = why;
+    p.Set(kPhase, "error");
+    return false;
 }
-bool Fail(Platform& p) { p.Set(kPhase, "error"); return false; }
 bool MakeSerial(Platform& p) {
     if (ValidSerial(p.Get(kSerial))) return true;
     std::string serial;
-    return p.RandomSerial(&serial) && ValidSerial(serial) &&
-           p.Set(kSerial, serial) && p.Get(kSerial) == serial;
+    if (!p.RandomSerial(&serial) || !ValidSerial(serial)) { gFailure = "random serial"; return false; }
+    if (!p.Set(kSerial, serial)) { gFailure = "setting the serial property"; return false; }
+    if (p.Get(kSerial) != serial) { gFailure = "reading the serial property back"; return false; }
+    return true;
 }
 }
 
@@ -55,8 +62,12 @@ bool ValidSerial(const std::string& serial) {
     return nonzero;
 }
 
+const char* UsbGateFailure() { return gFailure; }
+
 bool RunUsbGate(Platform& p, const std::string& stage) {
-    if (!Allowed(p) || !NoCompetitor(p)) return Fail(p);
+    gFailure = "";
+    if (!Allowed(p)) return Fail(p, "ro.secure and ro.adb.secure are not both 1");
+    if (!NoCompetitor(p)) return Fail(p, "another gadget module is present or unreadable");
     if (stage == "prepare") {
         if (p.Get(kPhase) != "none") return Fail(p);
         for (const char* module : {"fsl_otg_arc", "arcotg_udc", "g_android"})
@@ -73,9 +84,14 @@ bool RunUsbGate(Platform& p, const std::string& stage) {
     }
     if (stage == "configfs-serial") {
         // The same serial for the configfs gadget, before the gadget is made.
-        if (p.Get(kPhase) != "configfs-loaded" || !Configfs(p)) return Fail(p);
-        if (!MakeSerial(p)) return Fail(p);
-        return p.Set(kPhase, "configfs-ready");
+        if (p.Get(kPhase) != "configfs-loaded") return Fail(p, "phase is not configfs-loaded");
+        if (!p.ModuleLive("configfs")) return Fail(p, "configfs module not live");
+        if (!p.ModuleLive("libcomposite")) return Fail(p, "libcomposite module not live");
+        if (!p.ModuleLive("usb_f_fs")) return Fail(p, "usb_f_fs module not live");
+        if (!p.FunctionFs()) return Fail(p, "functionfs not in /proc/filesystems");
+        if (!MakeSerial(p)) return Fail(p, gFailure);
+        if (!p.Set(kPhase, "configfs-ready")) return Fail(p, "setting the phase");
+        return true;
     }
     const char* expected = nullptr;
     const char* next = nullptr;

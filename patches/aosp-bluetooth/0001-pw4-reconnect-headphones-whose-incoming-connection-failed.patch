@@ -1,0 +1,61 @@
+From: PW4 Android port
+Subject: [PW4] Bluetooth: headphones whose own connection fails are called back
+
+On the PW4 the A2DP source offers SBC alone (device/amazon/pw4 Bluetooth
+overlay, Jump 56): AAC costs the single 1 GHz core more than it has to give
+while WeRead turns pages. Headphones that connect on their own -- switched on
+next to the Kindle, or after the Kindle wakes -- may configure AAC, and once
+that is refused (btif_av "Received BTA_AV_REJECT_EVT", a2dp_codec "cannot find
+codec configuration for peer OTA codec AAC") some never try SBC: rc2 on
+2026-11-27, a pair of 夜鹰 headphones, two attempts both lost, while a tap in
+Settings connected at once, because an outgoing connection lets this side
+pick the codec.
+
+So an incoming connection that fails while pending is made again from this
+side, 2 s later, once per device in 10 s, and only for a bonded device whose
+A2DP priority is above PRIORITY_OFF. A device that connected meanwhile makes
+the call a no-op (Connected ignores CONNECT for its own device).
+
+diff --git a/src/com/android/bluetooth/a2dp/A2dpStateMachine.java b/src/com/android/bluetooth/a2dp/A2dpStateMachine.java
+index 7a18989..3b9dbfc 100755
+--- a/src/com/android/bluetooth/a2dp/A2dpStateMachine.java
++++ b/src/com/android/bluetooth/a2dp/A2dpStateMachine.java
+@@ -485,6 +485,7 @@ final class A2dpStateMachine extends StateMachine {
+                             mIncomingDevice = null;
+                             transitionTo(mDisconnected);
+                         }
++                        retryIncomingAsOutgoing(device);
+                     } else {
+                         loge("Unknown device Disconnected: " + device);
+                     }
+@@ -866,6 +867,30 @@ final class A2dpStateMachine extends StateMachine {
+         setCodecConfigPreferenceNative(codecConfigArray);
+     }
+ 
++    // Readom (PW4): an incoming connection that failed is made again from this
++    // side. The PW4 offers SBC only (device/amazon/pw4 Bluetooth overlay, to keep
++    // the single core free), and some headphones, when they connect on their
++    // own, configure AAC and do not fall back to SBC once that is refused: they
++    // never reconnect after being switched on or after the Kindle wakes. An
++    // outgoing connection lets this side pick the codec, as a tap in Settings
++    // does. Once per device in RETRY_WINDOW_MS, so a device that keeps failing
++    // is not called in a loop; only for bonded devices with A2DP allowed.
++    private static final int RETRY_DELAY_MS = 2000;
++    private static final long RETRY_WINDOW_MS = 10000;
++    private BluetoothDevice mRetryDevice;
++    private long mRetryAtMs;
++
++    private void retryIncomingAsOutgoing(BluetoothDevice device) {
++        long now = android.os.SystemClock.elapsedRealtime();
++        if (device.equals(mRetryDevice) && now - mRetryAtMs < RETRY_WINDOW_MS) return;
++        if (device.getBondState() != BluetoothDevice.BOND_BONDED
++                || mService.getPriority(device) <= BluetoothProfile.PRIORITY_OFF) return;
++        mRetryDevice = device;
++        mRetryAtMs = now;
++        logi("Incoming A2DP failed; connecting from this side in " + RETRY_DELAY_MS + " ms");
++        sendMessageDelayed(obtainMessage(CONNECT, device), RETRY_DELAY_MS);
++    }
++
+     boolean okToConnect(BluetoothDevice device) {
+         AdapterService adapterService = AdapterService.getAdapterService();
+         int priority = mService.getPriority(device);

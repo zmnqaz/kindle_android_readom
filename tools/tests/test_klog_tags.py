@@ -31,6 +31,9 @@ KEEP = {
     'pw3-handoff': "the handover's own init: rails, temperature, the display driver"
                    ' and the start screen, fixed strings with errno and sizes'
                    ' (boot/handoff-init/pw3-handoff-init.c, P())',
+    'pw3-usb-check': 'which USB gate check a stage stopped at: the stage name from'
+                     ' its .rc and fixed strings, never the serial'
+                     ' (tools/kernel-hardware/native/main.cpp)',
     'pw3-report-area': 'whether the report area was written and, when it was not, why:'
                        ' fixed strings, a path of ours and strerror()'
                        ' (BootReport.cpp, KernelLine())',

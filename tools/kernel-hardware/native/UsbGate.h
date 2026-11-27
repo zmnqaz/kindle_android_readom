@@ -19,4 +19,6 @@ class Platform {
 };
 bool ValidSerial(const std::string& serial);
 bool RunUsbGate(Platform& platform, const std::string& stage);
+// Which check the last failed RunUsbGate stopped at (a fixed text, no device data).
+const char* UsbGateFailure();
 }

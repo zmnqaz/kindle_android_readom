@@ -26,3 +26,4 @@ system/ca-certificates        aosp-ca-certificates
 system/timezone               aosp-timezone
 external/icu                  aosp-icu
 hardware/interfaces           aosp-hardware-interfaces
+packages/apps/Bluetooth       aosp-bluetooth

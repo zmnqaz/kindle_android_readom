@@ -4,7 +4,10 @@
 #include <android-base/properties.h>
 #include <log/log.h>
 #include <cerrno>
+#include <cstdio>
+#include <fcntl.h>
 #include <time.h>
+#include <unistd.h>
 
 namespace {
 class DevicePlatform : public pw3::Platform {
@@ -47,7 +50,15 @@ int main(int argc, char** argv) {
     if (argc != 2) return 2;
     DevicePlatform platform;
     if (!pw3::RunUsbGate(platform, argv[1])) {
-        ALOGE("PW3 USB module gate failed at stage %s; USB stays off", argv[1]);
+        ALOGE("PW3 USB module gate failed at stage %s (%s); USB stays off", argv[1], pw3::UsbGateFailure());
+        // Also the kernel log, which a user build keeps where logcat's early lines are lost.
+        int fd = open("/dev/kmsg", O_WRONLY | O_CLOEXEC);
+        if (fd >= 0) {
+            char line[200];
+            int n = snprintf(line, sizeof(line), "<3>pw3-usb-check: stage %s failed: %s\n", argv[1], pw3::UsbGateFailure());
+            if (n > 0) { ssize_t w = write(fd, line, n < (int)sizeof(line) ? n : (int)sizeof(line) - 1); (void)w; }
+            close(fd);
+        }
         return 1;
     }
     // Never log the transient USB serial or any device identifiers.
