@@ -73,6 +73,8 @@
     "data_bytes": 2147483648
   },
   "entry_why": "as the PW3 profile's, for the release entry: the PW4 PID 1 loads the v2 EPDC driver and the Goodix touch driver (device/amazon/pw4/porting/handoff.md, Jump 10), panic=5 is already in cmdline_base, and the device archive owns lib/ (lib/firmware/imx/epdc/epdc_ED060KC4.fw, which the EPDC driver asks for) as well as firmware/. None of the development switches of porting/pack-initramfs.py (pw4_lockup, a TCP shell, adb keys, boot properties) is in a release entry. The kernel release is passed to pw4-handoff-init, which loads the drivers only under the kernel they were built for",
+  "any_firmware": true,
+  "any_firmware_why": "the owner's decision of 2026-11-27: install on any PW4 firmware, not only 5.18.1.1.1, which is the only one tested. The board is still checked (dd_tree_device_matches); the stock kernel build, the stock command line and the pinned stock files are not (devicedata.c any_firmware, helper.c PW_ANY_FIRMWARE). A firmware the handoff module does not fit stops at the module load with E101; one that fails later restarts into the stock system. Must agree with dd_pw4_rex_5_18_1_1_1.any_firmware in boot/devicedata/devicedata.c",
   "stock_files": {
     "eips": {
       "path": "/usr/sbin/eips",

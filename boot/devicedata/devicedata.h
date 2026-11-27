@@ -67,6 +67,10 @@ int dd_atags(const char *root, const struct dd_profile *profile, const char *cmd
  * Built with -DPW_DEVICE_TREE and boot/handoff/pw4_fdt.c + pw3_plan.c. */
 int dd_fdt(const char *root, const struct dd_profile *profile, const char *cmdline,
            uint32_t initrd_start, uint32_t initrd_size, struct dd_buf *out, struct dd_why *why);
+/* The same; any_firmware: the stock command line is not compared with the
+ * profile's (the build's line is still the profile's, extended). */
+int dd_fdt_firmware(const char *root, const struct dd_profile *profile, int any_firmware, const char *cmdline,
+                    uint32_t initrd_start, uint32_t initrd_size, struct dd_buf *out, struct dd_why *why);
 
 #ifdef PW_DEVICE_TREE
 /* What a device-tree Kindle (PW4) fixes beyond struct dd_profile. Kept apart,
@@ -92,7 +96,15 @@ struct dd_tree_profile {
      * devices in the configuration (device/amazon/pw3/preinit/Board.h). Used
      * only when the stock system lists none; 0: nothing added. */
     uint64_t android_rpmb_sectors;
+    /* 1: any firmware of this model. The board (compatible) is still checked;
+     * the stock command line and kernel build are not, and the three files
+     * above are taken as the device has them (any regular file up to
+     * DD_ANY_FIRMWARE_MAX) instead of by size and SHA256. A firmware whose
+     * kernel the handoff module does not fit is stopped when the module is
+     * loaded (the stock kernel checks module symbol versions). 0: pinned. */
+    int any_firmware;
 };
+#define DD_ANY_FIRMWARE_MAX (8u << 20)
 extern const struct dd_tree_profile dd_pw4_rex_5_18_1_1_1;
 /* dd_device_matches and dd_archive for such a Kindle. The archive carries the
  * EPDC firmware, the Wi-Fi firmware and NVRAM, the Bluetooth patch file and

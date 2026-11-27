@@ -79,6 +79,7 @@ static void make_device(void) {
     test.epdc_firmware = (struct dd_pin){EPDC, sizeof(epdc), epdc_sha};
     test.wifi_firmware = (struct dd_pin){WIFI, sizeof(wifi), wifi_sha};
     test.bt_firmware = (struct dd_pin){BT, sizeof(bt), bt_sha};
+    test.any_firmware = 0;   /* the pinned checks below; test_any_firmware() for the release's */
 }
 
 struct entry { char name[128]; uint32_t mode, size; const unsigned char *data; };
@@ -127,6 +128,7 @@ static void test_profile(void) {
     }
     CHECK(!strcmp(dd_pw4_rex_5_18_1_1_1.wifi_firmware.path, dd_pw4_5_18_1_1_1.wifi_firmware));
     CHECK(dd_pw4_rex_5_18_1_1_1.android_rpmb_sectors == 8192);
+    CHECK(dd_pw4_rex_5_18_1_1_1.any_firmware == 1);   /* any PW4 firmware (2026-11-27) */
 }
 
 static void test_matches(void) {
@@ -179,6 +181,49 @@ static void test_matches(void) {
     CHECK(dd_tree_device_matches(root, &test, &why) == -1 && !why.other_device && why.text[0]);
     assert(rename(moved, full) == 0);
     CHECK(dd_tree_device_matches(root, &test, &why) == 0);
+}
+
+/* Any firmware (the release profile's setting): another kernel build, another
+ * stock command line and other stock files are this model all the same, and
+ * the archive carries the files the device has. The board still decides. */
+static void test_any_firmware(void) {
+    struct dd_tree_profile any = test;
+    any.any_firmware = 1;
+    struct dd_why why = {{0}, 0};
+    static const char other_build[] = "Linux version 4.1.15-lab126 (build@lab126) #2 SMP PREEMPT Fri Jun 1 00:00:00 UTC 2027\n";
+    static const char other_cmdline[] = "console=ttymxc0,115200 root=/dev/mmcblk1p8 rootwait quiet\n";
+    unsigned char other[sizeof(wifi)];
+    memcpy(other, wifi, sizeof(other)); other[100] ^= 1;
+    swap("/proc/version", other_build, strlen(other_build));
+    CHECK(dd_tree_device_matches(root, &any, &why) == 0);
+    CHECK(dd_tree_device_matches(root, &test, &why) == -1 && why.other_device);
+    restore("/proc/version");
+    swap("/proc/cmdline", other_cmdline, strlen(other_cmdline));
+    memset(&why, 0, sizeof(why));
+    CHECK(dd_tree_device_matches(root, &any, &why) == 0);
+    restore("/proc/cmdline");
+    swap(WIFI, other, sizeof(other));
+    memset(&why, 0, sizeof(why));
+    CHECK(dd_tree_device_matches(root, &any, &why) == 0);
+    struct dd_build build = {STOCK " panic=5", "schema=1\nadb_key_sha256=none\n", NULL, 0};
+    struct dd_buf a = {0};
+    struct entry e[32];
+    CHECK(dd_tree_archive(root, &any, &build, &a, &why) == 0);
+    unsigned n = parse(&a, e, 32);
+    const struct entry *f = find(e, n, "firmware/bcmdhd/fw_bcmdhd_sr.bin");
+    CHECK(f && f->size == sizeof(other) && !memcmp(f->data, other, sizeof(other)));
+    dd_free(&a);
+    restore(WIFI);
+    /* Another board is still another model; an empty or missing file still stops. */
+    swap("/sys/firmware/devicetree/base/compatible", "amzn,imx6sll-other\0fsl,imx6sll\0", 31);
+    memset(&why, 0, sizeof(why));
+    CHECK(dd_tree_device_matches(root, &any, &why) == -1 && why.other_device);
+    restore("/sys/firmware/devicetree/base/compatible");
+    swap(BT, "", 0);
+    memset(&why, 0, sizeof(why));
+    CHECK(dd_tree_device_matches(root, &any, &why) == -1 && why.text[0]);
+    restore(BT);
+    CHECK(dd_tree_device_matches(root, &any, &why) == 0);
 }
 
 static void test_archive(void) {
@@ -265,6 +310,7 @@ int main(void) {
     test_profile();
     test_matches();
     test_archive();
+    test_any_firmware();
     char cmd[300];
     snprintf(cmd, sizeof(cmd), "rm -rf '%s'", root);
     if (system(cmd)) {}

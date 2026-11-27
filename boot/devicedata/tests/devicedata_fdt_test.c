@@ -107,6 +107,10 @@ int main(void) {
     put("/proc/cmdline", "console=ttymxc0,115200 root=/dev/mmcblk0p1 rootwait\n", 52);
     memset(&why, 0, sizeof(why));
     CHECK(dd_fdt(root, &dd_pw4_5_18_1_1_1, CMDLINE, 0x84000000u, 0x1000u, &out, &why) == -1 && why.other_device);
+    /* Any firmware (the release's setting): that line is no stop; the build's
+     * line is still the profile's, extended. */
+    memset(&why, 0, sizeof(why));
+    CHECK(dd_fdt_firmware(root, &dd_pw4_5_18_1_1_1, 1, CMDLINE, 0x84000000u, 0x1000u, &out, &why) == 0);
 
     /* A damaged blob stops the start, it is not repaired. */
     put("/proc/cmdline", "console=ttymxc0,115200 consoleblank=0 uart_at_4m root=/dev/mmcblk1p8 rootwait quiet secure_cpu=1 androidboot.secure_cpu=1 androidboot.prod=1 androidboot.unlocked_kernel=false\n",

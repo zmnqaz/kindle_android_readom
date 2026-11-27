@@ -368,7 +368,13 @@ def stock_files_header(profile, unpinned):
              '#define STOCK_PINS_COMPLETE %d' % (not missing), '']
     if missing:
         lines.insert(2, '#define PW_STOCK_UNPINNED 1')
-    return '\n'.join(lines), not missing, files['eips']['sha256']
+    any_firmware = profile.get('any_firmware') is True
+    if any_firmware:
+        # Any firmware of the model: the pins above are what 5.18.1.1.1 has,
+        # and the helper checks only that eips is a file and that the boot chain
+        # does not change during the run (helper.c, PW_ANY_FIRMWARE).
+        lines.insert(2, '#define PW_ANY_FIRMWARE 1')
+    return '\n'.join(lines), not missing, None if any_firmware else files['eips']['sha256']
 
 
 def main():
@@ -577,7 +583,7 @@ def main():
         title_line += '\n# Icon: data:image/%s;base64,%s' % (kind, base64.b64encode(picture).decode())
         icon_sha = sha(picture)
     script = (template.replace(title_from, title_line)
-              .replace('@EIPS_SHA256@', eips_sha if pins_complete else '"$eips_hash"')
+              .replace('@EIPS_SHA256@', eips_sha if pins_complete and eips_sha else '"$eips_hash"')
               .replace(self_from, 'SELF=/mnt/us/documents/' + a.name)
               .replace('@STOPPED_MESSAGE@', stopped)
               .replace('@LOGPREFIX@', prefix).replace('@LOGPARENT@', prefix.rsplit('/', 1)[0])
@@ -604,7 +610,7 @@ def main():
               'helper_sha256': sha(helper.read_bytes()), 'module_receipt_sha256': sha((a.module / 'build-result.json').read_bytes()),
               'kernel_sha256': sha(kernel), 'public_initramfs_sha256': sha(public), 'cmdline': cmdline,
               'data_path': data_path, 'data_size': data_size, 'installer': installer_receipt,
-              'profile': a.profile.name, 'stock_pins_complete': pins_complete, 'icon_sha256': icon_sha,
+              'profile': a.profile.name, 'stock_pins_complete': pins_complete, 'any_firmware': eips_sha is None and pins_complete, 'icon_sha256': icon_sha,
               'contains_device_data': False}
     (out / 'build-result.json').write_text(json.dumps(result, indent=2) + '\n')
     print(json.dumps(result, indent=1))

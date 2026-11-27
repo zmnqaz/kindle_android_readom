@@ -551,6 +551,10 @@ done:
  * device's own and is passed on as it is, never stored. */
 int dd_fdt(const char *root, const struct dd_profile *profile, const char *cmdline,
            uint32_t initrd_start, uint32_t initrd_size, struct dd_buf *out, struct dd_why *why) {
+    return dd_fdt_firmware(root, profile, 0, cmdline, initrd_start, initrd_size, out, why);
+}
+int dd_fdt_firmware(const char *root, const struct dd_profile *profile, int any_firmware, const char *cmdline,
+                    uint32_t initrd_start, uint32_t initrd_size, struct dd_buf *out, struct dd_why *why) {
     char live[1024], stock[1024] = "", *save = NULL;
     struct dd_buf src = {0};
     struct pw_range rd = {initrd_start, initrd_size}, zone = {0x80000000u, 0x08000000u};
@@ -564,7 +568,7 @@ int dd_fdt(const char *root, const struct dd_profile *profile, const char *cmdli
         if (*stock) strcat(stock, " ");
         strcat(stock, t);
     }
-    if (strcmp(stock, profile->stock_cmdline))
+    if (!any_firmware && strcmp(stock, profile->stock_cmdline))
         return fail_other_device(why, "stock command line is not this model's");
     /* The build's line extends the stock one without its console= entries:
      * the first handoff on a PW4 (2026-11-23) hung in the 4.1 imx console
@@ -629,11 +633,16 @@ const struct dd_tree_profile dd_pw4_rex_5_18_1_1_1 = {
      * geometry check in the Android kernel, before anything is written, and
      * restarts into the stock system. */
     8192,
+    /* Any PW4 firmware, by the owner's decision of 2026-11-27: only
+     * 5.18.1.1.1 is tested, and a firmware this does not fit fails at the
+     * module load or at the Android start, and restarts into the stock system. */
+    1,
 };
 
 /* The stock command line and kernel, as dd_device_matches checks them. */
-static int tree_stock_system(const char *root, const struct dd_profile *base, struct dd_why *why) {
+static int tree_stock_system(const char *root, const struct dd_profile *base, int any_firmware, struct dd_why *why) {
     char live[1024], stock[1024] = "", *save = NULL;
+    if (any_firmware) return 0;
     if (read_text(root, "/proc/cmdline", live, sizeof(live), why)) return -1;
     for (char *token = strtok_r(live, " ", &save); token; token = strtok_r(NULL, " ", &save)) {
         if (!strcmp(token, "rootwait") || !strncmp(token, "root=", 5)) continue;
@@ -655,7 +664,12 @@ static int tree_stock_system(const char *root, const struct dd_profile *base, st
 /* A pinned stock file, whole. `identity`: a file that is there and is not the
  * pinned one says this is not the firmware the build is for (the screen that
  * says so, rather than "restart and tap again", which would be for ever). */
-static int pinned(const char *root, const struct dd_pin *pin, struct dd_buf *out, struct dd_why *why, int identity) {
+static int pinned(const char *root, const struct dd_pin *pin, struct dd_buf *out, struct dd_why *why, int identity,
+                  int any_firmware) {
+    if (any_firmware) {
+        if (read_file(root, pin->path, DD_ANY_FIRMWARE_MAX, out, why)) return -1;
+        return out->size ? 0 : fail(why, "%s is empty", pin->path);
+    }
     if (read_file(root, pin->path, pin->bytes + 1, out, why)) return -1;
     SHA256_CTX ctx;
     unsigned char digest[32];
@@ -674,7 +688,7 @@ static int pinned(const char *root, const struct dd_pin *pin, struct dd_buf *out
 
 int dd_tree_device_matches(const char *root, const struct dd_tree_profile *profile, struct dd_why *why) {
     struct dd_buf b = {0};
-    if (tree_stock_system(root, profile->base, why)) return -1;
+    if (tree_stock_system(root, profile->base, profile->any_firmware, why)) return -1;
     /* The board, by the device tree the boot loader gave the stock kernel: the
      * first, most specific entry of the root compatible. The SoC alone
      * ("fsl,imx6sll") is what the handoff module checks; other Kindles are
@@ -684,7 +698,7 @@ int dd_tree_device_matches(const char *root, const struct dd_tree_profile *profi
     int rc = first == b.size || first != strlen(profile->compatible) || memcmp(b.data, profile->compatible, first)
              ? fail_other_device(why, "not this model's board") : 0;
     const struct dd_pin *pins[] = {&profile->epdc_firmware, &profile->wifi_firmware, &profile->bt_firmware};
-    for (unsigned i = 0; i < 3 && !rc; ++i) rc = pinned(root, pins[i], &b, why, 1);
+    for (unsigned i = 0; i < 3 && !rc; ++i) rc = pinned(root, pins[i], &b, why, 1, profile->any_firmware);
     dd_free(&b);
     return rc;
 }
@@ -787,8 +801,9 @@ int dd_tree_archive(const char *root, const struct dd_tree_profile *profile, con
     struct dd_buf epdc = {0}, wifi = {0}, nvram = {0}, bt = {0}, conf = {0}, data = {0};
     int rc = -1;
     out->size = 0;
-    if (pinned(root, &profile->epdc_firmware, &epdc, why, 0) || pinned(root, &profile->wifi_firmware, &wifi, why, 0) ||
-        pinned(root, &profile->bt_firmware, &bt, why, 0)) goto done;
+    int any = profile->any_firmware;
+    if (pinned(root, &profile->epdc_firmware, &epdc, why, 0, any) || pinned(root, &profile->wifi_firmware, &wifi, why, 0, any) ||
+        pinned(root, &profile->bt_firmware, &bt, why, 0, any)) goto done;
     if (read_file(root, profile->base->wifi_board, profile->nvram_max, &nvram, why)) goto done;
     if (!nvram.size || memchr(nvram.data, 0, nvram.size)) { fail(why, "Wi-Fi NVRAM is not a text file"); goto done; }
     if (append(&conf, build->preinit_conf, strlen(build->preinit_conf)) || tree_storage_lines(root, profile, &conf, why)) {

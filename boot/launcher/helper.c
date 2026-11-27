@@ -60,7 +60,8 @@
 #if CHECK_PROFILE == 3
 #define DD_MATCHES(why) dd_tree_device_matches("/", &dd_pw4_rex_5_18_1_1_1, why)
 #define DD_ARCHIVE(build, out, why) dd_tree_archive("/", &dd_pw4_rex_5_18_1_1_1, build, out, why)
-#define DD_BOOT_PARAMS(cmdline, start, bytes, out, why) dd_fdt("/", dd_pw4_rex_5_18_1_1_1.base, cmdline, start, bytes, out, why)
+#define DD_BOOT_PARAMS(cmdline, start, bytes, out, why) \
+    dd_fdt_firmware("/", dd_pw4_rex_5_18_1_1_1.base, dd_pw4_rex_5_18_1_1_1.any_firmware, cmdline, start, bytes, out, why)
 #else
 #define DD_MATCHES(why) dd_device_matches("/", &dd_pw3_5_16_2_1_1, why)
 #define DD_ARCHIVE(build, out, why) dd_archive("/", &dd_pw3_5_16_2_1_1, build, out, why)
@@ -240,7 +241,7 @@ static void checkpoint(const char *name) {
 static void digest(const unsigned char *data, size_t bytes, unsigned char result[32]) {
     SHA256_CTX ctx; sha256_init(&ctx); sha256_update(&ctx, data, bytes); sha256_final(&ctx, result);
 }
-static int exact_file(const char *path, const char *expected, size_t bytes) {
+__attribute__((unused)) static int exact_file(const char *path, const char *expected, size_t bytes) {
     int fd = open(path, O_RDONLY | O_NOFOLLOW | O_CLOEXEC); struct stat st;
     if (fd < 0) return 0;
     if (fstat(fd, &st) || !S_ISREG(st.st_mode) || (size_t)st.st_size != bytes) { close(fd); return 0; }
@@ -281,9 +282,46 @@ static int stock_unpinned(const char *path, int needed) {
     return 1;
 }
 #endif
+#ifdef PW_ANY_FIRMWARE
+/* Any firmware of the model (the profile's any_firmware): the stock files are
+ * not pinned. eips has to be a regular file; the boot chain has to be what it
+ * was at its first check in this run, which is what original_boot is for --
+ * that nothing this run did changed it. */
+static int any_regular(const char *path, const char *expected, size_t bytes) {
+    (void)expected; (void)bytes; struct stat st;
+    return !lstat(path, &st) && S_ISREG(st.st_mode) && st.st_size > 0;
+}
+static int same_as_first(const char *path, const char *expected, size_t bytes) {
+    static struct { char path[64]; unsigned char sha[32]; } seen[8]; static unsigned count;
+    (void)expected; (void)bytes;
+    int fd = open(path, O_RDONLY | O_NOFOLLOW | O_CLOEXEC); struct stat st;
+    if (fd < 0) return 0;
+    if (fstat(fd, &st) || !S_ISREG(st.st_mode)) { close(fd); return 0; }
+    unsigned char block[4096], result[32]; SHA256_CTX hash; sha256_init(&hash);
+    for (;;) {
+        ssize_t n = read(fd, block, sizeof(block));
+        if (n < 0 && errno == EINTR) continue;
+        if (n < 0) { close(fd); return 0; }
+        if (!n) break;
+        sha256_update(&hash, block, (size_t)n);
+    }
+    close(fd); sha256_final(&hash, result);
+    for (unsigned i = 0; i < count; i++)
+        if (!strcmp(seen[i].path, path)) return !memcmp(seen[i].sha, result, 32);
+    if (count == sizeof(seen) / sizeof(seen[0]) || strlen(path) >= sizeof(seen[0].path)) return 0;
+    snprintf(seen[count].path, sizeof(seen[count].path), "%s", path);
+    memcpy(seen[count].sha, result, 32); count++;
+    return 1;
+}
+#define STOCK_FILE_CHECK any_regular
+#define STOCK_BOOT_CHECK same_as_first
+#else
+#define STOCK_FILE_CHECK exact_file
+#define STOCK_BOOT_CHECK exact_file
+#endif
 static int original_boot(void) {
 #if PW_STOCK
-    return STOCK_ORIGINAL_BOOT(exact_file);
+    return STOCK_ORIGINAL_BOOT(STOCK_BOOT_CHECK);
 #else
     return 1;
 #endif
@@ -771,7 +809,7 @@ int main(int argc, char **argv) {
      * and the launcher's own fallback line checks the same hash and stays quiet
      * too, so this one exits 1 -- 3 would tell the launcher a reason is on the
      * screen when none is. */
-    if (!STOCK_EIPS(exact_file)) {
+    if (!STOCK_EIPS(STOCK_FILE_CHECK)) {
         fprintf(stderr, "PW3_FIRST_KERNEL_CHECK_FAIL check=display_identity errno=%d checks=%u\n", errno, ++checks);
         exit(1);
     }
@@ -787,8 +825,14 @@ int main(int argc, char **argv) {
     open_screens();
 #endif
 #if PW_STOCK
+#ifdef PW_ANY_FIRMWARE
+    /* Any firmware: the kernel build is not compared. One the handoff module
+     * does not fit is refused by the stock kernel at the module load below. */
+    if (strcmp(u.machine, "armv7l")) {
+#else
     if (strcmp(u.release, STOCK_KERNEL_RELEASE) || strcmp(u.version, STOCK_KERNEL_VERSION) ||
         strcmp(u.machine, "armv7l")) {
+#endif
         fprintf(stderr, "PW3_FIRST_KERNEL_CHECK_FAIL check=stock_profile errno=%d checks=%u\n", errno, ++checks);
         /* Not this Kindle, or not this firmware: the same answer the device data
          * gives for it (device_data_failed), and for the same reason -- what put
@@ -909,7 +953,16 @@ int main(int argc, char **argv) {
 #endif
     snprintf(workspace, sizeof(workspace), "/tmp/pw3-first-kernel-%ld", (long)getpid());
     require(mkdir(workspace, 0700) == 0, "new_private_workspace"); workspace_created = 1;
-    require(syscall(SYS_init_module, module_payload, (size_t)MODULE_BYTES, "") == 0, "module_load"); loaded = 1;
+    if (syscall(SYS_init_module, module_payload, (size_t)MODULE_BYTES, "") != 0) {
+#if defined(PW_ANY_FIRMWARE) && defined(PW3_INSTALLER)
+        /* Any firmware: a stock kernel this module was not built for says so
+         * here (symbol versions, vermagic). Nothing is written yet: E101. */
+        fprintf(stderr, "PW3_FIRST_KERNEL_CHECK_FAIL check=module_load errno=%d checks=%u\n", errno, ++checks);
+        stop_now(PW3_SCREEN_E101);
+#endif
+        require(0, "module_load");
+    }
+    loaded = 1;
     FILE *stream = fopen("/proc/misc", "r"); require(stream != NULL, "misc_listing");
     unsigned number = 0, candidate, seen = 0; char name[128], line[256];
     while (fgets(line, sizeof(line), stream)) if (sscanf(line, "%u %127s", &candidate, name) == 2 && !strcmp(name, "pw3-first-kernel")) { number = candidate; seen++; }
