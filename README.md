@@ -1,6 +1,6 @@
 <h1 align="center">Readom 第十代移植版</h1>
 
-<p align="center"><b>让 Kindle 第十代读上微信读书。</b><br>把 Readom 的 Android 8.1 搬到 Kindle 第十代（Kindle Paperwhite 4，2018 款），Kindle 原厂系统原样保留。</p>
+<p align="center"><b>让 Kindle Paperwhite 4 读上微信读书。</b><br><b>只支持 KPW4</b>（Kindle Paperwhite 第十代，2018 款，原厂系统 5.18.1.1.1），其他型号都不支持；Kindle Paperwhite 3 请用原版 <a href="https://readom.app">readom.app</a>。<br>把 Readom 的 Android 8.1 搬到 Kindle 第十代（Kindle Paperwhite 4，2018 款），Kindle 原厂系统原样保留。</p>
 
 <p align="center">
   <a href="https://github.com/zmnqaz/readom/actions/workflows/tests.yml"><img src="https://github.com/zmnqaz/readom/actions/workflows/tests.yml/badge.svg?branch=kpw4" alt="测试"></a>

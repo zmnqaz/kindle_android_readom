@@ -1,6 +1,6 @@
 <h1 align="center">Readom for the Kindle 10th generation</h1>
 
-<p align="center"><b>WeRead on a Kindle Paperwhite 4.</b><br>Readom's Android 8.1, ported to the Kindle Paperwhite 4 (10th generation, 2018). The Kindle's own system stays as it is.</p>
+<p align="center"><b>WeRead on a Kindle Paperwhite 4.</b><br><b>KPW4 only</b> (Kindle Paperwhite 10th generation, 2018, stock firmware 5.18.1.1.1); no other model is supported. For the Kindle Paperwhite 3, use the original, <a href="https://readom.app">readom.app</a>.<br>Readom's Android 8.1, ported to the Kindle Paperwhite 4 (10th generation, 2018). The Kindle's own system stays as it is.</p>
 
 <p align="center">
   <a href="https://github.com/zmnqaz/readom/actions/workflows/tests.yml"><img src="https://github.com/zmnqaz/readom/actions/workflows/tests.yml/badge.svg?branch=kpw4" alt="Tests"></a>
