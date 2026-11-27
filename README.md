@@ -1,3 +1,86 @@
+<h1 align="center">Readom 第十代移植版</h1>
+
+<p align="center"><b>让 Kindle 第十代读上微信读书。</b><br>把 Readom 的 Android 8.1 搬到 Kindle 第十代（Kindle Paperwhite 4，2018 款），Kindle 原厂系统原样保留。</p>
+
+<p align="center">
+  <a href="https://github.com/zmnqaz/readom/actions/workflows/tests.yml"><img src="https://github.com/zmnqaz/readom/actions/workflows/tests.yml/badge.svg?branch=kpw4" alt="测试"></a>
+  <a href="#许可"><img src="https://img.shields.io/badge/%E8%AE%B8%E5%8F%AF-Apache--2.0%20%2F%20GPL--2.0-blue" alt="许可：Apache-2.0 / GPL-2.0"></a>
+</p>
+
+<p align="center">
+  <a href="https://zmnqaz.github.io/readom/">移植版网站</a> ·
+  <a href="https://zmnqaz.github.io/readom/install_pw4.md">交给 AI 安装的说明</a> ·
+  <a href="https://github.com/zmnqaz/readom/issues">反馈问题</a> ·
+  <a href="README.en.md">English</a>
+</p>
+
+> **这里不是 Readom 官方仓库。** Readom 由 [hbyxabc](https://github.com/hbyxabc/readom)（B 站：小蹦大侠）创作，原版支持 Kindle Paperwhite 3，官网是 [readom.app](https://readom.app)。
+> 这个仓库是在他的项目上 fork 出来、移植到 Kindle 第十代的社区版本，系统里绝大部分的设计和代码都来自原项目。
+> 原版的下载、教程和问题请到原项目；**第十代移植版的问题请在本仓库提 Issue，不要打扰原作者。**
+
+## 现在做到哪了
+
+下面每一项都在 Kindle 第十代真机上跑过：
+
+| | |
+|---|---|
+| 系统 | Readom 的 Android 8.1（AOSP），换上第十代自己的 4.1 内核，屏幕、触摸、前光、电源键、电量都已接上 |
+| 微信读书 | 官方墨水屏版能装、能用，看书和听书都可以 |
+| 蓝牙听书 | 新加的：配对蓝牙耳机，听书从耳机出声（A2DP，SBC 编码）。原版 Readom 没有蓝牙 |
+| Wi‑Fi 与休眠 | Wi‑Fi 可用；按电源键熄屏进入深度休眠，再按唤醒，Wi‑Fi 自动重连 |
+| 翻页 | 修正了第十代屏幕驱动上刷新波形用错的问题：听书播放中翻页，约 0.5 秒开始刷新、约 1 秒刷完 |
+| 存储 | 修好了反复休眠唤醒后的 eMMC 读写错误：100 次休眠唤醒、每次醒来立刻读 64 MiB 校验，零错误 |
+| 原厂系统 | 不写原厂分区，整个 Android 是 Kindle 盘上的镜像文件，随时可以切回 Kindle |
+
+还没做好的：
+
+- **一键安装包还没发布。** 和原版一样的 `Readom.sh` 一键安装已经做出来，候选版正在真机上测试；测完会发到本仓库的 Releases，下载地址和空间要求到时候在网站上公布。
+- **不算流畅。** 第十代是单核 1 GHz、512 MB 内存、没有 GPU，界面全靠 CPU 画。微信读书能用，但翻页、切换页面都偏慢，听书时更明显。
+- **低电量时刷新变慢。** 电量在 20% 及以下时，原厂屏幕驱动会降速保护，翻页更慢。
+- **需要先越狱。** 越狱不属于本项目，请自行判断风险。
+
+## 安装（安装包发布后）
+
+两种装法，结果一样：
+
+- **交给 AI**：把下面这段话发给任意 AI 助手，电脑这一侧的事它照着[安装说明](https://zmnqaz.github.io/readom/install_pw4.md)去做，你只负责插拔数据线、在 Kindle 上点几下。安装包发布之前，AI 读到说明会告诉你还没发布，不会动你的 Kindle。
+
+  ```text
+  请读取 https://zmnqaz.github.io/readom/install_pw4.md，照着它帮我给 Kindle 第十代越狱并装上 Readom。
+  电脑上的事你能做的就直接做完，做完告诉我结果，不要拆成步骤让我做。
+  要我在 Kindle 上动手的，一次只说一步，等我回话再往下。
+  ```
+
+- **自己一步步装**：开飞行模式、删掉升级残留、把空间临时填满防自动升级 → 用 [Sanctuary](https://kindlemodding.org/jailbreaking/Sanctuary/)（[书伴中文教程](https://bookfere.com/post/1190.html)）越狱，不成功换 [SpiderCat](https://kindlemodding.org/jailbreaking/SpiderCat/) → 删掉填充，把 `Readom.sh` 拷进 Kindle 盘的 `documents` → 在书库里点「Readom」。图文步骤见[网站](https://zmnqaz.github.io/readom/#install)。
+
+维护者的 Kindle 第十代原厂系统是 `5.18.1.1.1`，2026 年 11 月按 Sanctuary 的正常流程越狱走通。
+
+## 和原版 Readom 的不同
+
+| | 原版（Kindle Paperwhite 3） | 第十代移植版 |
+|---|---|---|
+| 内核 | 亚马逊 GPL 源码 Linux 3.0.35 | 亚马逊 GPL 源码 Linux 4.1.15（i.MX6SLL），补丁见 `device/amazon/pw4/porting/kernel/` |
+| 启动交接 | ATAG | 设备树（原厂那份换掉 `/chosen`） |
+| 蓝牙 | 无 | BCM4343 蓝牙，A2DP 耳机听书 |
+| 数据分区 | 1.75 GiB | 2 GiB（第十代用户盘约 6.3 GB） |
+| USB | 默认 MTP，adb 在开发者选项里打开 | 默认 MTP 和 adb 同时开，电脑连 adb 仍要在 Kindle 上授权（候选版，正在真机验证） |
+| 越狱 | WinterBreak2（5.16.2.1.1） | Sanctuary（5.18.1.1.1），备用 SpiderCat |
+
+第十代的设备目录在 [`device/amazon/pw4/`](device/amazon/pw4/)，移植记录在 [`device/amazon/pw4/porting/`](device/amazon/pw4/porting/)：
+[总览](device/amazon/pw4/porting/README.md)、[启动交接](device/amazon/pw4/porting/handoff.md)、[Android 一侧](device/amazon/pw4/porting/android.md)、[安装包与发行构建](device/amazon/pw4/porting/release.md)。
+
+分支：`kpw4` 是第十代的工作分支（默认）；`main` 跟着原项目的主线，以后往原项目合并时用。
+
+<br>
+
+---
+
+<p align="center"><b>以下是原版 Readom 的介绍（Kindle Paperwhite 3），原样保留。</b><br>其中的下载、安装和问题反馈都指向原项目，不适用于第十代。</p>
+
+---
+
+<br>
+
 <h1 align="center">
   <a href="https://readom.app">
     <picture>
