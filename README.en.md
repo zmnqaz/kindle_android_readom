@@ -8,6 +8,7 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/zmnqaz/readom/releases/tag/v1.0.0">Download v1.0.0</a> ·
   <a href="https://zmnqaz.github.io/readom/en/">Website of this port</a> ·
   <a href="https://zmnqaz.github.io/readom/install_pw4.md">Install guide for an AI assistant</a> ·
   <a href="https://github.com/zmnqaz/readom/issues">Report a problem</a> ·
@@ -34,14 +35,16 @@ Each of these has run on a real Kindle Paperwhite 4:
 
 Not done yet:
 
-- **The one-tap installer is not released.** A `Readom.sh` like the original's is built and a release candidate is being tested on the device; it will be published in this repository's Releases, and the website will give the download and the space it needs.
+- **Stock firmware 5.18.1.1.1 only.** On any other version the installer shows E101 and stops without changing a file.
 - **It is not smooth.** The 10th generation has one 1 GHz core, 512 MB of memory and no GPU. WeRead works, but page turns and screen changes are slow, more so while audio plays.
 - **Refreshes slow down on a low battery.** At 20% and below, the stock display driver throttles itself.
 - **The Kindle must be jailbroken.** Jailbreaking is not part of this project; judge the risk yourself.
 
-## Installing (once the installer is released)
+## Installing (v1.0.0)
 
-- **Let an AI assistant do it**: send it the text below. It does the computer's part following the [install guide](https://zmnqaz.github.io/readom/install_pw4.md); you plug and unplug the cable and tap on the Kindle. Until the installer is released, the guide tells the assistant to stop and say so.
+Download: [`Readom.sh`](https://github.com/zmnqaz/readom/releases/download/v1.0.0/Readom.sh) (about 13 MB) · [release page](https://github.com/zmnqaz/readom/releases/tag/v1.0.0). A first install needs 2.8 GB free and at least 40% battery; the 194 MB system package is downloaded by the Kindle itself.
+
+- **Let an AI assistant do it**: send it the text below. It does the computer's part following the [install guide](https://zmnqaz.github.io/readom/install_pw4.md); you plug and unplug the cable and tap on the Kindle.
 
   ```text
   Please read https://zmnqaz.github.io/readom/install_pw4.md and follow it to jailbreak my Kindle 10th generation and install Readom.
@@ -61,7 +64,7 @@ The maintainer's Kindle runs stock firmware `5.18.1.1.1` and was jailbroken with
 | Handoff | ATAG | Device tree (the stock one with a new `/chosen`) |
 | Bluetooth | None | BCM4343 Bluetooth, A2DP headphones |
 | `/data` | 1.75 GiB | 2 GiB (the user volume is about 6.3 GB) |
-| USB | MTP by default; adb from developer options | MTP and adb together by default; each computer still has to be authorised on the Kindle (release candidate, being verified on the device) |
+| USB | MTP by default; adb from developer options | MTP and adb together by default; each computer still has to be authorised on the Kindle |
 | Jailbreak | WinterBreak2 (5.16.2.1.1) | Sanctuary (5.18.1.1.1), SpiderCat as the fallback |
 
 The device directory is [`device/amazon/pw4/`](device/amazon/pw4/); the porting notes (in Chinese) are in [`device/amazon/pw4/porting/`](device/amazon/pw4/porting/):

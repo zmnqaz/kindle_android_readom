@@ -3,9 +3,8 @@
 这份文档写给**替使用者给 Kindle 第十代越狱、装上 Readom 第十代移植版的 AI 助手**。
 人读的介绍在 <https://zmnqaz.github.io/readom/#install>。
 
-> **【待安装包】这份说明还是草稿。** 一键安装包还在开发，下面所有标着【待安装包】的值都还没有定。
-> 只要第 1 节里还有【待安装包】，就**不要开始任何操作**（不越狱、不填空间、不拷文件），
-> 直接如实告诉使用者：第十代的安装包还没有发布，请关注 <https://github.com/zmnqaz/readom>。
+> 当前版本 **v1.0.0**（2026-11-27）。第 1 节的下载地址返回 404 时，如实告诉使用者这一版的文件不在了，
+> 请到 <https://github.com/zmnqaz/readom/releases> 看最新版本，**不要去别处找替代文件**。
 
 几个前提先说清楚：
 
@@ -25,14 +24,14 @@
 
 | | |
 |---|---|
-| 版本 | 【待安装包】 |
-| 安装文件 | 【待安装包：文件名】，约【待安装包】MB，【待安装包：下载地址】 |
-| 校验值（SHA-256） | 【待安装包：SHA256SUMS 地址，或直接写出哈希】 |
-| 另一条线路 | 【待安装包：GitHub Releases 地址】 |
-| 书库里的条目名 | 【待安装包】 |
-| 需要的空闲空间 | 【待安装包】（越狱时填进去的文件必须先删掉，否则一定不够） |
-| 电量 | 【待安装包】 |
-| 支持的原厂系统版本 | 【待安装包】。维护者的真机是 `5.18.1.1.1` |
+| 版本 | v1.0.0 |
+| 安装文件 | `Readom.sh`，约 13 MB，https://github.com/zmnqaz/readom/releases/download/v1.0.0/Readom.sh |
+| 校验值（SHA-256） | https://github.com/zmnqaz/readom/releases/download/v1.0.0/SHA256SUMS 里 `Readom.sh` 那一行 |
+| 发布页 | https://github.com/zmnqaz/readom/releases/tag/v1.0.0（系统包 `readom-system-v1.0.0.img.zst` 约 194 MB 也在这里，见第 5 节） |
+| 书库里的条目名 | `Readom`（封面是一台屏幕上有小机器人的阅读器） |
+| 需要的空闲空间 | 首次安装至少 **2.8 GB**（系统 512 MiB + 数据 2 GiB + 余量；越狱时填进去的文件必须先删掉，否则一定不够） |
+| 电量 | 40% 以上（低于时屏幕显示 E102 并停下） |
+| 支持的原厂系统版本 | 只有 `5.18.1.1.1`。别的版本安装器显示 E101 并停下，不改动任何文件 |
 
 下载返回 404，说明这一版的文件还没传上去：如实告诉使用者，**不要去别处找替代文件**。
 
@@ -157,20 +156,24 @@
 3. **下载并核对安装文件**：
 
    ```sh
-   # macOS / Linux。地址和文件名见第 1 节【待安装包】
-   curl -fL -o ~/Downloads/【待安装包：文件名】 【待安装包：下载地址】
-   shasum -a 256 ~/Downloads/【待安装包：文件名】     # Linux 用 sha256sum，和第 1 节的值比对
+   # macOS / Linux
+   curl -fL -o ~/Downloads/Readom.sh https://github.com/zmnqaz/readom/releases/download/v1.0.0/Readom.sh
+   curl -fL -o ~/Downloads/SHA256SUMS https://github.com/zmnqaz/readom/releases/download/v1.0.0/SHA256SUMS
+   shasum -a 256 ~/Downloads/Readom.sh     # Linux 用 sha256sum，和 SHA256SUMS 里 Readom.sh 那一行比对
    ```
 
    ```powershell
    # Windows PowerShell
-   Invoke-WebRequest 【待安装包：下载地址】 -OutFile $HOME\Downloads\【待安装包：文件名】
-   Get-FileHash $HOME\Downloads\【待安装包：文件名】 -Algorithm SHA256
+   Invoke-WebRequest https://github.com/zmnqaz/readom/releases/download/v1.0.0/Readom.sh -OutFile $HOME\Downloads\Readom.sh
+   Invoke-WebRequest https://github.com/zmnqaz/readom/releases/download/v1.0.0/SHA256SUMS -OutFile $HOME\Downloads\SHA256SUMS
+   Get-FileHash $HOME\Downloads\Readom.sh -Algorithm SHA256
    ```
 
    一条线路下不动就换第 1 节的另一条，两边是同一份文件。哈希对不上：删掉重下，还不对就停下告诉使用者，不要拷进去。
 4. **拷进 `documents/`**：直接放在 Kindle 盘的 `documents` 文件夹里，不放根目录、不放子文件夹，**文件名一字不改**。
-   【待安装包：位置和文件名的具体要求以安装包为准】
+   文件名必须正好是 `Readom.sh`（它按这个路径找自己）。
+   系统包会由 Kindle 在安装时自己联网下载；Kindle 连不上 GitHub 时，你再下载
+   `readom-system-v1.0.0.img.zst`（约 194 MB，同一发布页，同样核对 SHA256SUMS），文件名不改，也拷进 `documents/`。
 5. **弹出 Kindle 盘**（macOS `diskutil eject`；Windows 资源管理器右键「弹出」；Linux `udisksctl unmount` 后 `power-off`）。
    弹出命令不灵，就**提醒使用者先在电脑上点「弹出」再拔线**，不要直接拔。
 
@@ -182,18 +185,33 @@
 
 ## 6. 在 Kindle 上点一下（设备这一侧，由使用者做）
 
-拔线后，使用者在 **Kindle 书库里点「【待安装包：条目名】」**，剩下的在 Kindle 上完成。
+拔线后，使用者在 **Kindle 书库里点「Readom」**，剩下的在 Kindle 上完成。
 
-- 屏幕上的步骤、大约要多久、装完怎么启动：【待安装包】
+- 屏幕依次显示检查、下载、校验、写入系统、准备数据，首次约 10～15 分钟（要联网下载时更久），升级约 5 分钟；装完自动进入 Android。期间别按电源键、别操作。
+- 安装时会关掉 Kindle 的 Wi‑Fi；Android 里要再连一次 Wi‑Fi。微信读书在第一次联网时由系统从腾讯官方地址自动安装。
 - 书库里找不到这个条目：先确认是弹出后再拔的线，等一两分钟，还没有就重启 Kindle；
   再问使用者书库里别的 `.sh` 小程序能不能运行——都不能运行，问题在越狱那一侧（回第 4 节）；只有这一个不行，重新下载覆盖。
-  【待安装包：其余排查项】
+  点了没反应、屏幕停在 E104：Kindle 还连着电脑，拔线再点。
 
 ## 7. 屏幕上出现错误码时
 
-【待安装包：错误码表】
+| 代码 | 意思 | 怎么办 |
+|---|---|---|
+| E101 | 型号或原厂系统版本不受支持 | 只支持 Kindle 第十代、`5.18.1.1.1`；没有改动任何文件 |
+| E102 | 电量低于 40% | 充电后再点 |
+| E103 | 上一次安装还在进行 | 等它完成 |
+| E104 | 连着电脑 | 拔掉数据线再点（接充电器没关系） |
+| E201 / E202 | 下载中断 / 没连 Wi‑Fi | 连好 Wi‑Fi 再点；或按第 5 节把系统包拷进 `documents/` |
+| E203 | 无法确认下载安全 | 多半是 Kindle 日期时间不对，改对再点 |
+| E302 | 安装包不完整，已删除 | 再点会重新下载，或重新拷入 |
+| E303 / E304 | 发行文件有问题 / 已有数据来自不兼容的版本 | 到问题反馈地址报告，附上 `android/logs` |
+| E401 | 空间不足 | 屏幕上写着还差多少；让使用者自己决定删哪些书 |
+| E402 / E403 | 读写出错 / 内存不足 | 重启 Kindle 再点 |
+| E404 | Kindle 盘文件系统有问题 | 到问题反馈地址报告，不要继续 |
 
-**卡住了**：【待安装包：回到原厂系统的方法】。原厂系统一直保留，本移植版不写原厂分区。
+每次运行的日志在 Kindle 盘的 `android/logs/` 里，报告问题时附上最新的那个文件夹。
+
+**卡住了**：按住电源键不放，直到屏幕变化（最多约 40 秒），Kindle 会重启回原厂系统，数据不会丢。原厂系统一直保留，本移植版不写原厂分区。
 
 ## 8. 你没有文件和命令权限时
 
@@ -203,13 +221,13 @@
    按 <https://kindlemodding.org/jailbreaking/prevent-auto-update/> 把空间填到只剩 50～90 MB；弹出、拔线。
 2. 按第 4 节越狱。
 3. 接电脑，删掉填充文件，下载第 1 节的安装文件、核对 SHA-256，拷进 `documents/`，弹出、拔线。
-4. 在书库里点「【待安装包：条目名】」。
+4. 在书库里点「Readom」。
 
 然后按第 6、7 节继续。
 
 ## 9. 其他
 
-- **原厂系统**：一直保留，不写原厂分区；整个 Android 是 Kindle 盘上的镜像文件。回到原厂系统、卸载的具体方法：【待安装包】
+- **原厂系统**：一直保留，不写原厂分区；整个 Android 是 Kindle 盘上的镜像文件。在 Android 里长按电源键选重启，就回到 Kindle 原厂系统；想再进 Android，在书库里再点「Readom」。卸载：删掉 Kindle 盘上的 `android` 文件夹、`documents/Readom.sh` 和 `documents/Readom.sh.sdr`
 - **现状**：第十代是单核 1 GHz、512 MB 内存、没有 GPU，微信读书能用但不算流畅。
   使用者问起，照这个说，不要夸大。
 - **隐私**：屏幕波形、Wi‑Fi 校准这些每台机器独有的数据，在使用者自己的设备上读取，不进仓库、不进安装包。

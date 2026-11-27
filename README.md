@@ -8,6 +8,7 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/zmnqaz/readom/releases/tag/v1.0.0">下载 v1.0.0</a> ·
   <a href="https://zmnqaz.github.io/readom/">移植版网站</a> ·
   <a href="https://zmnqaz.github.io/readom/install_pw4.md">交给 AI 安装的说明</a> ·
   <a href="https://github.com/zmnqaz/readom/issues">反馈问题</a> ·
@@ -34,16 +35,18 @@
 
 还没做好的：
 
-- **一键安装包还没发布。** 和原版一样的 `Readom.sh` 一键安装已经做出来，候选版正在真机上测试；测完会发到本仓库的 Releases，下载地址和空间要求到时候在网站上公布。
+- **只支持原厂系统 5.18.1.1.1。** 别的版本安装器显示 E101 并停下，不改动任何文件。
 - **不算流畅。** 第十代是单核 1 GHz、512 MB 内存、没有 GPU，界面全靠 CPU 画。微信读书能用，但翻页、切换页面都偏慢，听书时更明显。
 - **低电量时刷新变慢。** 电量在 20% 及以下时，原厂屏幕驱动会降速保护，翻页更慢。
 - **需要先越狱。** 越狱不属于本项目，请自行判断风险。
 
-## 安装（安装包发布后）
+## 安装（v1.0.0）
+
+下载：[`Readom.sh`](https://github.com/zmnqaz/readom/releases/download/v1.0.0/Readom.sh)（约 13 MB）· [发布页](https://github.com/zmnqaz/readom/releases/tag/v1.0.0)。首次安装要 2.8 GB 空闲空间、40% 以上电量；系统包约 194 MB，Kindle 会自己联网下载。
 
 两种装法，结果一样：
 
-- **交给 AI**：把下面这段话发给任意 AI 助手，电脑这一侧的事它照着[安装说明](https://zmnqaz.github.io/readom/install_pw4.md)去做，你只负责插拔数据线、在 Kindle 上点几下。安装包发布之前，AI 读到说明会告诉你还没发布，不会动你的 Kindle。
+- **交给 AI**：把下面这段话发给任意 AI 助手，电脑这一侧的事它照着[安装说明](https://zmnqaz.github.io/readom/install_pw4.md)去做，你只负责插拔数据线、在 Kindle 上点几下。
 
   ```text
   请读取 https://zmnqaz.github.io/readom/install_pw4.md，照着它帮我给 Kindle 第十代越狱并装上 Readom。
@@ -63,7 +66,7 @@
 | 启动交接 | ATAG | 设备树（原厂那份换掉 `/chosen`） |
 | 蓝牙 | 无 | BCM4343 蓝牙，A2DP 耳机听书 |
 | 数据分区 | 1.75 GiB | 2 GiB（第十代用户盘约 6.3 GB） |
-| USB | 默认 MTP，adb 在开发者选项里打开 | 默认 MTP 和 adb 同时开，电脑连 adb 仍要在 Kindle 上授权（候选版，正在真机验证） |
+| USB | 默认 MTP，adb 在开发者选项里打开 | 默认 MTP 和 adb 同时开，电脑连 adb 仍要在 Kindle 上授权 |
 | 越狱 | WinterBreak2（5.16.2.1.1） | Sanctuary（5.18.1.1.1），备用 SpiderCat |
 
 第十代的设备目录在 [`device/amazon/pw4/`](device/amazon/pw4/)，移植记录在 [`device/amazon/pw4/porting/`](device/amazon/pw4/porting/)：

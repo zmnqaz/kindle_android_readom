@@ -71,7 +71,7 @@
       </p>
       <div class="actions">
         <a class="btn btn-primary" href="#status">看看现在做到哪了</a>
-        <span class="btn" aria-disabled="true">安装包 <span class="tag">即将推出</span></span>
+        <a class="btn" href="https://github.com/zmnqaz/readom/releases/tag/v1.0.0">下载 v1.0.0</a>
         <a class="btn" href="https://github.com/zmnqaz/readom">GitHub 源码</a>
       </div>
     </div>
@@ -289,7 +289,7 @@
       <article class="card">
         <h3>还没做好</h3>
         <ul class="list todo">
-          <li><strong>一键安装包正在做。</strong>现在还是开发用的启动方式，普通用户暂时装不上，下载和安装教程都在准备中。</li>
+          <li><strong>只支持原厂系统 5.18.1.1.1。</strong>别的版本安装器会显示 E101 并停下，不改动任何文件。</li>
           <li><strong>不算流畅。</strong>第十代是单核 1 GHz、512 MB 内存、没有 GPU，界面全靠 CPU 画。微信读书能用，但翻页、切换页面都偏慢，听书时更明显。</li>
           <li><strong>需要先越狱。</strong>越狱不属于本项目，请自行判断风险。</li>
           <li><strong>低电量时刷新变慢。</strong>电量在 20% 及以下时，原厂屏幕驱动会进入降速保护，翻页更慢；想看流畅度先充上电。</li>
@@ -308,7 +308,7 @@
       <span class="seal" aria-hidden="true">五</span>
       <div>
         <span class="chapter-kicker">第五章</span>
-        <h2 id="install-title">安装 <span class="tag" style="vertical-align:middle">即将推出</span></h2>
+        <h2 id="install-title">安装 <span class="tag" style="vertical-align:middle">v1.0.0</span></h2>
         <p class="sub">两种装法，结果一样，挑一种就行。一键安装包还在做，安装文件、下载地址和空间要求到时候在这里公布。</p>
       </div>
     </header>
@@ -329,7 +329,7 @@
           </div>
         </div>
         <p class="note">你在 Kindle 上要做的：开、关飞行模式；在越狱网页上等它扫描完，照着输入一串编号；到「设置 → 帮助 → Getting Started」点一下；最后在书库里点 Readom。</p>
-        <p class="note">安装包发布之前，AI 读到这份说明会告诉你还没发布，不会动你的 Kindle。</p>
+        <p class="note">AI 只删它自己填进去的文件和升级残留，不碰你的书。</p>
       </article>
 
       <article class="card way">
@@ -341,7 +341,7 @@
           <li><b>删填充，拷一个文件</b>越狱后删掉填充文件，把安装文件拷进 Kindle 盘的 <code>documents</code>，弹出后拔线。</li>
           <li><b>书库里点一下</b>在书库里点 Readom，剩下的在 Kindle 上完成。</li>
         </ol>
-        <span class="soon">安装文件、下载地址、空间要求待公布</span>
+        <a class="btn" href="https://github.com/zmnqaz/readom/releases/download/v1.0.0/Readom.sh">下载 Readom.sh（约 13 MB）</a> <span class="soon">首次安装要 2.8 GB 空闲空间、40% 以上电量；系统包约 194 MB，Kindle 会自己联网下载</span>
       </article>
     </div>
 
@@ -357,9 +357,9 @@
         <tbody>
           <tr><th scope="row">设备</th><td>Kindle 第十代（Paperwhite 4，2018 款）。在「设置 → 设备选项 → 设备信息」里查看。</td></tr>
           <tr><th scope="row">越狱</th><td>需要。没越狱过的，上面两种装法都包括越狱这一步。</td></tr>
-          <tr><th scope="row">原厂系统版本</th><td>维护者真机是 5.18.1.1.1；支持哪些版本随安装包公布。</td></tr>
-          <tr><th scope="row">空闲空间、电量</th><td>随安装包一起公布。越狱时填进去的文件要先删掉。</td></tr>
-          <tr><th scope="row">回到 Kindle、卸载</th><td>原厂系统一直都在；具体操作随安装包一起写清楚。</td></tr>
+          <tr><th scope="row">原厂系统版本</th><td>只支持 5.18.1.1.1（维护者真机）。</td></tr>
+          <tr><th scope="row">空闲空间、电量</th><td>首次安装至少 2.8 GB 空闲空间，电量 40% 以上。越狱时填进去的文件要先删掉。</td></tr>
+          <tr><th scope="row">回到 Kindle、卸载</th><td>原厂系统一直都在：Android 里长按电源键选重启就回到 Kindle；卡住时按住电源键约 40 秒。卸载：删掉 Kindle 盘上的 <code>android</code> 文件夹和 <code>documents/Readom.sh</code>。</td></tr>
         </tbody>
       </table>
     </div>
