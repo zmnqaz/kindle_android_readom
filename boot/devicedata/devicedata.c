@@ -624,6 +624,11 @@ const struct dd_tree_profile dd_pw4_rex_5_18_1_1_1 = {
     {"/opt/brcm_4343w/bluetooth/firmware/BCM4343A1_001.002.009.0152.0515.hcd", 35568,
      "0d5fee0ddb32c628a0a9d99329ab8bee2f45ac3156b95699db3c7c24123ead71"},
     16384,
+    /* 4 MiB, as the 4.1 kernel listed it on the maintainer's PW4 (Jumps 8 to
+     * 57). A PW4 whose eMMC has another RPMB size is stopped by preinit's
+     * geometry check in the Android kernel, before anything is written, and
+     * restarts into the stock system. */
+    8192,
 };
 
 /* The stock command line and kernel, as dd_device_matches checks them. */
@@ -736,10 +741,11 @@ static int tree_storage_lines(const char *root, const struct dd_tree_profile *pr
     }
     closedir(dir);
     qsort(names, count, sizeof(names[0]), name_order);
-    int rc = 0, disk = 0, user = 0;
+    int rc = 0, disk = 0, user = 0, rpmb = 0;
     uint64_t disk_size = 0, user_start = 0, user_size = 0;
     size_t d = strlen(profile->disk);
     for (unsigned i = 0; i < count && !rc; ++i) {
+        if (!strcmp(names[i] + d, "rpmb")) rpmb = 1;
         uint64_t sectors, start = 0;
         int partition = names[i][d] == 'p';
         snprintf(path, sizeof(path), "/sys/class/block/%s/size", names[i]);
@@ -755,6 +761,9 @@ static int tree_storage_lines(const char *root, const struct dd_tree_profile *pr
         if (!strcmp(names[i], profile->user_partition)) { user = 1; user_start = start; user_size = sectors; }
     }
     while (count) free(names[--count]);
+    /* Last, where the sorted list has it ("rpmb" after "p"). */
+    if (!rc && !rpmb && profile->android_rpmb_sectors)
+        rc = append_text(conf, "block=%srpmb:%llu:-\n", profile->disk, (unsigned long long)profile->android_rpmb_sectors);
     if (rc) return rc;
     if (!disk || !user || user_start >= disk_size || user_size > disk_size - user_start || fat_offset >= user_size * 512 ||
         (fat_limit && fat_limit > user_size * 512 - fat_offset)) return fail(why, "eMMC geometry inconsistent");

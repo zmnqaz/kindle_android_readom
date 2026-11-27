@@ -85,6 +85,13 @@ struct dd_tree_profile {
      * are part of the firmware this build is for, as the kernel is. */
     struct dd_pin epdc_firmware, wifi_firmware, bt_firmware;
     size_t nvram_max;                /* the Wi-Fi NVRAM (base->wifi_board) is not pinned */
+    /* <disk>rpmb as the Android kernel lists it, in sectors. The PW4's stock
+     * kernel reaches the eMMC through Amazon's own storage driver, whose
+     * mmcblk1 has no RPMB device, while the Android kernel's mmc driver adds
+     * mmcblk1rpmb; preinit wants every one of the Android kernel's eMMC
+     * devices in the configuration (device/amazon/pw3/preinit/Board.h). Used
+     * only when the stock system lists none; 0: nothing added. */
+    uint64_t android_rpmb_sectors;
 };
 extern const struct dd_tree_profile dd_pw4_rex_5_18_1_1_1;
 /* dd_device_matches and dd_archive for such a Kindle. The archive carries the

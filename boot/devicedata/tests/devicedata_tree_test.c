@@ -61,7 +61,6 @@ static void make_device(void) {
     puts_("/sys/block/loop0/loop/sizelimit", "0\n");
     puts_("/sys/class/block/mmcblk1/size", "1000000\n");
     puts_("/sys/class/block/mmcblk1boot0/size", "8192\n");
-    puts_("/sys/class/block/mmcblk1rpmb/size", "8192\n");
     puts_("/sys/class/block/mmcblk1p1/size", "32768\n");
     puts_("/sys/class/block/mmcblk1p1/start", "2048\n");
     puts_("/sys/class/block/mmcblk1p10/size", "600000\n");
@@ -127,6 +126,7 @@ static void test_profile(void) {
         CHECK(strspn(pins[i]->sha256, "0123456789abcdef") == 64);
     }
     CHECK(!strcmp(dd_pw4_rex_5_18_1_1_1.wifi_firmware.path, dd_pw4_5_18_1_1_1.wifi_firmware));
+    CHECK(dd_pw4_rex_5_18_1_1_1.android_rpmb_sectors == 8192);
 }
 
 static void test_matches(void) {
@@ -209,6 +209,23 @@ static void test_archive(void) {
         "block=mmcblk1:1000000:-\nblock=mmcblk1boot0:8192:-\nblock=mmcblk1p1:32768:2048\n"
         "block=mmcblk1p10:600000:400000\nblock=mmcblk1rpmb:8192:-\n";
     CHECK(f && f->mode == 0100400 && f->size == strlen(conf) && !memcmp(f->data, conf, f->size));
+    /* The stock kernel lists no mmcblk1rpmb (as on the device); with one listed,
+     * its own size is taken and nothing is added. */
+    puts_("/sys/class/block/mmcblk1rpmb/size", "16384\n");
+    dd_free(&a);
+    CHECK(dd_tree_archive(root, &test, &build, &a, &why) == 0);
+    n = parse(&a, e, 32);
+    f = find(e, n, "pw3-preinit.conf");
+    static const char conf_listed[] = "schema=1\nadb_key_sha256=none\nfat_offset=8192\nfat_sizelimit=0\n"
+        "block=mmcblk1:1000000:-\nblock=mmcblk1boot0:8192:-\nblock=mmcblk1p1:32768:2048\n"
+        "block=mmcblk1p10:600000:400000\nblock=mmcblk1rpmb:16384:-\n";
+    CHECK(f && f->size == strlen(conf_listed) && !memcmp(f->data, conf_listed, f->size));
+    char rpmb[300];
+    snprintf(rpmb, sizeof(rpmb), "%s/sys/class/block/mmcblk1rpmb", root);
+    { char cmd[400]; snprintf(cmd, sizeof(cmd), "rm -rf '%s'", rpmb); if (system(cmd)) {} }
+    dd_free(&a);
+    CHECK(dd_tree_archive(root, &test, &build, &a, &why) == 0);
+    n = parse(&a, e, 32);
     f = find(e, n, "pw3-testdata.conf");
     static const char data[] = "schema=2\ndata_path=android/data.img\ndata_size=1048576\ndata_uuid=b0b1b2b3b4b5b6b7b8b9babbbcbdbebf\n";
     CHECK(f && f->mode == 0100400 && f->size == strlen(data) && !memcmp(f->data, data, f->size));
