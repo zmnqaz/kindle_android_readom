@@ -25,7 +25,7 @@
 | | |
 |---|---|
 | 版本 | v1.0.1 |
-| 安装文件 | `Readom.sh`，约 13 MB，https://github.com/zmnqaz/kindle_android_readom/releases/download/v1.0.1/Readom.sh |
+| 安装文件 | `Readom.sh`，约 17 MB，https://github.com/zmnqaz/kindle_android_readom/releases/download/v1.0.1/Readom.sh |
 | 校验值（SHA-256） | https://github.com/zmnqaz/kindle_android_readom/releases/download/v1.0.1/SHA256SUMS 里 `Readom.sh` 那一行 |
 | 发布页 | https://github.com/zmnqaz/kindle_android_readom/releases/tag/v1.0.1（系统包 `readom-system-v1.0.0.img.zst` 约 194 MB 也在这里，见第 5 节） |
 | 书库里的条目名 | `Readom`（封面是一台屏幕上有小机器人的阅读器） |

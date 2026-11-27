@@ -21,7 +21,7 @@
 
 ## 安装（v1.0.1）
 
-下载：[`Readom.sh`](https://github.com/zmnqaz/kindle_android_readom/releases/download/v1.0.1/Readom.sh)（约 13 MB）· [发布页](https://github.com/zmnqaz/kindle_android_readom/releases/tag/v1.0.1)。原厂系统 5.18.1.1.1 实测通过，其他版本没测过；首次安装要 2.8 GB 空闲空间、40% 以上电量；系统包约 194 MB，Kindle 会自己联网下载。
+下载：[`Readom.sh`](https://github.com/zmnqaz/kindle_android_readom/releases/download/v1.0.1/Readom.sh)（约 17 MB）· [发布页](https://github.com/zmnqaz/kindle_android_readom/releases/tag/v1.0.1)。原厂系统 5.18.1.1.1 实测通过，其他版本没测过；首次安装要 2.8 GB 空闲空间、40% 以上电量；系统包约 194 MB，Kindle 会自己联网下载。
 
 两种装法，结果一样：
 

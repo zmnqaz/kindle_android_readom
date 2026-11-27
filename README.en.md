@@ -21,7 +21,7 @@
 
 ## Installing (v1.0.1)
 
-Download: [`Readom.sh`](https://github.com/zmnqaz/kindle_android_readom/releases/download/v1.0.1/Readom.sh) (about 13 MB) · [release page](https://github.com/zmnqaz/kindle_android_readom/releases/tag/v1.0.1). Tested on stock firmware 5.18.1.1.1; other versions are untested. A first install needs 2.8 GB free and at least 40% battery; the 194 MB system package is downloaded by the Kindle itself.
+Download: [`Readom.sh`](https://github.com/zmnqaz/kindle_android_readom/releases/download/v1.0.1/Readom.sh) (about 17 MB) · [release page](https://github.com/zmnqaz/kindle_android_readom/releases/tag/v1.0.1). Tested on stock firmware 5.18.1.1.1; other versions are untested. A first install needs 2.8 GB free and at least 40% battery; the 194 MB system package is downloaded by the Kindle itself.
 
 - **Let an AI assistant do it**: send it the text below. It does the computer's part following the [install guide](https://zmnqaz.github.io/kindle_android_readom/install_pw4.md); you plug and unplug the cable and tap on the Kindle.
 
