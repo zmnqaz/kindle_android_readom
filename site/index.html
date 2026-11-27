@@ -8,10 +8,10 @@
 <meta name="theme-color" content="#f5efe3" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#1c1a17" media="(prefers-color-scheme: dark)">
 <meta name="color-scheme" content="light dark">
-<!-- 站点地址按 GitHub Pages 的默认地址写；换了自定义域名要一起改下面五处 https://zmnqaz.github.io/readom/ -->
-<link rel="canonical" href="https://zmnqaz.github.io/readom/">
-<link rel="alternate" hreflang="zh-CN" href="https://zmnqaz.github.io/readom/">
-<link rel="alternate" hreflang="en" href="https://zmnqaz.github.io/readom/en/">
+<!-- 站点地址按 GitHub Pages 的默认地址写；换了自定义域名要一起改下面五处 https://zmnqaz.github.io/kindle_android_readom/ -->
+<link rel="canonical" href="https://zmnqaz.github.io/kindle_android_readom/">
+<link rel="alternate" hreflang="zh-CN" href="https://zmnqaz.github.io/kindle_android_readom/">
+<link rel="alternate" hreflang="en" href="https://zmnqaz.github.io/kindle_android_readom/en/">
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="assets/touch-icon.png">
 <meta property="og:type" content="website">
@@ -20,8 +20,8 @@
 <meta property="og:site_name" content="Readom 第十代移植版">
 <meta property="og:title" content="Readom 第十代移植版 · 让 Kindle 第十代读上微信读书">
 <meta property="og:description" content="基于 Readom 的社区移植版：Android 8.1、官方墨水屏版微信读书、蓝牙耳机听书，保留 Kindle 原厂系统。">
-<meta property="og:url" content="https://zmnqaz.github.io/readom/">
-<meta property="og:image" content="https://zmnqaz.github.io/readom/assets/og.png">
+<meta property="og:url" content="https://zmnqaz.github.io/kindle_android_readom/">
+<meta property="og:image" content="https://zmnqaz.github.io/kindle_android_readom/assets/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:image:alt" content="Readom 第十代移植版：让 Kindle 第十代读上微信读书">
@@ -48,7 +48,7 @@
     </a>
     <nav class="nav" aria-label="页面导航">
       <a href="#install">安装</a>
-      <a href="https://github.com/zmnqaz/readom/releases/tag/v1.0.0">v1.0.0</a>
+      <a href="https://github.com/zmnqaz/kindle_android_readom/releases/tag/v1.0.0">v1.0.0</a>
       <a href="#features">能做什么</a>
       <a href="#status">现状</a>
       <a href="#thanks">致谢</a>
@@ -70,9 +70,9 @@
         把 Android 8.1 搬到 Kindle 第十代上：官方墨水屏版微信读书、蓝牙耳机听书、Wi‑Fi、熄屏休眠，都已在真机上跑通；Kindle 原厂系统原样保留。
       </p>
       <div class="actions">
-        <a class="btn btn-primary" href="https://github.com/zmnqaz/readom/releases/download/v1.0.0/Readom.sh">下载 Readom.sh · v1.0.0</a>
+        <a class="btn btn-primary" href="https://github.com/zmnqaz/kindle_android_readom/releases/download/v1.0.0/Readom.sh">下载 Readom.sh · v1.0.0</a>
         <a class="btn" href="#install">安装教程</a>
-        <a class="btn" href="https://github.com/zmnqaz/readom">GitHub 源码</a>
+        <a class="btn" href="https://github.com/zmnqaz/kindle_android_readom">GitHub 源码</a>
       </div>
     </div>
     <figure style="margin:0">
@@ -102,7 +102,7 @@
       <table>
         <caption>准备工作</caption>
         <tbody>
-          <tr><th scope="row">安装文件</th><td><a href="https://github.com/zmnqaz/readom/releases/download/v1.0.0/Readom.sh">Readom.sh</a>（v1.0.0，约 13 MB）。系统包约 194 MB，装的时候 Kindle 自己联网下载。<a href="https://github.com/zmnqaz/readom/releases/tag/v1.0.0">发布页</a></td></tr>
+          <tr><th scope="row">安装文件</th><td><a href="https://github.com/zmnqaz/kindle_android_readom/releases/download/v1.0.0/Readom.sh">Readom.sh</a>（v1.0.0，约 13 MB）。系统包约 194 MB，装的时候 Kindle 自己联网下载。<a href="https://github.com/zmnqaz/kindle_android_readom/releases/tag/v1.0.0">发布页</a></td></tr>
           <tr><th scope="row">机型</th><td><b>只支持 KPW4</b>：Kindle Paperwhite 第十代，2018 款。在「设置 → 设备选项 → 设备信息」里查看。其他型号都不支持；Paperwhite 3 用原版 <a href="https://readom.app">readom.app</a>。</td></tr>
           <tr><th scope="row">越狱</th><td>需要。没越狱过的，下面两种装法都包括越狱这一步。</td></tr>
           <tr><th scope="row">原厂系统版本</th><td>只支持 5.18.1.1.1。版本不对时安装器显示 E101 并停下，不改动任何文件。</td></tr>
@@ -118,7 +118,7 @@
         <h3>交给 AI</h3>
         <p>把下面这段话发给任意 AI 助手。电脑这一侧的事——清掉升级残留、临时填满空间防自动升级、越狱后删掉填充、下载并核对安装文件、拷进 Kindle、弹出——它照着<a href="install_pw4.md">这份说明</a>去做。你只负责插拔数据线，在 Kindle 上点几下。</p>
         <div class="prompt">
-          <pre id="ai-prompt" tabindex="0" aria-label="发给 AI 的话">请读取 https://zmnqaz.github.io/readom/install_pw4.md，照着它帮我给 Kindle 第十代越狱并装上 Readom。
+          <pre id="ai-prompt" tabindex="0" aria-label="发给 AI 的话">请读取 https://zmnqaz.github.io/kindle_android_readom/install_pw4.md，照着它帮我给 Kindle 第十代越狱并装上 Readom。
 电脑上的事你能做的就直接做完，做完告诉我结果，不要拆成步骤让我做。
 要我在 Kindle 上动手的，一次只说一步，等我回话再往下。
 如果你打不开这个链接，告诉我，我把文档内容贴给你。</pre>
@@ -140,7 +140,7 @@
           <li><b>删填充，拷一个文件</b>越狱后删掉填充文件，把安装文件拷进 Kindle 盘的 <code>documents</code>，弹出后拔线。</li>
           <li><b>书库里点一下</b>在书库里点 Readom，剩下的在 Kindle 上完成。</li>
         </ol>
-        <a class="btn" href="https://github.com/zmnqaz/readom/releases/download/v1.0.0/Readom.sh">下载 Readom.sh（约 13 MB）</a> <span class="soon">首次安装要 2.8 GB 空闲空间、40% 以上电量；系统包约 194 MB，Kindle 会自己联网下载</span>
+        <a class="btn" href="https://github.com/zmnqaz/kindle_android_readom/releases/download/v1.0.0/Readom.sh">下载 Readom.sh（约 13 MB）</a> <span class="soon">首次安装要 2.8 GB 空闲空间、40% 以上电量；系统包约 194 MB，Kindle 会自己联网下载</span>
       </article>
     </div>
 
@@ -326,8 +326,8 @@
         <div class="links">
           <a href="https://readom.app">Readom 官网 readom.app</a>
           <a href="https://github.com/hbyxabc/readom">原项目 github.com/hbyxabc/readom</a>
-          <a href="https://github.com/zmnqaz/readom">本移植版 github.com/zmnqaz/readom</a>
-          <a href="https://github.com/zmnqaz/readom/issues">反馈问题</a>
+          <a href="https://github.com/zmnqaz/kindle_android_readom">本移植版 github.com/zmnqaz/kindle_android_readom</a>
+          <a href="https://github.com/zmnqaz/kindle_android_readom/issues">反馈问题</a>
         </div>
         <h3>也感谢</h3>
         <ul>
@@ -354,7 +354,7 @@
       <p>本站是纯静态页面：不用 Cookie，不做访问统计，不加载第三方资源。</p>
     </div>
     <div>
-      <p><a href="https://github.com/zmnqaz/readom">源码</a> · <a href="https://github.com/zmnqaz/readom/tree/kpw4/site">本站源码</a> · <a href="en/" hreflang="en" lang="en">English</a></p>
+      <p><a href="https://github.com/zmnqaz/kindle_android_readom">源码</a> · <a href="https://github.com/zmnqaz/kindle_android_readom/tree/kpw4/site">本站源码</a> · <a href="en/" hreflang="en" lang="en">English</a></p>
       <p>内容更新于 2026 年 11 月</p>
     </div>
   </div>

@@ -3,7 +3,7 @@
 blank_issues_enabled: true
 contact_links:
   - name: 安装教程 / Install guide
-    url: https://zmnqaz.github.io/readom/#install
+    url: https://zmnqaz.github.io/kindle_android_readom/#install
     about: Kindle 第十代的安装步骤，也可以让 AI 带你一步步装。/ The Kindle 10th generation install steps, or have an AI walk you through it.
   - name: 安全问题 / Security issues
     url: https://github.com/hbyxabc/readom/blob/main/SECURITY.md

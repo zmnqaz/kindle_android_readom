@@ -3,15 +3,15 @@
 <p align="center"><b>让 Kindle Paperwhite 4 读上微信读书。</b><br><b>只支持 KPW4</b>（Kindle Paperwhite 第十代，2018 款，原厂系统 5.18.1.1.1），其他型号都不支持；Kindle Paperwhite 3 请用原版 <a href="https://readom.app">readom.app</a>。<br>把 Readom 的 Android 8.1 搬到 Kindle 第十代（Kindle Paperwhite 4，2018 款），Kindle 原厂系统原样保留。</p>
 
 <p align="center">
-  <a href="https://github.com/zmnqaz/readom/actions/workflows/tests.yml"><img src="https://github.com/zmnqaz/readom/actions/workflows/tests.yml/badge.svg?branch=kpw4" alt="测试"></a>
+  <a href="https://github.com/zmnqaz/kindle_android_readom/actions/workflows/tests.yml"><img src="https://github.com/zmnqaz/kindle_android_readom/actions/workflows/tests.yml/badge.svg?branch=kpw4" alt="测试"></a>
   <a href="#许可"><img src="https://img.shields.io/badge/%E8%AE%B8%E5%8F%AF-Apache--2.0%20%2F%20GPL--2.0-blue" alt="许可：Apache-2.0 / GPL-2.0"></a>
 </p>
 
 <p align="center">
-  <a href="https://github.com/zmnqaz/readom/releases/tag/v1.0.0">下载 v1.0.0</a> ·
-  <a href="https://zmnqaz.github.io/readom/"><b>移植版网站</b></a> ·
-  <a href="https://zmnqaz.github.io/readom/install_pw4.md">交给 AI 安装的说明</a> ·
-  <a href="https://github.com/zmnqaz/readom/issues">反馈问题</a> ·
+  <a href="https://github.com/zmnqaz/kindle_android_readom/releases/tag/v1.0.0">下载 v1.0.0</a> ·
+  <a href="https://zmnqaz.github.io/kindle_android_readom/"><b>移植版网站</b></a> ·
+  <a href="https://zmnqaz.github.io/kindle_android_readom/install_pw4.md">交给 AI 安装的说明</a> ·
+  <a href="https://github.com/zmnqaz/kindle_android_readom/issues">反馈问题</a> ·
   <a href="README.en.md">English</a>
 </p>
 
@@ -21,19 +21,19 @@
 
 ## 安装（v1.0.0）
 
-下载：[`Readom.sh`](https://github.com/zmnqaz/readom/releases/download/v1.0.0/Readom.sh)（约 13 MB）· [发布页](https://github.com/zmnqaz/readom/releases/tag/v1.0.0)。只支持原厂系统 5.18.1.1.1；首次安装要 2.8 GB 空闲空间、40% 以上电量；系统包约 194 MB，Kindle 会自己联网下载。
+下载：[`Readom.sh`](https://github.com/zmnqaz/kindle_android_readom/releases/download/v1.0.0/Readom.sh)（约 13 MB）· [发布页](https://github.com/zmnqaz/kindle_android_readom/releases/tag/v1.0.0)。只支持原厂系统 5.18.1.1.1；首次安装要 2.8 GB 空闲空间、40% 以上电量；系统包约 194 MB，Kindle 会自己联网下载。
 
 两种装法，结果一样：
 
-- **交给 AI**：把下面这段话发给任意 AI 助手，电脑这一侧的事它照着[安装说明](https://zmnqaz.github.io/readom/install_pw4.md)去做，你只负责插拔数据线、在 Kindle 上点几下。
+- **交给 AI**：把下面这段话发给任意 AI 助手，电脑这一侧的事它照着[安装说明](https://zmnqaz.github.io/kindle_android_readom/install_pw4.md)去做，你只负责插拔数据线、在 Kindle 上点几下。
 
   ```text
-  请读取 https://zmnqaz.github.io/readom/install_pw4.md，照着它帮我给 Kindle 第十代越狱并装上 Readom。
+  请读取 https://zmnqaz.github.io/kindle_android_readom/install_pw4.md，照着它帮我给 Kindle 第十代越狱并装上 Readom。
   电脑上的事你能做的就直接做完，做完告诉我结果，不要拆成步骤让我做。
   要我在 Kindle 上动手的，一次只说一步，等我回话再往下。
   ```
 
-- **自己一步步装**：开飞行模式、删掉升级残留、把空间临时填满防自动升级 → 用 [Sanctuary](https://kindlemodding.org/jailbreaking/Sanctuary/)（[书伴中文教程](https://bookfere.com/post/1190.html)）越狱，不成功换 [SpiderCat](https://kindlemodding.org/jailbreaking/SpiderCat/) → 删掉填充，把 `Readom.sh` 拷进 Kindle 盘的 `documents` → 在书库里点「Readom」。图文步骤见[网站](https://zmnqaz.github.io/readom/#install)。
+- **自己一步步装**：开飞行模式、删掉升级残留、把空间临时填满防自动升级 → 用 [Sanctuary](https://kindlemodding.org/jailbreaking/Sanctuary/)（[书伴中文教程](https://bookfere.com/post/1190.html)）越狱，不成功换 [SpiderCat](https://kindlemodding.org/jailbreaking/SpiderCat/) → 删掉填充，把 `Readom.sh` 拷进 Kindle 盘的 `documents` → 在书库里点「Readom」。图文步骤见[网站](https://zmnqaz.github.io/kindle_android_readom/#install)。
 
 维护者的 Kindle 第十代原厂系统是 `5.18.1.1.1`，2026 年 11 月按 Sanctuary 的正常流程越狱走通。
 

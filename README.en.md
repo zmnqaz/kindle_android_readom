@@ -3,15 +3,15 @@
 <p align="center"><b>WeRead on a Kindle Paperwhite 4.</b><br><b>KPW4 only</b> (Kindle Paperwhite 10th generation, 2018, stock firmware 5.18.1.1.1); no other model is supported. For the Kindle Paperwhite 3, use the original, <a href="https://readom.app">readom.app</a>.<br>Readom's Android 8.1, ported to the Kindle Paperwhite 4 (10th generation, 2018). The Kindle's own system stays as it is.</p>
 
 <p align="center">
-  <a href="https://github.com/zmnqaz/readom/actions/workflows/tests.yml"><img src="https://github.com/zmnqaz/readom/actions/workflows/tests.yml/badge.svg?branch=kpw4" alt="Tests"></a>
+  <a href="https://github.com/zmnqaz/kindle_android_readom/actions/workflows/tests.yml"><img src="https://github.com/zmnqaz/kindle_android_readom/actions/workflows/tests.yml/badge.svg?branch=kpw4" alt="Tests"></a>
   <a href="#licence"><img src="https://img.shields.io/badge/licence-Apache--2.0%20%2F%20GPL--2.0-blue" alt="Licence: Apache-2.0 / GPL-2.0"></a>
 </p>
 
 <p align="center">
-  <a href="https://github.com/zmnqaz/readom/releases/tag/v1.0.0">Download v1.0.0</a> ·
-  <a href="https://zmnqaz.github.io/readom/en/"><b>Website of this port</b></a> ·
-  <a href="https://zmnqaz.github.io/readom/install_pw4.md">Install guide for an AI assistant</a> ·
-  <a href="https://github.com/zmnqaz/readom/issues">Report a problem</a> ·
+  <a href="https://github.com/zmnqaz/kindle_android_readom/releases/tag/v1.0.0">Download v1.0.0</a> ·
+  <a href="https://zmnqaz.github.io/kindle_android_readom/en/"><b>Website of this port</b></a> ·
+  <a href="https://zmnqaz.github.io/kindle_android_readom/install_pw4.md">Install guide for an AI assistant</a> ·
+  <a href="https://github.com/zmnqaz/kindle_android_readom/issues">Report a problem</a> ·
   <a href="README.md">中文</a>
 </p>
 
@@ -21,17 +21,17 @@
 
 ## Installing (v1.0.0)
 
-Download: [`Readom.sh`](https://github.com/zmnqaz/readom/releases/download/v1.0.0/Readom.sh) (about 13 MB) · [release page](https://github.com/zmnqaz/readom/releases/tag/v1.0.0). Stock firmware 5.18.1.1.1 only. A first install needs 2.8 GB free and at least 40% battery; the 194 MB system package is downloaded by the Kindle itself.
+Download: [`Readom.sh`](https://github.com/zmnqaz/kindle_android_readom/releases/download/v1.0.0/Readom.sh) (about 13 MB) · [release page](https://github.com/zmnqaz/kindle_android_readom/releases/tag/v1.0.0). Stock firmware 5.18.1.1.1 only. A first install needs 2.8 GB free and at least 40% battery; the 194 MB system package is downloaded by the Kindle itself.
 
-- **Let an AI assistant do it**: send it the text below. It does the computer's part following the [install guide](https://zmnqaz.github.io/readom/install_pw4.md); you plug and unplug the cable and tap on the Kindle.
+- **Let an AI assistant do it**: send it the text below. It does the computer's part following the [install guide](https://zmnqaz.github.io/kindle_android_readom/install_pw4.md); you plug and unplug the cable and tap on the Kindle.
 
   ```text
-  Please read https://zmnqaz.github.io/readom/install_pw4.md and follow it to jailbreak my Kindle 10th generation and install Readom.
+  Please read https://zmnqaz.github.io/kindle_android_readom/install_pw4.md and follow it to jailbreak my Kindle 10th generation and install Readom.
   Do everything on the computer that you can yourself, then tell me the result; don't turn it into steps for me.
   For anything I have to do on the Kindle, give me one step at a time and wait for my reply.
   ```
 
-- **Do it yourself**: airplane mode on, delete leftover updates, fill the drive for now so no update can download → jailbreak with [Sanctuary](https://kindlemodding.org/jailbreaking/Sanctuary/), or [SpiderCat](https://kindlemodding.org/jailbreaking/SpiderCat/) if that fails → delete the filler, copy `Readom.sh` into `documents` on the Kindle drive → tap "Readom" in the library. Step by step on the [website](https://zmnqaz.github.io/readom/en/#install).
+- **Do it yourself**: airplane mode on, delete leftover updates, fill the drive for now so no update can download → jailbreak with [Sanctuary](https://kindlemodding.org/jailbreaking/Sanctuary/), or [SpiderCat](https://kindlemodding.org/jailbreaking/SpiderCat/) if that fails → delete the filler, copy `Readom.sh` into `documents` on the Kindle drive → tap "Readom" in the library. Step by step on the [website](https://zmnqaz.github.io/kindle_android_readom/en/#install).
 
 The maintainer's Kindle runs stock firmware `5.18.1.1.1` and was jailbroken with Sanctuary's normal steps in November 2026.
 
