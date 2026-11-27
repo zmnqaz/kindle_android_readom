@@ -48,6 +48,7 @@
     </a>
     <nav class="nav" aria-label="页面导航">
       <a href="#install">安装</a>
+      <a href="https://github.com/zmnqaz/readom/releases/tag/v1.0.0">v1.0.0</a>
       <a href="#features">能做什么</a>
       <a href="#status">现状</a>
       <a href="#thanks">致谢</a>
@@ -69,8 +70,8 @@
         把 Android 8.1 搬到 Kindle 第十代上：官方墨水屏版微信读书、蓝牙耳机听书、Wi‑Fi、熄屏休眠，都已在真机上跑通；Kindle 原厂系统原样保留。
       </p>
       <div class="actions">
-        <a class="btn btn-primary" href="#install">怎么安装</a>
-        <a class="btn" href="https://github.com/zmnqaz/readom/releases/tag/v1.0.0">下载 v1.0.0</a>
+        <a class="btn btn-primary" href="https://github.com/zmnqaz/readom/releases/download/v1.0.0/Readom.sh">下载 Readom.sh · v1.0.0</a>
+        <a class="btn" href="#install">安装教程</a>
         <a class="btn" href="https://github.com/zmnqaz/readom">GitHub 源码</a>
       </div>
     </div>
@@ -85,22 +86,6 @@
   </div>
 </section>
 
-<!-- ———————————————— 致谢条（首页显眼处） ———————————————— -->
-<section class="credit-band" aria-label="致谢原作者">
-  <div class="wrap">
-    <div class="inner">
-      <span class="seal" aria-hidden="true">谢</span>
-      <p>
-        <strong>这里不是 Readom 官方网站。</strong>Readom 由 <strong>hbyxabc</strong>（B 站：小蹦大侠）创作，原版支持 Kindle Paperwhite 3。本站介绍的是在他的项目上 fork 出来、移植到 Kindle 第十代的版本。没有 Readom，就没有这个移植。
-      </p>
-      <div class="links">
-        <a href="https://readom.app">Kindle Paperwhite 3 请去原版官网 readom.app</a>
-        <a href="https://github.com/hbyxabc/readom">原项目 GitHub</a>
-      </div>
-    </div>
-  </div>
-</section>
-
 <!-- ———————————————— 第一章 安装 ———————————————— -->
 <section class="chapter" id="install" aria-labelledby="install-title">
   <div class="wrap">
@@ -112,6 +97,20 @@
         <p class="sub">两种装法，结果一样，挑一种就行。</p>
       </div>
     </header>
+
+    <div class="req card">
+      <table>
+        <caption>准备工作</caption>
+        <tbody>
+          <tr><th scope="row">安装文件</th><td><a href="https://github.com/zmnqaz/readom/releases/download/v1.0.0/Readom.sh">Readom.sh</a>（v1.0.0，约 13 MB）。系统包约 194 MB，装的时候 Kindle 自己联网下载。<a href="https://github.com/zmnqaz/readom/releases/tag/v1.0.0">发布页</a></td></tr>
+          <tr><th scope="row">机型</th><td><b>只支持 KPW4</b>：Kindle Paperwhite 第十代，2018 款。在「设置 → 设备选项 → 设备信息」里查看。其他型号都不支持；Paperwhite 3 用原版 <a href="https://readom.app">readom.app</a>。</td></tr>
+          <tr><th scope="row">越狱</th><td>需要。没越狱过的，下面两种装法都包括越狱这一步。</td></tr>
+          <tr><th scope="row">原厂系统版本</th><td>只支持 5.18.1.1.1。版本不对时安装器显示 E101 并停下，不改动任何文件。</td></tr>
+          <tr><th scope="row">空闲空间、电量</th><td>首次安装至少 2.8 GB 空闲空间，电量 40% 以上。越狱时填进去的文件要先删掉。</td></tr>
+          <tr><th scope="row">回到 Kindle、卸载</th><td>原厂系统一直都在：Android 里长按电源键选重启就回到 Kindle；卡住时按住电源键约 40 秒。卸载：删掉 Kindle 盘上的 <code>android</code> 文件夹和 <code>documents/Readom.sh</code>。</td></tr>
+        </tbody>
+      </table>
+    </div>
 
     <div class="ways">
       <article class="card way">
@@ -151,20 +150,23 @@
       <p>越狱工具都是社区做的，不属于本项目，请自行判断风险。原教程：Sanctuary <a href="https://bookfere.com/post/1190.html">书伴中文教程</a> · <a href="https://kindlemodding.org/jailbreaking/Sanctuary/">KindleModding</a>；SpiderCat <a href="https://kindlemodding.org/jailbreaking/SpiderCat/">KindleModding</a>；其他版本用 <a href="https://kindlemodding.org/jailbreak-wizard.html">越狱向导</a> 查。</p>
     </div>
 
-    <div class="req card">
-      <table>
-        <caption>安装前要满足的条件</caption>
-        <tbody>
-          <tr><th scope="row">设备</th><td>Kindle 第十代（Paperwhite 4，2018 款）。在「设置 → 设备选项 → 设备信息」里查看。</td></tr>
-          <tr><th scope="row">越狱</th><td>需要。没越狱过的，上面两种装法都包括越狱这一步。</td></tr>
-          <tr><th scope="row">原厂系统版本</th><td>只支持 5.18.1.1.1（维护者真机）。</td></tr>
-          <tr><th scope="row">空闲空间、电量</th><td>首次安装至少 2.8 GB 空闲空间，电量 40% 以上。越狱时填进去的文件要先删掉。</td></tr>
-          <tr><th scope="row">回到 Kindle、卸载</th><td>原厂系统一直都在：Android 里长按电源键选重启就回到 Kindle；卡住时按住电源键约 40 秒。卸载：删掉 Kindle 盘上的 <code>android</code> 文件夹和 <code>documents/Readom.sh</code>。</td></tr>
-        </tbody>
-      </table>
-    </div>
-
     <p class="folio" aria-hidden="true">1</p>
+  </div>
+</section>
+
+<!-- ———————————————— 致谢条（首页显眼处） ———————————————— -->
+<section class="credit-band" aria-label="致谢原作者">
+  <div class="wrap">
+    <div class="inner">
+      <span class="seal" aria-hidden="true">谢</span>
+      <p>
+        <strong>这里不是 Readom 官方网站。</strong>Readom 由 <strong>hbyxabc</strong>（B 站：小蹦大侠）创作，原版支持 Kindle Paperwhite 3。本站介绍的是在他的项目上 fork 出来、移植到 Kindle 第十代的版本。没有 Readom，就没有这个移植。
+      </p>
+      <div class="links">
+        <a href="https://readom.app">Kindle Paperwhite 3 请去原版官网 readom.app</a>
+        <a href="https://github.com/hbyxabc/readom">原项目 GitHub</a>
+      </div>
+    </div>
   </div>
 </section>
 

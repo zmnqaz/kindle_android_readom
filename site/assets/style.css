@@ -373,6 +373,7 @@ html[lang="en"] .figure .label { letter-spacing: .02em; }
   border: 1px dashed var(--rule); padding: .1rem .5rem; border-radius: 2px;
 }
 .req { margin-top: 1.5rem; }
+.req + .ways { margin-top: 1.1rem; }
 .req table { width: 100%; border-collapse: collapse; font-size: .95rem; }
 .req th, .req td { text-align: left; padding: .65rem .75rem; border-top: 1px solid var(--rule-soft); vertical-align: top; }
 .req th { width: 34%; font-weight: 700; color: var(--ink); }
