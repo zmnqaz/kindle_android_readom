@@ -2,9 +2,13 @@
 /* pw4-rpmb.h: the RPMB line of pw3-preinit.conf, rewritten to the size the
  * Android kernel lists, on configurations shaped like the device side writes
  * them (boot/devicedata/devicedata.c: the block= lines, RPMB last). */
+#define _GNU_SOURCE
 #include "../pw4-rpmb.h"
+#include <dirent.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 
 static int failures;
 #define CHECK(c) do { if (!(c)) { fprintf(stderr, "FAIL %s:%d %s\n", __FILE__, __LINE__, #c); ++failures; } } while (0)
@@ -61,6 +65,32 @@ int main(void)
 	snprintf(in, sizeof(in), "%sblock=mmcblk1rpmb:8192:-\n", head);
 	CHECK(run(in, 32768, out, strlen(in), &len, &old) == -1);
 	CHECK(run(in, 0, out, sizeof(out), &len, &old) == -1);
+
+	/* Reading: a sysfs attribute stats as 4096 bytes and reads as a few (the
+	 * rc1 bug); this host's own block devices are one. */
+	char text[24], path[300];
+	struct stat st;
+	int sysfs_seen = 0;
+	DIR *dir = opendir("/sys/class/block");
+	for (struct dirent *e; dir && (e = readdir(dir)) && !sysfs_seen;) {
+		if (e->d_name[0] == '.') continue;
+		snprintf(path, sizeof(path), "/sys/class/block/%s/size", e->d_name);
+		if (stat(path, &st) || st.st_size != 4096) continue;
+		sysfs_seen = 1;
+		CHECK(pw4_rpmb_read_text(path, text, sizeof(text)));
+		CHECK(strlen(text) < 24 && text[strlen(text) - 1] == '\n');
+	}
+	if (dir) closedir(dir);
+	if (!sysfs_seen) puts("rpmb: no sysfs block size file on this host; that case not run");
+	char tmpl[] = "/tmp/rpmb-test-XXXXXX";
+	int fd = mkstemp(tmpl);
+	CHECK(fd >= 0 && write(fd, "32768\n", 6) == 6 && !close(fd));
+	CHECK(pw4_rpmb_read_text(tmpl, text, sizeof(text)) && !strcmp(text, "32768\n"));
+	CHECK(pw4_rpmb_parse_size(text, &v) && v == 32768);
+	CHECK(pw4_rpmb_read_text(tmpl, text, 7) && !strcmp(text, "32768\n"));   /* exactly fits */
+	CHECK(!pw4_rpmb_read_text(tmpl, text, 6));                               /* one byte short */
+	unlink(tmpl);
+	CHECK(!pw4_rpmb_read_text("/nonexistent/rpmb/size", text, sizeof(text)));
 
 	/* The sysfs value. */
 	CHECK(pw4_rpmb_parse_size("8192\n", &v) && v == 8192);

@@ -314,15 +314,14 @@ static void usb_watch(void)
 #define RPMB_SIZE "/sys/class/block/mmcblk1rpmb/size"
 static void fix_rpmb(void)
 {
-	size_t sl = 0, cl = 0, outlen = 0;
-	unsigned char *s = load_file(RPMB_SIZE, &sl);
+	size_t cl = 0, outlen = 0;
 	char text[24];
 	uint64_t sectors = 0, old = 0;
-	if (!s) { P("RPMB none listed; configuration left as is"); return; }
-	int ok = sl < sizeof(text);
-	if (ok) { memcpy(text, s, sl); text[sl] = 0; ok = pw4_rpmb_parse_size(text, &sectors); }
-	free(s);
-	if (!ok) { P("RPMB size unreadable; configuration left as is"); return; }
+	if (access(RPMB_SIZE, F_OK)) { P("RPMB none listed; configuration left as is"); return; }
+	if (!pw4_rpmb_read_text(RPMB_SIZE, text, sizeof(text)) || !pw4_rpmb_parse_size(text, &sectors)) {
+		P("RPMB size unreadable; configuration left as is");
+		return;
+	}
 	struct stat st;
 	unsigned char *conf = load_file(PREINIT_CONF, &cl);
 	if (!conf || stat(PREINIT_CONF, &st)) { free(conf); P("RPMB configuration unreadable"); return; }

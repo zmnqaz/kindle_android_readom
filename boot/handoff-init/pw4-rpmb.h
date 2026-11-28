@@ -16,10 +16,13 @@
  * still requires it present and read only. */
 #ifndef PW4_RPMB_H
 #define PW4_RPMB_H
+#include <errno.h>
+#include <fcntl.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 
 /* A decimal sector count as sysfs prints it ("8192\n"); 0 if not one. */
 static inline int pw4_rpmb_parse_size(const char *s, uint64_t *out)
@@ -32,6 +35,30 @@ static inline int pw4_rpmb_parse_size(const char *s, uint64_t *out)
 	}
 	if (!n || (s[n] && !(s[n] == '\n' && !s[n + 1])) || !v) return 0;
 	*out = v;
+	return 1;
+}
+
+/* A small text file read to its end into buf (cap bytes, NUL added); 1 if it
+ * fit. Not by its size: a sysfs attribute stats as 4096 bytes and reads as
+ * "8192\n", which is how rc1 took the RPMB size for absent. */
+static inline int pw4_rpmb_read_text(const char *path, char *buf, size_t cap)
+{
+	int fd = open(path, O_RDONLY | O_CLOEXEC);
+	size_t used = 0;
+	if (fd < 0 || cap < 2) { if (fd >= 0) close(fd); return 0; }
+	for (;;) {
+		ssize_t k = read(fd, buf + used, cap - 1 - used);
+		if (k < 0 && errno == EINTR) continue;
+		if (k < 0) { close(fd); return 0; }
+		if (!k) break;
+		used += (size_t)k;
+		if (used == cap - 1) { char extra; ssize_t more;
+			do more = read(fd, &extra, 1); while (more < 0 && errno == EINTR);
+			if (more) { close(fd); return 0; }
+			break; }
+	}
+	close(fd);
+	buf[used] = 0;
 	return 1;
 }
 
