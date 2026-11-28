@@ -608,7 +608,17 @@ static int __init stage_init(void)
 #elif PWS_PROFILE == 2
     if(!strstr(u->release,"-pw3-core-smoke") || PHYS_OFFSET!=0x60000000)return -ENOEXEC;
 #elif PWS_PROFILE == 3
-    if(strcmp(u->release,TARGET_UNAME_RELEASE) || strcmp(u->version,TARGET_UNAME_VERSION) ||
+    /* Any firmware (TARGET_ANY_FIRMWARE, the profile's any_firmware): the build
+     * string is not compared. 5.18.1 and 5.18.1.1.1 are two builds of a kernel
+     * that is the same where this module touches it -- vermagic, symbol CRCs,
+     * and the three functions native_init() hashes, at the same addresses --
+     * and the build string alone stopped 5.18.1 with E101. What does differ
+     * where it matters is still refused: the stock kernel's own symbol-version
+     * check, and native_init()'s hashes of the code this module calls. */
+    if(strcmp(u->release,TARGET_UNAME_RELEASE) ||
+#ifndef TARGET_ANY_FIRMWARE
+       strcmp(u->version,TARGET_UNAME_VERSION) ||
+#endif
        strcmp(u->machine,"armv7l"))return -ENOEXEC;
 #elif PWS_PROFILE == 4
     if(!strstr(u->release,"-pw4-loader-smoke"))return -ENOEXEC;

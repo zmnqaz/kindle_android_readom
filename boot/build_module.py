@@ -49,6 +49,10 @@ def fdt_lock(p):
     if p['module_profile'] == 3:
         out += ['#define TARGET_UNAME_RELEASE %s' % c_string(p['stock_kernel_release']),
                 '#define TARGET_UNAME_VERSION %s' % c_string(p['stock_kernel_version'])]
+        if p.get('any_firmware') is True:
+            # The build string is not compared (stage.c); the release, the
+            # symbol versions and the stock function hashes still are.
+            out.append('#define TARGET_ANY_FIRMWARE 1')
         functions = p['stock_functions']
         names = ['l2c210_flush_all', 'l2c310_disable']
         if any(not functions[n].get('sha256') for n in ['pm_test_show'] + names):

@@ -135,6 +135,8 @@ TESTS = [
     # when it was read, a restart between the samples, a field that moved.
     ('sleep-power', 'python', ['tools/tests/test_sleep_power.py'], False),
     ('reuse', 'python', ['tools/tests/test_reuse.py'], False),
+    # The PW4 module's pins of the stock kernel: with any_firmware, not its build string.
+    ('module-lock', 'python', ['tools/tests/test_module_lock.py'], False),
     ('launcher-call-sites', 'python', ['tools/tests/test_launcher_call_sites.py'], False),
     ('verify-script', 'python', ['tools/tests/test_verify_script.py'], False),
     ('verify-device-answers', 'python', ['tools/tests/test_verify_device_answers.py'], False),
