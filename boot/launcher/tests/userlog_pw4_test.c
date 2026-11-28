@@ -37,6 +37,10 @@ int main(void)
 	CHECK(keep("<4>[    1.900000] pw4-handoff: RESULT driver_loaded=1 touch_loaded=1"));
 	/* Still not a line with an identifier on it, whatever its prefix. */
 	CHECK(!keep("<4>[    1.000000] pw4-handoff: MAC 02:00:00:00:00:00"));
+	/* The stock kernel refusing our module: the reason behind an E101. */
+	CHECK(keep("<3>[21191.4] pw3_first_kernel: disagrees about version of symbol module_layout"));
+	CHECK(keep("<3>[21191.4] pw3_first_kernel: version magic '4.1.15-lab126 SMP preempt mod_unload ARMv7 p2v8 ' should be '4.1.15-lab126 SMP preempt mod_unload modversions ARMv7 p2v8 '"));
+	CHECK(!keep("<3>[21191.4] other_module: disagrees about version of symbol module_layout"));
 	CHECK(!keep("<6>[    1.300000] mmc1: serial 0123456789abcdef"));
 	/* What both keep. */
 	CHECK(keep("<6>[  160.699698] suspend debug: Waiting for 5 second(s)."));

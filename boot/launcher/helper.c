@@ -966,7 +966,21 @@ int main(int argc, char **argv) {
 #if defined(PW_ANY_FIRMWARE) && defined(PW3_INSTALLER)
         /* Any firmware: a stock kernel this module was not built for says so
          * here (symbol versions, vermagic). Nothing is written yet: E101. */
-        fprintf(stderr, "PW3_FIRST_KERNEL_CHECK_FAIL check=module_load errno=%d checks=%u\n", errno, ++checks);
+        const int load_errno = errno;
+        fprintf(stderr, "PW3_FIRST_KERNEL_CHECK_FAIL check=module_load errno=%d checks=%u\n", load_errno, ++checks);
+        /* Which stock kernel, and the kernel's own reason ("pw3_first_kernel:
+         * version magic ..." or "disagrees about version of symbol ..."): with
+         * only the errno, a stranger's E101 says that it failed and not why. */
+        fprintf(stderr, "PW3_STOCK_KERNEL release=%s version=%s\n", u.release, u.version);
+        {
+            int n = klogctl(3, log_before, (int)sizeof(log_before) - 1);
+            struct klog_file f;
+            if (n > 0 && klog_begin(&f, "module-load-kernel.txt", "klogctl") == 0) {
+                log_before[n] = 0;
+                pw3_klog_feed(&f.out, log_before, (size_t)n);
+                (void)klog_finish(&f);
+            }
+        }
         stop_now(PW3_SCREEN_E101);
 #endif
         require(0, "module_load");

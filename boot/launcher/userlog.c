@@ -46,6 +46,7 @@ static const char *const ALLOW[] = {
 #endif
 	"android_usb", "g_android",					/* and, under Android, the gadget on it */
 	"pw3-",								/* every line this project prints itself (see below) */
+	"pw3_first_kernel:",						/* the stock kernel on our module: why it refused it */
 #if defined(CHECK_PROFILE) && CHECK_PROFILE == 3
 	"pw4-handoff:",							/* the PW4's PID 1 before Android */
 	"mmc1", "mmcblk", "sdhci", "emmc", "EXT3-fs", "EXT4-fs",	/* the PW4's eMMC */
