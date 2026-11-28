@@ -22,17 +22,17 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  deploy:
-    name: publish site/
+  # Upload and deploy are two jobs, as in GitHub's own Pages example. In one
+  # job, deploy-pages asked for the artifact under a second after the upload
+  # and was told there was none (2026-11-28, twice in a row; it was there when
+  # asked again minutes later). The second job starts only once the first has
+  # finished, which gives the artifact listing that time.
+  build:
+    name: package site/
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
       contents: read
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -44,5 +44,17 @@ jobs:
         with:
           path: site
 
+  deploy:
+    name: publish site/
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
       - id: deployment
         uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
