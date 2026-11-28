@@ -629,9 +629,10 @@ const struct dd_tree_profile dd_pw4_rex_5_18_1_1_1 = {
      "0d5fee0ddb32c628a0a9d99329ab8bee2f45ac3156b95699db3c7c24123ead71"},
     16384,
     /* 4 MiB, as the 4.1 kernel listed it on the maintainer's PW4 (Jumps 8 to
-     * 57). A PW4 whose eMMC has another RPMB size is stopped by preinit's
-     * geometry check in the Android kernel, before anything is written, and
-     * restarts into the stock system. */
+     * 57). Only a placeholder: the size is the eMMC's own and differs between
+     * chips, and the stock system cannot read it, so the Android kernel's
+     * PID 1 puts the size it lists in this line before preinit compares it
+     * (boot/handoff-init/pw4-rpmb.h). */
     8192,
     /* Any PW4 firmware, by the owner's decision of 2026-11-27: only
      * 5.18.1.1.1 is tested, and a firmware this does not fit fails at the

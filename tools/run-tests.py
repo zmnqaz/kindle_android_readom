@@ -165,6 +165,9 @@ TESTS = [
     ('device-data-tree', 'c', ['-DPW_DEVICE_TREE', 'boot/devicedata/tests/devicedata_tree_test.c',
                                'boot/devicedata/devicedata.c', 'boot/handoff/pw3_plan.c',
                                'boot/handoff/pw4_fdt.c', 'boot/handoff/sha256.c'], False),
+    # The PW4's PID 1 puts the RPMB size the Android kernel lists in the line
+    # the device side could only fill with the maintainer's (pw4-rpmb.h).
+    ('pw4-rpmb', 'c', ['boot/handoff-init/tests/rpmb_test.c'], False),
     ('user-log', 'c', ['boot/launcher/tests/userlog_test.c', 'boot/launcher/userlog.c'], False),
     # The same filter as the PW4's helper is built (its eMMC is mmc1, its Wi-Fi mmc0).
     ('user-log-pw4', 'c', ['-DCHECK_PROFILE=3', 'boot/launcher/tests/userlog_pw4_test.c',

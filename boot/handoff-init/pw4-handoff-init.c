@@ -16,8 +16,11 @@
  * Then "正在启动 Android" goes on the panel and the touch driver (gt9xx-ts.ko,
  * loaded by the stock system with no parameters, /etc/upstart/touch) is
  * loaded, since Android's interface check waits for its input device "goodix-ts".
+ * Before that, the RPMB line of pw3-preinit.conf gets the size this kernel
+ * lists (pw4-rpmb.h): the device side could only write the maintainer's.
  * Last the unmodified storage entry
- * is executed as PID 1 with the root as found: no mounts left, no files added.
+ * is executed as PID 1 with the root as found but for that one line: no
+ * mounts left, no files added.
  *
  * Nothing is written to any block device. */
 #define _GNU_SOURCE
@@ -44,6 +47,7 @@
 #include <linux/fb.h>
 #include "start-picture.h"
 #include "pw4-usb-regs.h"
+#include "pw4-rpmb.h"
 
 #ifndef KERNEL_RELEASE
 #define KERNEL_RELEASE "4.1.15-lab126-pw4-android81+"
@@ -303,6 +307,56 @@ static void usb_watch(void)
 	_exit(0);
 }
 
+/* The RPMB size preinit will compare, from this kernel (pw4-rpmb.h): the
+ * device side could only write the maintainer's. The file is replaced whole,
+ * by rename, so preinit reads either the old one or the new one. */
+#define PREINIT_CONF "/pw3-preinit.conf"
+#define RPMB_SIZE "/sys/class/block/mmcblk1rpmb/size"
+static void fix_rpmb(void)
+{
+	size_t sl = 0, cl = 0, outlen = 0;
+	unsigned char *s = load_file(RPMB_SIZE, &sl);
+	char text[24];
+	uint64_t sectors = 0, old = 0;
+	if (!s) { P("RPMB none listed; configuration left as is"); return; }
+	int ok = sl < sizeof(text);
+	if (ok) { memcpy(text, s, sl); text[sl] = 0; ok = pw4_rpmb_parse_size(text, &sectors); }
+	free(s);
+	if (!ok) { P("RPMB size unreadable; configuration left as is"); return; }
+	struct stat st;
+	unsigned char *conf = load_file(PREINIT_CONF, &cl);
+	if (!conf || stat(PREINIT_CONF, &st)) { free(conf); P("RPMB configuration unreadable"); return; }
+	char *out = malloc(cl + sizeof(text));
+	int rc = out ? pw4_rpmb_rewrite((const char *)conf, cl, "mmcblk1", sectors, out, cl + sizeof(text), &outlen, &old) : -1;
+	free(conf);
+	if (rc <= 0) {
+		if (rc < 0) P("RPMB line not found; configuration left as is");
+		else P("RPMB %llu sectors, as configured", (unsigned long long)sectors);
+		free(out);
+		return;
+	}
+	static const char tmp[] = PREINIT_CONF ".rpmb";
+	int fd = open(tmp, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, st.st_mode & 07777);
+	size_t done = 0;
+	while (fd >= 0 && done < outlen) {
+		ssize_t k = write(fd, out + done, outlen - done);
+		if (k < 0 && errno == EINTR) continue;
+		if (k <= 0) break;
+		done += (size_t)k;
+	}
+	free(out);
+	int e = 0, bad = fd < 0 || done != outlen || fchmod(fd, st.st_mode & 07777);
+	if (bad) e = errno;
+	if (fd >= 0 && close(fd) && !bad) { bad = 1; e = errno; }
+	if (!bad && rename(tmp, PREINIT_CONF)) { bad = 1; e = errno; }
+	if (bad) {
+		unlink(tmp);
+		P("RPMB %llu sectors (configured %llu); rewrite failed errno=%d", (unsigned long long)sectors, (unsigned long long)old, e);
+		return;
+	}
+	P("RPMB %llu sectors (configured %llu); configuration updated", (unsigned long long)sectors, (unsigned long long)old);
+}
+
 /* Everything that touches hardware; runs in a child so that it is bounded in time. */
 static int work(void)
 {
@@ -345,6 +399,7 @@ int main(int argc, char **argv, char **envp)
 		if (!umount2(WFM_MOUNT, MNT_DETACH)) P("WFM was still mounted; detached");
 		rmdir(WFM_MOUNT);
 	} else P("RESULT skipped: unexpected kernel or mounts");
+	if (ms) fix_rpmb();
 
 	/* The firmware came from the device: it does not stay in the root. */
 	if (unlink(FIRMWARE_FILE) && errno != ENOENT) P("FIRMWARE unlink errno=%d", errno);
