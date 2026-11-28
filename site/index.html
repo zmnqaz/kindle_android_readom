@@ -72,7 +72,7 @@
     <div>
       <p class="eyebrow">基于 Readom 的社区移植版</p>
       <h1 id="hero-title">让 Kindle Paperwhite 4<br>读上<em>微信读书</em></h1>
-      <p class="support"><b>只支持 KPW4</b>：Kindle Paperwhite 第十代，2018 款。原厂系统 5.18.1.1.1 实测通过，其他版本也能装，但没测过。<span>其他型号都不支持；Kindle Paperwhite 3 请用原版 <a href="https://readom.app">readom.app</a>。</span></p>
+      <p class="support"><b>只支持 KPW4</b>：Kindle Paperwhite 第十代，2018 款。支持原厂系统 5.18.1、5.18.1.1.1，均实测通过；更早的版本先升级到 5.18.1.1.1。<span>其他型号都不支持；Kindle Paperwhite 3 请用原版 <a href="https://readom.app">readom.app</a>。</span></p>
       <p class="lede">
         把 Android 8.1 搬到 Kindle 第十代上：官方墨水屏版微信读书、蓝牙耳机听书、Wi‑Fi、熄屏休眠，都已在真机上跑通；Kindle 原厂系统原样保留。
       </p>
@@ -112,7 +112,7 @@
           <tr><th scope="row">安装文件</th><td><a href="https://github.com/zmnqaz/kindle_android_readom/releases/download/v1.0.3/Readom.sh">Readom.sh</a>（v1.0.3，约 17 MB）。系统包约 194 MB，装的时候 Kindle 自己联网下载。<a href="https://github.com/zmnqaz/kindle_android_readom/releases/tag/v1.0.3">发布页</a></td></tr>
           <tr><th scope="row">机型</th><td><b>只支持 KPW4</b>：Kindle Paperwhite 第十代，2018 款。在「设置 → 设备选项 → 设备信息」里查看。其他型号都不支持；Paperwhite 3 用原版 <a href="https://readom.app">readom.app</a>。</td></tr>
           <tr><th scope="row">越狱</th><td>需要。没越狱过的，下面两种装法都包括越狱这一步。</td></tr>
-          <tr><th scope="row">原厂系统版本</th><td>不限。5.18.1.1.1 实测通过；其他版本没测过，万一装不上，安装器会显示 E101 停下，或者 Kindle 自己重启回原厂系统，原厂分区都不会被改动。</td></tr>
+          <tr><th scope="row">原厂系统版本</th><td><b>5.18.1、5.18.1.1.1</b>，均实测通过。更早的版本（5.16、5.17）内核不一样，装不上（安装器显示 E101 停下，不改动任何东西）：先升级到 5.18.1.1.1（下载<a href="https://s3.amazonaws.com/firmwaredownloads/update_kindle_all_new_paperwhite_v2_5.18.1.1.1.bin">亚马逊官方更新包</a>拷到 Kindle 盘根目录，再在「设置 → 设备选项 → 高级选项 → 更新您的 Kindle」安装），再越狱安装。</td></tr>
           <tr><th scope="row">空闲空间、电量</th><td>首次安装至少 2.8 GB 空闲空间，电量 40% 以上。越狱时填进去的文件要先删掉。</td></tr>
           <tr><th scope="row">回到 Kindle、卸载</th><td>原厂系统一直都在：Android 里长按电源键选重启就回到 Kindle；卡住时按住电源键约 40 秒。卸载：删掉 Kindle 盘上的 <code>android</code> 文件夹和 <code>documents/Readom.sh</code>。</td></tr>
         </tbody>

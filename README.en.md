@@ -1,6 +1,6 @@
 <h1 align="center">Readom for the Kindle 10th generation</h1>
 
-<p align="center"><b>WeRead on a Kindle Paperwhite 4.</b><br><b>KPW4 only</b> (Kindle Paperwhite 10th generation, 2018; tested on stock firmware 5.18.1.1.1, other versions install but are untested); no other model is supported. For the Kindle Paperwhite 3, use the original, <a href="https://readom.app">readom.app</a>.<br>Readom's Android 8.1, ported to the Kindle Paperwhite 4 (10th generation, 2018). The Kindle's own system stays as it is.</p>
+<p align="center"><b>WeRead on a Kindle Paperwhite 4.</b><br><b>KPW4 only</b> (Kindle Paperwhite 10th generation, 2018; stock firmware 5.18.1 or 5.18.1.1.1, both tested; update an older one to 5.18.1.1.1 first); no other model is supported. For the Kindle Paperwhite 3, use the original, <a href="https://readom.app">readom.app</a>.<br>Readom's Android 8.1, ported to the Kindle Paperwhite 4 (10th generation, 2018). The Kindle's own system stays as it is.</p>
 
 <p align="center">
   <a href="https://github.com/zmnqaz/kindle_android_readom/actions/workflows/tests.yml"><img src="https://github.com/zmnqaz/kindle_android_readom/actions/workflows/tests.yml/badge.svg?branch=kpw4" alt="Tests"></a>
@@ -21,7 +21,7 @@
 
 ## Installing (v1.0.3)
 
-Download: [`Readom.sh`](https://github.com/zmnqaz/kindle_android_readom/releases/download/v1.0.3/Readom.sh) (about 17 MB) · [release page](https://github.com/zmnqaz/kindle_android_readom/releases/tag/v1.0.3). Tested on stock firmware 5.18.1.1.1; other versions are untested. A first install needs 2.8 GB free and at least 40% battery; the 194 MB system package is downloaded by the Kindle itself.
+Download: [`Readom.sh`](https://github.com/zmnqaz/kindle_android_readom/releases/download/v1.0.3/Readom.sh) (about 17 MB) · [release page](https://github.com/zmnqaz/kindle_android_readom/releases/tag/v1.0.3). Stock firmware 5.18.1 and 5.18.1.1.1 are supported, both tested; an older one (5.16, 5.17) is updated to 5.18.1.1.1 first. A first install needs 2.8 GB free and at least 40% battery; the 194 MB system package is downloaded by the Kindle itself.
 
 - **Let an AI assistant do it**: send it the text below. It does the computer's part following the [install guide](https://zmnqaz.github.io/kindle_android_readom/install_pw4.md); you plug and unplug the cable and tap on the Kindle.
 
