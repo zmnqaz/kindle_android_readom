@@ -3,7 +3,7 @@
 这份文档写给**替使用者给 Kindle 第十代越狱、装上 Readom 第十代移植版的 AI 助手**。
 人读的介绍在 <https://zmnqaz.github.io/kindle_android_readom/#install>。
 
-> 当前版本 **v1.0.1**（2026-11-27）。第 1 节的下载地址返回 404 时，如实告诉使用者这一版的文件不在了，
+> 当前版本 **v1.0.2**（2026-11-28）。第 1 节的下载地址返回 404 时，如实告诉使用者这一版的文件不在了，
 > 请到 <https://github.com/zmnqaz/kindle_android_readom/releases> 看最新版本，**不要去别处找替代文件**。
 
 几个前提先说清楚：
@@ -24,10 +24,10 @@
 
 | | |
 |---|---|
-| 版本 | v1.0.1 |
-| 安装文件 | `Readom.sh`，约 17 MB，https://github.com/zmnqaz/kindle_android_readom/releases/download/v1.0.1/Readom.sh |
-| 校验值（SHA-256） | https://github.com/zmnqaz/kindle_android_readom/releases/download/v1.0.1/SHA256SUMS 里 `Readom.sh` 那一行 |
-| 发布页 | https://github.com/zmnqaz/kindle_android_readom/releases/tag/v1.0.1（系统包 `readom-system-v1.0.0.img.zst` 约 194 MB 也在这里，见第 5 节） |
+| 版本 | v1.0.2 |
+| 安装文件 | `Readom.sh`，约 17 MB，https://github.com/zmnqaz/kindle_android_readom/releases/download/v1.0.2/Readom.sh |
+| 校验值（SHA-256） | https://github.com/zmnqaz/kindle_android_readom/releases/download/v1.0.2/SHA256SUMS 里 `Readom.sh` 那一行 |
+| 发布页 | https://github.com/zmnqaz/kindle_android_readom/releases/tag/v1.0.2（系统包 `readom-system-v1.0.0.img.zst` 约 194 MB 也在这里，见第 5 节） |
 | 书库里的条目名 | `Readom`（封面是一台屏幕上有小机器人的阅读器） |
 | 需要的空闲空间 | 首次安装至少 **2.8 GB**（系统 512 MiB + 数据 2 GiB + 余量；越狱时填进去的文件必须先删掉，否则一定不够） |
 | 电量 | 40% 以上（低于时屏幕显示 E102 并停下） |
@@ -157,15 +157,15 @@
 
    ```sh
    # macOS / Linux
-   curl -fL -o ~/Downloads/Readom.sh https://github.com/zmnqaz/kindle_android_readom/releases/download/v1.0.1/Readom.sh
-   curl -fL -o ~/Downloads/SHA256SUMS https://github.com/zmnqaz/kindle_android_readom/releases/download/v1.0.1/SHA256SUMS
+   curl -fL -o ~/Downloads/Readom.sh https://github.com/zmnqaz/kindle_android_readom/releases/download/v1.0.2/Readom.sh
+   curl -fL -o ~/Downloads/SHA256SUMS https://github.com/zmnqaz/kindle_android_readom/releases/download/v1.0.2/SHA256SUMS
    shasum -a 256 ~/Downloads/Readom.sh     # Linux 用 sha256sum，和 SHA256SUMS 里 Readom.sh 那一行比对
    ```
 
    ```powershell
    # Windows PowerShell
-   Invoke-WebRequest https://github.com/zmnqaz/kindle_android_readom/releases/download/v1.0.1/Readom.sh -OutFile $HOME\Downloads\Readom.sh
-   Invoke-WebRequest https://github.com/zmnqaz/kindle_android_readom/releases/download/v1.0.1/SHA256SUMS -OutFile $HOME\Downloads\SHA256SUMS
+   Invoke-WebRequest https://github.com/zmnqaz/kindle_android_readom/releases/download/v1.0.2/Readom.sh -OutFile $HOME\Downloads\Readom.sh
+   Invoke-WebRequest https://github.com/zmnqaz/kindle_android_readom/releases/download/v1.0.2/SHA256SUMS -OutFile $HOME\Downloads\SHA256SUMS
    Get-FileHash $HOME\Downloads\Readom.sh -Algorithm SHA256
    ```
 
