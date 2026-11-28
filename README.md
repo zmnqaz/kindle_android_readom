@@ -8,7 +8,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/zmnqaz/kindle_android_readom/releases/tag/v1.0.2">下载 v1.0.2</a> ·
+  <a href="https://github.com/zmnqaz/kindle_android_readom/releases/tag/v1.0.3">下载 v1.0.3</a> ·
   <a href="https://zmnqaz.github.io/kindle_android_readom/"><b>移植版网站</b></a> ·
   <a href="https://zmnqaz.github.io/kindle_android_readom/install_pw4.md">交给 AI 安装的说明</a> ·
   <a href="https://github.com/zmnqaz/kindle_android_readom/issues">反馈问题</a> ·
@@ -19,9 +19,9 @@
 > 这个仓库是在他的项目上 fork 出来、移植到 Kindle 第十代的社区版本，系统里绝大部分的设计和代码都来自原项目。
 > **用 Kindle Paperwhite 3 的请去原版官网 [readom.app](https://readom.app)**，原版的下载、教程和问题都在那里；**第十代移植版的问题请在本仓库提 Issue，不要打扰原作者。**
 
-## 安装（v1.0.2）
+## 安装（v1.0.3）
 
-下载：[`Readom.sh`](https://github.com/zmnqaz/kindle_android_readom/releases/download/v1.0.2/Readom.sh)（约 17 MB）· [发布页](https://github.com/zmnqaz/kindle_android_readom/releases/tag/v1.0.2)。原厂系统 5.18.1.1.1 实测通过，其他版本没测过；首次安装要 2.8 GB 空闲空间、40% 以上电量；系统包约 194 MB，Kindle 会自己联网下载。
+下载：[`Readom.sh`](https://github.com/zmnqaz/kindle_android_readom/releases/download/v1.0.3/Readom.sh)（约 17 MB）· [发布页](https://github.com/zmnqaz/kindle_android_readom/releases/tag/v1.0.3)。原厂系统 5.18.1.1.1 实测通过，其他版本没测过；首次安装要 2.8 GB 空闲空间、40% 以上电量；系统包约 194 MB，Kindle 会自己联网下载。
 
 两种装法，结果一样：
 
